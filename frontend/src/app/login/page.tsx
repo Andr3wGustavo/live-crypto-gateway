@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useAppKit } from '@reown/appkit/react';
 import { SiweMessage } from 'siwe';
 
 export default function LoginPage() {
   const { address, isConnected } = useAccount();
-  const { open } = useWeb3Modal();
+  const { open } = useAppKit();
   const { signMessageAsync } = useSignMessage();
   const [status, setStatus] = useState<'' | 'fetching_nonce' | 'signing' | 'verifying' | 'success' | 'error'>('');
   const [errorMsg, setErrorMsg] = useState('');

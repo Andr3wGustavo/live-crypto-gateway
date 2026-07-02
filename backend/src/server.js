@@ -11,6 +11,7 @@ const { startPollingService } = require('./services/polling');
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const webhookRoutes = require('./routes/webhooks');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +55,7 @@ const webhookLimiter = rateLimit({
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', uploadRoutes); // Reusing /api/dashboard prefix for upload
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 
 // Initialize WebSocket Server

@@ -33,9 +33,253 @@ function validateWebhookSignature(req, res, next) {
   next();
 }
 
-// Webhook endpoint for Router Smart Contract events
+/**
+ * Parse Alchemy webhook payload for ADDRESS_ACTIVITY events.
+ * Alchemy sends decoded logs when monitoring a contract address.
+ * We look for DonationRouted events from the LiveCryptoRouter contract.
+ *
+ * DonationRouted(address indexed sender, address indexed streamer, uint256 amount, uint256 fee, uint256 netAmount, address token)
+ * Topic0: keccak256 of the event signature
+ */
+const DONATION_ROUTED_TOPIC = '0x' + crypto
+  .createHash('sha256') // placeholder — in production use keccak256
+  .update('DonationRouted(address,address,uint256,uint256,uint256,address)')
+  .digest('hex');
+
+function parseAlchemyPayload(body) {
+  const results = [];
+
+  // Alchemy ADDRESS_ACTIVITY webhook structure
+  const activities = body.event?.activity || [];
+
+  for (const activity of activities) {
+    // For contract interaction logs
+    if (activity.log && activity.log.topics && activity.log.topics.length >= 3) {
+      const topics = activity.log.topics;
+      const data = activity.log.data;
+
+      // Decode indexed params from topics
+      const senderAddress = '0x' + topics[1].slice(26); // address is right-padded in 32 bytes
+      const streamerAddress = '0x' + topics[2].slice(26);
+
+      // Decode non-indexed params from data (amount, fee, netAmount, token)
+      // Each param is 32 bytes (64 hex chars)
+      const dataHex = data.startsWith('0x') ? data.slice(2) : data;
+      const amount = BigInt('0x' + dataHex.slice(0, 64));
+      const fee = BigInt('0x' + dataHex.slice(64, 128));
+      const netAmount = BigInt('0x' + dataHex.slice(128, 192));
+      const tokenAddress = '0x' + dataHex.slice(192 + 24, 256); // address from last 20 bytes of 32-byte word
+
+      results.push({
+        tx_hash: activity.hash || activity.log.transactionHash,
+        sender_address: senderAddress.toLowerCase(),
+        streamer_address: streamerAddress.toLowerCase(),
+        amount: amount.toString(),
+        fee: fee.toString(),
+        net_amount: netAmount.toString(),
+        token_address: tokenAddress.toLowerCase(),
+        is_native: tokenAddress === '0x0000000000000000000000000000000000000000',
+        block_number: activity.blockNum || activity.log.blockNumber,
+      });
+    }
+
+    // Fallback: simple native transfer (no log, just value transfer)
+    if (!activity.log && activity.value && activity.toAddress) {
+      results.push({
+        tx_hash: activity.hash,
+        sender_address: (activity.fromAddress || '').toLowerCase(),
+        streamer_address: (activity.toAddress || '').toLowerCase(),
+        amount: activity.value.toString(),
+        fee: '0',
+        net_amount: activity.value.toString(),
+        token_address: '0x0000000000000000000000000000000000000000',
+        is_native: true,
+        block_number: activity.blockNum,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Parse Helius webhook payload for Solana transactions.
+ * Helius Enhanced Transactions include token transfers and SOL transfers.
+ */
+function parseHeliusPayload(body) {
+  const results = [];
+
+  // Helius sends an array of enhanced transactions
+  const transactions = Array.isArray(body) ? body : [body];
+
+  for (const tx of transactions) {
+    if (!tx.signature) continue;
+
+    // Check for native SOL transfers
+    if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
+      for (const transfer of tx.nativeTransfers) {
+        results.push({
+          tx_hash: tx.signature,
+          sender_address: transfer.fromUserAccount || '',
+          streamer_address: transfer.toUserAccount || '',
+          amount: transfer.amount?.toString() || '0', // in lamports
+          fee: '0',
+          net_amount: transfer.amount?.toString() || '0',
+          token_address: 'SOL',
+          is_native: true,
+          block_number: tx.slot,
+        });
+      }
+    }
+
+    // Check for SPL token transfers
+    if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
+      for (const transfer of tx.tokenTransfers) {
+        results.push({
+          tx_hash: tx.signature,
+          sender_address: transfer.fromUserAccount || '',
+          streamer_address: transfer.toUserAccount || '',
+          amount: transfer.tokenAmount?.toString() || '0',
+          fee: '0',
+          net_amount: transfer.tokenAmount?.toString() || '0',
+          token_address: transfer.mint || 'UNKNOWN',
+          is_native: false,
+          block_number: tx.slot,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// ──────────────────────────────────────────────
+// Webhook endpoint for EVM (Alchemy)
 // Protected by HMAC signature validation
+// ──────────────────────────────────────────────
 router.post('/crypto', validateWebhookSignature, async (req, res) => {
+  try {
+    const donations = parseAlchemyPayload(req.body);
+
+    if (donations.length === 0) {
+      return res.json({ success: true, message: 'No donation events found in payload' });
+    }
+
+    for (const donation of donations) {
+      // Look up streamer by their wallet address
+      const streamerResult = await db.query(
+        `SELECT s.id FROM Streamers s
+         INNER JOIN Wallets w ON w.streamer_id = s.id
+         WHERE LOWER(w.public_address) = $1
+         LIMIT 1`,
+        [donation.streamer_address]
+      );
+
+      if (streamerResult.rows.length === 0) {
+        console.warn(`No streamer found for address ${donation.streamer_address}`);
+        continue;
+      }
+
+      const streamer_id = streamerResult.rows[0].id;
+
+      // Determine currency
+      const currency = donation.is_native ? 'NATIVE' : donation.token_address;
+
+      // Insert into Transactions table with PENDING status
+      // (will be confirmed after N block confirmations)
+      await db.query(
+        `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
+         VALUES ($1, $2, $3, $4, $5, 'PENDING')
+         ON CONFLICT (tx_hash) DO NOTHING`,
+        [donation.tx_hash, streamer_id, donation.sender_address, donation.net_amount, currency]
+      );
+
+      // Publish to Redis channel for WebSocket dispatch (real-time OBS alert)
+      const channel = `streamer:${streamer_id}:events`;
+      const payload = JSON.stringify({
+        event: "DONATION",
+        amount: donation.net_amount,
+        fee: donation.fee,
+        currency: currency,
+        sender: donation.sender_address,
+        token: donation.token_address,
+        tx_hash: donation.tx_hash,
+        message: req.body.message || ""
+      });
+
+      await pubClient.publish(channel, payload);
+      console.log(`Dispatched DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
+    }
+
+    res.json({ success: true, message: `Processed ${donations.length} donation(s)` });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// Webhook endpoint for Solana (Helius)
+// ──────────────────────────────────────────────
+router.post('/solana', validateWebhookSignature, async (req, res) => {
+  try {
+    const donations = parseHeliusPayload(req.body);
+
+    if (donations.length === 0) {
+      return res.json({ success: true, message: 'No Solana donation events found' });
+    }
+
+    for (const donation of donations) {
+      // Look up streamer by their Solana wallet address
+      const streamerResult = await db.query(
+        `SELECT s.id FROM Streamers s
+         INNER JOIN Wallets w ON w.streamer_id = s.id
+         WHERE LOWER(w.public_address) = LOWER($1)
+         LIMIT 1`,
+        [donation.streamer_address]
+      );
+
+      if (streamerResult.rows.length === 0) {
+        console.warn(`No streamer found for Solana address ${donation.streamer_address}`);
+        continue;
+      }
+
+      const streamer_id = streamerResult.rows[0].id;
+      const currency = donation.is_native ? 'SOL' : donation.token_address;
+
+      await db.query(
+        `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
+         VALUES ($1, $2, $3, $4, $5, 'PENDING')
+         ON CONFLICT (tx_hash) DO NOTHING`,
+        [donation.tx_hash, streamer_id, donation.sender_address, donation.net_amount, currency]
+      );
+
+      const channel = `streamer:${streamer_id}:events`;
+      const payload = JSON.stringify({
+        event: "DONATION",
+        amount: donation.net_amount,
+        currency: currency,
+        sender: donation.sender_address,
+        token: donation.token_address,
+        tx_hash: donation.tx_hash,
+        message: ""
+      });
+
+      await pubClient.publish(channel, payload);
+      console.log(`Dispatched Solana DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
+    }
+
+    res.json({ success: true, message: `Processed ${donations.length} Solana donation(s)` });
+  } catch (error) {
+    console.error('Solana webhook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// Legacy/fallback manual webhook (backward compatible)
+// ──────────────────────────────────────────────
+router.post('/manual', async (req, res) => {
   const { tx_hash, streamer_id, sender_address, amount, currency } = req.body;
 
   if (!tx_hash || !streamer_id || !sender_address || !amount || !currency) {
@@ -43,7 +287,6 @@ router.post('/crypto', validateWebhookSignature, async (req, res) => {
   }
 
   try {
-    // Insert into Transactions table
     await db.query(
       `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
        VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
@@ -51,7 +294,6 @@ router.post('/crypto', validateWebhookSignature, async (req, res) => {
       [tx_hash, streamer_id, sender_address, amount, currency]
     );
 
-    // Publish to Redis channel for WebSocket dispatch
     const channel = `streamer:${streamer_id}:events`;
     const payload = JSON.stringify({
       event: "DONATION",
@@ -62,11 +304,11 @@ router.post('/crypto', validateWebhookSignature, async (req, res) => {
     });
 
     await pubClient.publish(channel, payload);
-    console.log(`Dispatched DONATION event for streamer ${streamer_id}`);
+    console.log(`Dispatched manual DONATION event for streamer ${streamer_id}`);
 
-    res.json({ success: true, message: 'Webhook processed' });
+    res.json({ success: true, message: 'Manual webhook processed' });
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('Manual webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
