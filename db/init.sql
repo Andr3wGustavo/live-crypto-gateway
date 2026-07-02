@@ -1,0 +1,33 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE Streamers (
+    id SERIAL PRIMARY KEY,
+    public_address VARCHAR(255) UNIQUE NOT NULL,
+    obs_token UUID DEFAULT uuid_generate_v4() UNIQUE NOT NULL
+);
+
+CREATE TABLE Wallets (
+    id SERIAL PRIMARY KEY,
+    streamer_id INT NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
+    chain_id VARCHAR(50) NOT NULL,
+    public_address VARCHAR(255) NOT NULL,
+    UNIQUE(streamer_id, chain_id)
+);
+
+CREATE TABLE Alert_Configs (
+    id SERIAL PRIMARY KEY,
+    streamer_id INT UNIQUE NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
+    min_amount DECIMAL(18,8) NOT NULL DEFAULT 0.0,
+    media_url VARCHAR(2048),
+    audio_url VARCHAR(2048)
+);
+
+CREATE TABLE Transactions (
+    tx_hash VARCHAR(255) PRIMARY KEY,
+    streamer_id INT NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
+    sender_address VARCHAR(255) NOT NULL,
+    amount DECIMAL(18,8) NOT NULL,
+    currency VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
