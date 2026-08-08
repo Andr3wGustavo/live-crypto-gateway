@@ -19,7 +19,11 @@ CREATE TABLE Alert_Configs (
     streamer_id INT UNIQUE NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
     min_amount DECIMAL(18,8) NOT NULL DEFAULT 0.0,
     media_url VARCHAR(2048),
-    audio_url VARCHAR(2048)
+    audio_url VARCHAR(2048),
+    active_theme VARCHAR(50) NOT NULL DEFAULT 'cyberpunk',
+    goal_amount DECIMAL(18,8) NOT NULL DEFAULT 0.0,
+    goal_current DECIMAL(18,8) NOT NULL DEFAULT 0.0,
+    goal_title VARCHAR(255) NOT NULL DEFAULT 'Donation Goal'
 );
 
 CREATE TABLE Transactions (

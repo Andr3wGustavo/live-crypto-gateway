@@ -4,7 +4,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 const db = require('../db');
 
+const authMiddleware = require('../middleware/auth');
+
 const router = express.Router();
+router.use(authMiddleware);
 
 // Configure Multer for in-memory file storage
 const upload = multer({ 
@@ -23,8 +26,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file provided' });
   }
 
-  // Assuming middleware validates the JWT and sets req.streamer_id
-  const streamerId = req.body.streamer_id; // Temporary: in production use req.streamer_id from auth token
+  const streamerId = req.user.id;
   const fileType = req.body.type; // 'media' or 'audio'
 
   if (!streamerId || !['media', 'audio'].includes(fileType)) {

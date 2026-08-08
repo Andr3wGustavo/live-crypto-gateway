@@ -1,26 +1,9 @@
 const express = require('express');
 const db = require('../db');
-const jwt = require('jsonwebtoken');
+const { pubClient } = require('../redis');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
-
-// Middleware to verify JWT
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, username }
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
+const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
 
@@ -36,7 +19,11 @@ router.get('/', async (req, res) => {
     const walletsRes = await db.query('SELECT chain_id, public_address FROM Wallets WHERE streamer_id = $1', [streamerId]);
     
     // Get Alert Configs
-    const alertsRes = await db.query('SELECT min_amount, media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1', [streamerId]);
+    const alertsRes = await db.query(
+      `SELECT min_amount, media_url, audio_url, active_theme, goal_amount, goal_current, goal_title 
+       FROM Alert_Configs WHERE streamer_id = $1`,
+      [streamerId]
+    );
     
     res.json({
       streamer: streamerRes.rows[0],
@@ -65,6 +52,52 @@ router.post('/wallet', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Wallet Update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update Alert Config, Theme, and Goal
+router.post('/config', async (req, res) => {
+  const streamerId = req.user.id;
+  const { min_amount, active_theme, goal_amount, goal_current, goal_title } = req.body;
+
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO Alert_Configs (streamer_id, min_amount, active_theme, goal_amount, goal_current, goal_title)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (streamer_id)
+       DO UPDATE SET 
+         min_amount = COALESCE(EXCLUDED.min_amount, Alert_Configs.min_amount),
+         active_theme = COALESCE(EXCLUDED.active_theme, Alert_Configs.active_theme),
+         goal_amount = COALESCE(EXCLUDED.goal_amount, Alert_Configs.goal_amount),
+         goal_current = COALESCE(EXCLUDED.goal_current, Alert_Configs.goal_current),
+         goal_title = COALESCE(EXCLUDED.goal_title, Alert_Configs.goal_title)
+       RETURNING min_amount, active_theme, goal_amount, goal_current, goal_title`,
+      [
+        streamerId, 
+        min_amount || '0.0', 
+        active_theme || 'cyberpunk', 
+        goal_amount || '0.0', 
+        goal_current || '0.0', 
+        goal_title || 'Donation Goal'
+      ]
+    );
+
+    // Publish CONFIG_UPDATE to Redis Pub/Sub so OBS overlay updates instantly
+    const channel = `streamer:${streamerId}:events`;
+    const payload = JSON.stringify({
+      event: 'CONFIG_UPDATE',
+      theme: active_theme || 'cyberpunk',
+      goal_amount: parseFloat(goal_amount || '0.0'),
+      goal_current: parseFloat(goal_current || '0.0'),
+      goal_title: goal_title || 'Donation Goal'
+    });
+    
+    await pubClient.publish(channel, payload);
+
+    res.json({ success: true, config: rows[0] });
+  } catch (error) {
+    console.error('Config update error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

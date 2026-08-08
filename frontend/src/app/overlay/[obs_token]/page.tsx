@@ -41,11 +41,11 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
   const { obs_token } = use(params);
   const [donation, setDonation] = useState<{ amount: number, currency: string, sender: string, message: string, fiatValue?: number } | null>(null);
   const [isExiting, setIsExiting] = useState(false);
-  const [theme, setTheme] = useState<'matrix' | 'cyberpunk' | 'minimal' | 'fire'>('cyberpunk'); // Defaulting to cyberpunk for demo
-
-  // Goal State
-  const [goalAmount] = useState(1500.00);
-  const [currentAmount, setCurrentAmount] = useState(1240.50);
+  const [theme, setTheme] = useState<'matrix' | 'cyberpunk' | 'minimal' | 'fire'>('cyberpunk');
+  const [goalAmount, setGoalAmount] = useState(0.00);
+  const [currentAmount, setCurrentAmount] = useState(0.00);
+  const [goalTitle, setGoalTitle] = useState('Donation Goal');
+  const [mediaConfig, setMediaConfig] = useState<{ mediaUrl: string | null; audioUrl: string | null }>({ mediaUrl: null, audioUrl: null });
 
   // Text-to-Speech using Web Speech API
   const speakDonation = useCallback((donationData: { amount: number, currency: string, sender: string, message: string }) => {
@@ -95,15 +95,32 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
         try {
           const data = JSON.parse(event.data);
           
-          // Allow theme updates via WebSocket
-          if (data.event === 'CONFIG_UPDATE' && data.theme) {
-            setTheme(data.theme);
+          if (data.event === 'CONNECTED' && data.config) {
+            setTheme(data.config.theme);
+            setGoalAmount(data.config.goal_amount);
+            setCurrentAmount(data.config.goal_current);
+            setGoalTitle(data.config.goal_title);
+            setMediaConfig({ mediaUrl: data.config.media_url, audioUrl: data.config.audio_url });
+          }
+
+          if (data.event === 'CONFIG_UPDATE') {
+            if (data.theme) setTheme(data.theme);
+            if (data.goal_amount !== undefined) setGoalAmount(data.goal_amount);
+            if (data.goal_current !== undefined) setCurrentAmount(data.goal_current);
+            if (data.goal_title !== undefined) setGoalTitle(data.goal_title);
+            if (data.media_url !== undefined || data.audio_url !== undefined) {
+              setMediaConfig(prev => ({
+                mediaUrl: data.media_url !== undefined ? data.media_url : prev.mediaUrl,
+                audioUrl: data.audio_url !== undefined ? data.audio_url : prev.audioUrl
+              }));
+            }
           }
 
           if (data.event === 'DONATION') {
-            const fiatVal = await fetchFiatValue(data.currency, data.amount);
+            const donationAmount = parseFloat(data.amount);
+            const fiatVal = await fetchFiatValue(data.currency, donationAmount);
             const donationData = {
-              amount: data.amount,
+              amount: donationAmount,
               currency: data.currency,
               sender: data.sender,
               message: data.message,
@@ -112,7 +129,17 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
             
             setDonation(donationData);
             setIsExiting(false);
-            setCurrentAmount(prev => prev + (fiatVal ? parseFloat(fiatVal) : data.amount)); // Add equivalent USD to goal
+            
+            const addedVal = fiatVal ? parseFloat(fiatVal) : donationAmount;
+            setCurrentAmount(prev => prev + addedVal);
+
+            // Play custom audio if configured
+            if (data.audio_url || mediaConfig.audioUrl) {
+              const audioUrl = data.audio_url || mediaConfig.audioUrl;
+              const audio = new Audio(audioUrl);
+              audio.volume = 1.0;
+              audio.play().catch(e => console.error("Failed to play custom audio:", e));
+            }
 
             speakDonation(donationData);
 
@@ -199,6 +226,7 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
     <div className={`w-screen h-screen overflow-hidden relative ${t.container}`}>
       {/* Goal Overlay */}
       <div className={`absolute top-4 right-4 transition-all duration-500 ${t.goalBox}`}>
+        <div className="text-[10px] uppercase opacity-75 mb-1 font-mono tracking-widest text-right">{goalTitle}</div>
         <div className={t.goalText}>
           ${currentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}
         </div>
@@ -214,6 +242,14 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
       {donation && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className={`max-w-2xl transform transition-all duration-500 ${t.alertBox} ${isExiting ? 'scale-90 opacity-0' : 'scale-100 opacity-100 animate-bounce-short'}`}>
+            
+            {/* Custom media display if configured */}
+            {mediaConfig.mediaUrl && (
+              <div className="flex justify-center mb-4 max-h-48 overflow-hidden">
+                <img src={mediaConfig.mediaUrl} alt="Alert GIF" className="object-contain max-h-48 rounded shadow-[0_0_15px_rgba(0,255,0,0.3)]" />
+              </div>
+            )}
+
             <div className="text-4xl mb-4 tracking-widest text-center">
               {theme === 'matrix' ? (
                 <MatrixText text={`${donation.sender.substring(0, 8)}...`} className={t.alertAccent} />

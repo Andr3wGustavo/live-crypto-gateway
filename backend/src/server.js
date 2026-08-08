@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const webhookRoutes = require('./routes/webhooks');
 const uploadRoutes = require('./routes/upload');
+const publicRoutes = require('./routes/public');
 
 const app = express();
 const server = http.createServer(app);
@@ -57,6 +58,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dashboard', uploadRoutes); // Reusing /api/dashboard prefix for upload
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
+app.use('/api/public', publicRoutes);
 
 // Initialize WebSocket Server
 initWebSocket(server);
