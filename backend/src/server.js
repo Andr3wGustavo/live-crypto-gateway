@@ -8,6 +8,11 @@ const { connectRedis } = require('./redis');
 const { initWebSocket } = require('./ws');
 const { startPollingService } = require('./services/polling');
 
+const logger = require('./utils/logger');
+const db = require('./db');
+const { pubClient } = require('./redis');
+
+// Routes
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const webhookRoutes = require('./routes/webhooks');
@@ -16,6 +21,20 @@ const publicRoutes = require('./routes/public');
 
 const app = express();
 const server = http.createServer(app);
+
+// Request tracking & timing middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    logger.info(`${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`, {
+      ip: req.ip,
+      status: res.statusCode,
+      duration: `${duration}ms`
+    });
+  });
+  next();
+});
 
 // CORS configuration - strict for API
 const corsOptions = {
@@ -42,6 +61,43 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
+// Health Check & Diagnostic Endpoint (Database, Redis, Memory, Uptime)
+app.get('/api/health', async (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    services: {
+      database: 'unknown',
+      redis: 'unknown'
+    }
+  };
+
+  try {
+    // Check PostgreSQL
+    const dbStart = Date.now();
+    await db.query('SELECT 1');
+    health.services.database = `connected (${Date.now() - dbStart}ms)`;
+  } catch (err) {
+    health.status = 'degraded';
+    health.services.database = `disconnected: ${err.message}`;
+  }
+
+  try {
+    // Check Redis
+    const redisStart = Date.now();
+    await pubClient.ping();
+    health.services.redis = `connected (${Date.now() - redisStart}ms)`;
+  } catch (err) {
+    health.status = 'degraded';
+    health.services.redis = `disconnected: ${err.message}`;
+  }
+
+  const statusCode = health.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(health);
+});
+
 // Stricter rate limiter for auth routes - 20 requests per 15 minutes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -60,12 +116,19 @@ const webhookLimiter = rateLimit({
   message: { error: 'Webhook rate limit exceeded.' }
 });
 
-// Routes
+// Mount Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/dashboard', uploadRoutes); // Reusing /api/dashboard prefix for upload
+app.use('/api/dashboard', uploadRoutes);
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 app.use('/api/public', publicRoutes);
+
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  logger.error('Unhandled server error:', err, { path: req.path, method: req.method });
+  res.status(500).json({ error: 'Internal Server Error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
+});
+
 
 // Initialize WebSocket Server
 initWebSocket(server);
