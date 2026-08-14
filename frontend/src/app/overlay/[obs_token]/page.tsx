@@ -29,6 +29,7 @@ function MatrixText({ text, className = '' }: { text: string, className?: string
 
 // Token ID map for CoinGecko
 const COINGECKO_IDS: Record<string, string> = {
+  'SUI': 'sui',
   'ETH': 'ethereum',
   'MATIC': 'matic-network',
   'POL': 'matic-network',
@@ -38,6 +39,7 @@ const COINGECKO_IDS: Record<string, string> = {
   'DAI': 'dai',
   'BNB': 'binancecoin'
 };
+
 
 export default function OverlayPage({ params }: { params: Promise<{ obs_token: string }> }) {
   const { obs_token } = use(params);

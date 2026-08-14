@@ -134,6 +134,7 @@ router.get('/analytics', async (req, res) => {
 
     // Approximate USD values for display
     const mockRates = {
+      'SUI': 3.50,
       'SOL': 150,
       'MATIC': 0.60,
       'POL': 0.60,
@@ -144,6 +145,7 @@ router.get('/analytics', async (req, res) => {
       'DAI': 1.0,
       'NATIVE': 1.0
     };
+
 
     transactions.forEach(tx => {
       const amt = parseFloat(tx.amount) || 0;

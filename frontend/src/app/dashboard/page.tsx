@@ -18,8 +18,8 @@ export default function Dashboard() {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
-  // New Wallet form state
-  const [selectedChain, setSelectedChain] = useState('solana');
+  // New Wallet form state (SUI, Solana, Polygon, etc.)
+  const [selectedChain, setSelectedChain] = useState('sui');
   const [newWalletAddress, setNewWalletAddress] = useState('');
 
   // Transactions & Analytics states
@@ -176,9 +176,9 @@ export default function Dashboard() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          amount: 0.5,
-          currency: 'SOL',
-          sender: streamer.public_address ? `${streamer.public_address.slice(0, 6)}...` : '0xDonor',
+          amount: 25,
+          currency: 'SUI',
+          sender: streamer.public_address ? `${streamer.public_address.slice(0, 6)}...Slush` : '0xSlushDonor',
           message: '⚡ Teste de alerta ao vivo no Live Crypto OBS!'
         })
       });
@@ -266,7 +266,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#08090d] text-cyan-400 flex flex-col items-center justify-center font-mono gap-4">
+      <div className="min-h-screen text-cyan-400 flex flex-col items-center justify-center font-mono gap-4">
         <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
         <div className="text-sm tracking-widest uppercase animate-pulse">Carregando Painel Live Crypto...</div>
       </div>
@@ -277,23 +277,23 @@ export default function Dashboard() {
   const donationUrl = typeof window !== 'undefined' && streamer.id ? `${window.location.origin}/pay/${streamer.id}` : '';
 
   return (
-    <div className="min-h-screen bg-[#08090d] text-slate-100 pb-16 relative">
+    <div className="min-h-screen text-slate-100 pb-16 relative">
       {/* Top Navbar */}
       <header className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-500/30 bg-zinc-900 flex items-center justify-center p-1">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-500/30 bg-zinc-900 flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
               <Image src="/brand/logo-png.png" alt="Logo" width={36} height={36} className="object-contain" />
             </div>
             <div>
-              <span className="font-black tracking-wider text-base text-white flex items-center gap-2">
-                PAINEL DO CRIADOR <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono">LIVE CRYPTO</span>
+              <span className="font-extrabold tracking-wide text-base text-white flex items-center gap-2 font-sans">
+                PAINEL DO CRIADOR <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">LIVE CRYPTO</span>
               </span>
             </div>
           </Link>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 text-xs font-mono bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-white/10">
+            <div className="hidden md:flex items-center gap-2 text-xs font-mono bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-white/10">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span className="text-slate-400">Conectado:</span>
               <span className="text-cyan-400 font-bold">{streamer.public_address.slice(0, 6)}...{streamer.public_address.slice(-4)}</span>
@@ -301,7 +301,7 @@ export default function Dashboard() {
 
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 text-xs font-mono border border-red-500/40 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 text-xs font-mono border border-red-500/40 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer font-bold"
             >
               SAIR
             </button>
@@ -315,7 +315,7 @@ export default function Dashboard() {
         {/* Quick Link Share Banners */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* OBS Overlay Source Link */}
-          <div className="glass-card p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+          <div className="glass-card p-6 rounded-3xl border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)]">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-2">
                 <span>📹 LINK DO OBS BROWSER SOURCE</span>
@@ -333,11 +333,11 @@ export default function Dashboard() {
                 type="text" 
                 readOnly 
                 value={obsUrl}
-                className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
+                className="w-full text-xs font-mono px-3 py-2.5 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
               />
               <button 
                 onClick={() => copyToClipboard(obsUrl, 'obs')}
-                className="px-4 py-2 bg-cyan-500 text-black text-xs font-mono font-bold rounded-xl hover:bg-cyan-400 transition-all shrink-0 cursor-pointer"
+                className="px-4 py-2 bg-cyan-500 text-black text-xs font-mono font-bold rounded-xl hover:bg-cyan-400 transition-all shrink-0 cursor-pointer shadow-md"
               >
                 {copiedLink === 'obs' ? 'COPIADO!' : 'COPIAR'}
               </button>
@@ -348,7 +348,7 @@ export default function Dashboard() {
           </div>
 
           {/* Public Donation Link for Donors */}
-          <div className="glass-card p-6 rounded-2xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="glass-card p-6 rounded-3xl border border-purple-500/30 shadow-[0_0_25px_rgba(168,85,247,0.15)]">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-mono font-bold text-purple-400 flex items-center gap-2">
                 <span>🔗 SEU LINK PÚBLICO DE DOAÇÕES (DOADORES)</span>
@@ -368,11 +368,11 @@ export default function Dashboard() {
                 type="text" 
                 readOnly 
                 value={donationUrl}
-                className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
+                className="w-full text-xs font-mono px-3 py-2.5 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
               />
               <button 
                 onClick={() => copyToClipboard(donationUrl, 'pay')}
-                className="px-4 py-2 bg-purple-500 text-white text-xs font-mono font-bold rounded-xl hover:bg-purple-400 transition-all shrink-0 cursor-pointer"
+                className="px-4 py-2 bg-purple-500 text-white text-xs font-mono font-bold rounded-xl hover:bg-purple-400 transition-all shrink-0 cursor-pointer shadow-md"
               >
                 {copiedLink === 'pay' ? 'COPIADO!' : 'COPIAR'}
               </button>
@@ -385,25 +385,25 @@ export default function Dashboard() {
 
         {/* Analytics Highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="glass-card p-6 rounded-2xl border border-white/10">
+          <div className="glass-card p-6 rounded-3xl border border-white/10">
             <div className="text-xs font-mono text-slate-400 uppercase">Total Arrecadado (Est.)</div>
             <div className="text-3xl font-black text-cyan-400 mt-2 font-mono">${analytics.estimatedTotalUSD} <span className="text-xs text-slate-400">USD</span></div>
-            <div className="text-[11px] text-slate-500 font-mono mt-1">100% recebido direto em carteira</div>
+            <div className="text-[11px] text-slate-500 font-mono mt-1">100% direto na sua carteira</div>
           </div>
 
-          <div className="glass-card p-6 rounded-2xl border border-white/10">
+          <div className="glass-card p-6 rounded-3xl border border-white/10">
             <div className="text-xs font-mono text-slate-400 uppercase">Total de Doações</div>
             <div className="text-3xl font-black text-purple-400 mt-2 font-mono">{analytics.totalTransactions}</div>
             <div className="text-[11px] text-slate-500 font-mono mt-1">Transações confirmadas on-chain</div>
           </div>
 
-          <div className="glass-card p-6 rounded-2xl border border-white/10">
-            <div className="text-xs font-mono text-slate-400 uppercase">Tokens Recebidos</div>
+          <div className="glass-card p-6 rounded-3xl border border-white/10">
+            <div className="text-xs font-mono text-slate-400 uppercase">Tokens Recebidos (SUI / SOL / EVM)</div>
             <div className="flex flex-wrap gap-2 mt-2">
               {Object.entries(analytics.tokenBreakdown).length > 0 ? (
                 Object.entries(analytics.tokenBreakdown).map(([token, amount]) => (
-                  <span key={token} className="px-2 py-1 bg-zinc-800 rounded-lg text-xs font-mono text-slate-200">
-                    <strong>{amount.toFixed(2)}</strong> {token}
+                  <span key={token} className="px-2.5 py-1 bg-zinc-800 rounded-xl text-xs font-mono text-slate-200 font-bold border border-white/5">
+                    {amount.toFixed(2)} {token}
                   </span>
                 ))
               ) : (
@@ -419,7 +419,7 @@ export default function Dashboard() {
           {/* Left Column: Alerts, Themes & Donation Goals */}
           <div className="space-y-8">
             {/* Visual Theme & Goals Settings */}
-            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+            <div className="glass-card p-6 sm:p-8 rounded-3xl border border-white/10 space-y-6">
               <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono flex items-center gap-2">
                 <span>🎨 TEMA VISUAL & META DE DOAÇÕES</span>
               </h2>
@@ -499,7 +499,7 @@ export default function Dashboard() {
                 <button 
                   type="submit" 
                   disabled={configSaveStatus === 'saving'}
-                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-bold text-xs font-mono tracking-wider uppercase rounded-xl hover:opacity-90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-bold text-xs font-mono tracking-wider uppercase rounded-xl hover:opacity-90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
                 >
                   {configSaveStatus === 'saving' ? 'SALVANDO CONFIGURAÇÃO...' : 
                    configSaveStatus === 'success' ? '✅ CONFIGURAÇÃO SALVA!' : 
@@ -509,17 +509,17 @@ export default function Dashboard() {
             </div>
 
             {/* Custom IPFS Media & Audio Uploader */}
-            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+            <div className="glass-card p-6 sm:p-8 rounded-3xl border border-white/10 space-y-6">
               <h2 className="text-base font-bold uppercase tracking-wider text-purple-400 font-mono flex items-center gap-2">
                 <span>📁 MÍDIA & ÁUDIO PERSONALIZADOS (IPFS)</span>
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
                 {/* Media Uploader */}
-                <div className="p-4 rounded-xl border border-dashed border-white/20 bg-zinc-950/40 text-center space-y-2">
+                <div className="p-4 rounded-2xl border border-dashed border-white/20 bg-zinc-950/50 text-center space-y-2">
                   <div className="text-slate-300 font-bold">GIF / MP4 do Alerta</div>
                   <p className="text-[10px] text-slate-500">Exibido na tela quando doar</p>
-                  <label className="inline-block px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-cyan-400 font-bold cursor-pointer transition-colors">
+                  <label className="inline-block px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-cyan-400 font-bold cursor-pointer transition-colors">
                     {uploadingMedia ? 'Enviando ao IPFS...' : 'Selecionar Arquivo'}
                     <input 
                       type="file" 
@@ -535,10 +535,10 @@ export default function Dashboard() {
                 </div>
 
                 {/* Audio Uploader */}
-                <div className="p-4 rounded-xl border border-dashed border-white/20 bg-zinc-950/40 text-center space-y-2">
+                <div className="p-4 rounded-2xl border border-dashed border-white/20 bg-zinc-950/50 text-center space-y-2">
                   <div className="text-slate-300 font-bold">Áudio / Chime do Alerta</div>
                   <p className="text-[10px] text-slate-500">Tocado instantaneamente</p>
-                  <label className="inline-block px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-purple-400 font-bold cursor-pointer transition-colors">
+                  <label className="inline-block px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-purple-400 font-bold cursor-pointer transition-colors">
                     {uploadingAudio ? 'Enviando ao IPFS...' : 'Selecionar Áudio (MP3)'}
                     <input 
                       type="file" 
@@ -560,12 +560,12 @@ export default function Dashboard() {
           <div className="space-y-8">
             
             {/* Live OBS Overlay Simulator */}
-            <div className="glass-card p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)] space-y-4">
+            <div className="glass-card p-6 sm:p-8 rounded-3xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)] space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
                   ⚡ SIMULADOR DO OVERLAY OBS
                 </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30 font-bold">
                   WEBSOCKET ATIVO
                 </span>
               </div>
@@ -599,13 +599,13 @@ export default function Dashboard() {
                   'bg-zinc-900/90 border-cyan-400 text-white'
                 }`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-lg shrink-0">
-                      ⚡
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-base font-bold shrink-0 text-cyan-400">
+                      SUI
                     </div>
                     <div>
                       <div className="text-[10px] uppercase font-mono tracking-widest text-cyan-400">NOVA DOAÇÃO RECEBIDA</div>
-                      <div className="text-sm font-black">0.5 SOL ($75.00 USD)</div>
-                      <div className="text-[10px] text-slate-400 font-mono">de: 8x3s...F3aQ</div>
+                      <div className="text-sm font-black">25 SUI ($87.50 USD)</div>
+                      <div className="text-[10px] text-slate-400 font-mono">de: 0x8f3c...Slush</div>
                     </div>
                   </div>
                   <div className="mt-2 pt-2 border-t border-white/10 text-xs italic text-slate-300">
@@ -628,7 +628,7 @@ export default function Dashboard() {
             </div>
 
             {/* Payout Wallets Manager */}
-            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+            <div className="glass-card p-6 sm:p-8 rounded-3xl border border-white/10 space-y-6">
               <h2 className="text-base font-bold uppercase tracking-wider text-emerald-400 font-mono flex items-center gap-2">
                 <span>👛 CARTEIRAS DE RECEBIMENTO (MULTI-CHAIN)</span>
               </h2>
@@ -644,7 +644,7 @@ export default function Dashboard() {
                     <div key={w.chain_id} className="p-3 bg-zinc-950/60 rounded-xl border border-white/10 flex items-center justify-between text-xs font-mono">
                       <div>
                         <span className="px-2 py-0.5 rounded bg-zinc-800 text-slate-300 font-bold uppercase mr-2">
-                          {w.chain_id === 'solana' ? 'SOLANA' : w.chain_id === '137' ? 'POLYGON' : w.chain_id === '8453' ? 'BASE' : w.chain_id === '1' ? 'ETHEREUM' : `CHAIN ${w.chain_id}`}
+                          {w.chain_id === 'sui' ? 'SUI PROTOCOL' : w.chain_id === 'solana' ? 'SOLANA' : w.chain_id === '137' ? 'POLYGON' : w.chain_id === '8453' ? 'BASE' : w.chain_id === '1' ? 'ETHEREUM' : `CHAIN ${w.chain_id}`}
                         </span>
                         <span className="text-slate-400">{w.public_address}</span>
                       </div>
@@ -661,9 +661,10 @@ export default function Dashboard() {
                     <select 
                       value={selectedChain}
                       onChange={e => setSelectedChain(e.target.value)}
-                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                      className="w-full glass-input px-3 py-2.5 rounded-xl text-xs font-mono"
                     >
-                      <option value="solana">Solana (SOL)</option>
+                      <option value="sui">SUI Protocol (Slush Wallet)</option>
+                      <option value="solana">Solana (Phantom / SOL)</option>
                       <option value="137">Polygon (POL/MATIC)</option>
                       <option value="8453">Base (USDC)</option>
                       <option value="42161">Arbitrum</option>
@@ -673,10 +674,10 @@ export default function Dashboard() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-mono text-slate-400 mb-1">Endereço da Carteira:</label>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Endereço da Carteira ({selectedChain.toUpperCase()}):</label>
                     <input 
                       type="text" 
-                      placeholder="Ex: 8x3s... ou 0x1234..."
+                      placeholder="Ex: 0x8f3c... (Sui) ou 8x3s... (Solana)"
                       value={newWalletAddress}
                       onChange={e => setNewWalletAddress(e.target.value)}
                       className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
@@ -699,7 +700,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Transactions Table */}
-        <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
+        <div className="glass-card p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
           <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
             📜 HISTÓRICO RECENTE DE DOAÇÕES
           </h2>
