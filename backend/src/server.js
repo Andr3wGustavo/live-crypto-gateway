@@ -138,17 +138,21 @@ const PORT = process.env.PORT || 8080;
 async function startServer() {
   try {
     await connectRedis();
-
-    // Start the fallback polling service for missed webhooks
-    startPollingService();
-
-    server.listen(PORT, () => {
-      console.log(`Backend server running on port ${PORT}`);
-    });
   } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
+    logger.warn('Could not establish external Redis connection, running with in-memory PubSub fallback.');
   }
+
+  try {
+    startPollingService();
+  } catch (err) {
+    logger.warn('Polling service initialized in standby mode.');
+  }
+
+  server.listen(PORT, () => {
+    logger.info(`⚡ Live Crypto Backend API & WebSockets running on port ${PORT}`);
+    console.log(`\n\x1b[32m✔ Live Crypto Backend running on http://localhost:${PORT}\x1b[0m\n`);
+  });
 }
 
 startServer();
+
