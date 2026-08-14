@@ -2,11 +2,14 @@ const WebSocket = require('ws');
 const db = require('../db');
 const { subClient } = require('../redis');
 
+// Streamer connection pool: Map<streamerId, Set<WebSocket>>
+const streamerConnections = new Map();
+
 function initWebSocket(server) {
   const wss = new WebSocket.Server({ server });
 
   wss.on('connection', async (ws, req) => {
-    // Extract obs_token from the URL, e.g., ws://localhost:3000/?obs_token=UUID
+    // Extract obs_token from the URL, e.g., ws://localhost:8080/?obs_token=UUID
     const url = new URL(req.url, `http://${req.headers.host}`);
     const obsToken = url.searchParams.get('obs_token');
 
@@ -28,17 +31,44 @@ function initWebSocket(server) {
 
       console.log(`WebSocket connected for streamer: ${rows[0].public_address} (ID: ${streamerId})`);
 
-      // Subscribe to Redis channel for this streamer
-      await subClient.subscribe(channel, (message) => {
-        // message is a JSON string of the event payload
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(message);
-        }
-      });
+      // Add ws to streamer's connection pool
+      if (!streamerConnections.has(streamerId)) {
+        streamerConnections.set(streamerId, new Set());
 
+        // First connection for this streamer: Subscribe to Redis channel
+        await subClient.subscribe(channel, (message) => {
+          const clientSet = streamerConnections.get(streamerId);
+          if (clientSet) {
+            for (const client of clientSet) {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(message);
+              }
+            }
+          }
+        });
+        console.log(`Subscribed to Redis channel: ${channel}`);
+      }
+
+      streamerConnections.get(streamerId).add(ws);
+
+      // Handle disconnection safely
       ws.on('close', async () => {
-        console.log(`WebSocket disconnected for streamer ID: ${streamerId}`);
-        await subClient.unsubscribe(channel);
+        const clientSet = streamerConnections.get(streamerId);
+        if (clientSet) {
+          clientSet.delete(ws);
+          console.log(`WebSocket disconnected for streamer ID: ${streamerId} (${clientSet.size} client(s) remaining)`);
+
+          // Only unsubscribe if all clients for this streamer disconnected
+          if (clientSet.size === 0) {
+            streamerConnections.delete(streamerId);
+            try {
+              await subClient.unsubscribe(channel);
+              console.log(`Unsubscribed from Redis channel: ${channel}`);
+            } catch (err) {
+              console.error(`Error unsubscribing channel ${channel}:`, err);
+            }
+          }
+        }
       });
 
       // Fetch initial configurations
@@ -83,3 +113,4 @@ function initWebSocket(server) {
 module.exports = {
   initWebSocket
 };
+

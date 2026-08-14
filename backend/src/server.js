@@ -20,10 +20,17 @@ const server = http.createServer(app);
 // CORS configuration - strict for API
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  credentials: true
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+
+// Preserve rawBody for accurate cryptographic HMAC webhook signature validation
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Global rate limiter - 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({

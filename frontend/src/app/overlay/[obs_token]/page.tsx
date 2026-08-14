@@ -19,7 +19,7 @@ function MatrixText({ text, className = '' }: { text: string, className?: string
       );
       iteration += 1 / 3;
       if (iteration >= text.length) clearInterval(interval);
-    }, 30);
+    }, 25);
 
     return () => clearInterval(interval);
   }, [text]);
@@ -31,10 +31,12 @@ function MatrixText({ text, className = '' }: { text: string, className?: string
 const COINGECKO_IDS: Record<string, string> = {
   'ETH': 'ethereum',
   'MATIC': 'matic-network',
+  'POL': 'matic-network',
   'SOL': 'solana',
   'USDC': 'usd-coin',
   'USDT': 'tether',
-  'DAI': 'dai'
+  'DAI': 'dai',
+  'BNB': 'binancecoin'
 };
 
 export default function OverlayPage({ params }: { params: Promise<{ obs_token: string }> }) {
@@ -42,25 +44,26 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
   const [donation, setDonation] = useState<{ amount: number, currency: string, sender: string, message: string, fiatValue?: number } | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const [theme, setTheme] = useState<'matrix' | 'cyberpunk' | 'minimal' | 'fire'>('cyberpunk');
-  const [goalAmount, setGoalAmount] = useState(0.00);
+  const [goalAmount, setGoalAmount] = useState(100.00);
   const [currentAmount, setCurrentAmount] = useState(0.00);
-  const [goalTitle, setGoalTitle] = useState('Donation Goal');
+  const [goalTitle, setGoalTitle] = useState('Meta de Doações');
   const [mediaConfig, setMediaConfig] = useState<{ mediaUrl: string | null; audioUrl: string | null }>({ mediaUrl: null, audioUrl: null });
 
   // Text-to-Speech using Web Speech API
   const speakDonation = useCallback((donationData: { amount: number, currency: string, sender: string, message: string }) => {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const senderShort = donationData.sender.substring(0, 8);
-      let utteranceText = `${senderShort} sent ${donationData.amount} ${donationData.currency}.`;
+      const senderShort = donationData.sender.substring(0, 6);
+      let utteranceText = `${senderShort} doou ${donationData.amount} ${donationData.currency}.`;
       if (donationData.message) {
         const sanitized = donationData.message.replace(/<[^>]*>/g, '').substring(0, 200);
-        utteranceText += ` Message: ${sanitized}`;
+        utteranceText += ` Mensagem: ${sanitized}`;
       }
       const utterance = new SpeechSynthesisUtterance(utteranceText);
-      utterance.rate = 0.9;
-      utterance.pitch = 0.8;
+      utterance.rate = 0.95;
+      utterance.pitch = 0.9;
       utterance.volume = 1.0;
+      utterance.lang = 'pt-BR';
       window.speechSynthesis.speak(utterance);
     }
   }, []);
@@ -85,21 +88,22 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
     // Connect to WebSocket Server
     const wsUrl = `ws://localhost:8080/?obs_token=${obs_token}`;
     let ws: WebSocket;
+    let reconnectTimeout: NodeJS.Timeout;
 
     const connectWS = () => {
       ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => console.log('Connected to WS');
+      ws.onopen = () => console.log('Connected to Live Crypto OBS WebSocket');
 
       ws.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
           
           if (data.event === 'CONNECTED' && data.config) {
-            setTheme(data.config.theme);
-            setGoalAmount(data.config.goal_amount);
-            setCurrentAmount(data.config.goal_current);
-            setGoalTitle(data.config.goal_title);
+            setTheme(data.config.theme || 'cyberpunk');
+            setGoalAmount(data.config.goal_amount || 100);
+            setCurrentAmount(data.config.goal_current || 0);
+            setGoalTitle(data.config.goal_title || 'Meta de Doações');
             setMediaConfig({ mediaUrl: data.config.media_url, audioUrl: data.config.audio_url });
           }
 
@@ -133,22 +137,23 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
             const addedVal = fiatVal ? parseFloat(fiatVal) : donationAmount;
             setCurrentAmount(prev => prev + addedVal);
 
-            // Play custom audio if configured
-            if (data.audio_url || mediaConfig.audioUrl) {
-              const audioUrl = data.audio_url || mediaConfig.audioUrl;
-              const audio = new Audio(audioUrl);
+            // Play custom audio chime
+            const audioToPlay = data.audio_url || mediaConfig.audioUrl;
+            if (audioToPlay) {
+              const audio = new Audio(audioToPlay);
               audio.volume = 1.0;
-              audio.play().catch(e => console.error("Failed to play custom audio:", e));
+              audio.play().catch(e => console.error("Audio playback error:", e));
             }
 
             speakDonation(donationData);
 
+            // Hide alert after 8 seconds
             setTimeout(() => {
               setIsExiting(true);
               setTimeout(() => {
                 setDonation(null);
                 setIsExiting(false);
-              }, 500);
+              }, 600);
             }, 8000);
           }
         } catch (e) {
@@ -157,7 +162,7 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
       };
 
       ws.onclose = () => {
-        setTimeout(connectWS, 5000);
+        reconnectTimeout = setTimeout(connectWS, 4000);
       };
     };
 
@@ -165,114 +170,101 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
 
     return () => {
       if (ws) ws.close();
+      clearTimeout(reconnectTimeout);
     };
-  }, [obs_token, speakDonation]);
+  }, [obs_token, mediaConfig.audioUrl, speakDonation]);
 
-  const progressPercent = Math.min((currentAmount / goalAmount) * 100, 100);
-
-  // Theme configurations
-  const getThemeClasses = () => {
-    switch (theme) {
-      case 'cyberpunk':
-        return {
-          container: "bg-transparent font-sans tracking-wide text-cyan-400 scanlines",
-          goalBox: "bg-fuchsia-900/40 border-2 border-cyan-400 p-3 shadow-[0_0_15px_rgba(0,255,255,0.6),inset_0_0_10px_rgba(255,0,255,0.4)] backdrop-blur-sm",
-          goalText: "text-3xl text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,1)]",
-          barBg: "bg-fuchsia-950/60 border border-cyan-500/50",
-          barFill: "bg-gradient-to-r from-fuchsia-500 to-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.8)]",
-          alertBox: "bg-slate-900/80 border-l-4 border-r-4 border-fuchsia-500 p-8 shadow-[0_0_30px_rgba(255,0,255,0.4)] backdrop-blur-md skew-x-[-2deg]",
-          alertAccent: "text-fuchsia-400 drop-shadow-[0_0_8px_rgba(255,0,255,0.8)]",
-          messageText: "text-xl mt-4 border-t border-cyan-500/50 pt-4 text-cyan-200"
-        };
-      case 'minimal':
-        return {
-          container: "bg-transparent font-sans text-slate-800",
-          goalBox: "bg-white/70 border border-white/40 p-4 rounded-2xl shadow-xl backdrop-blur-xl",
-          goalText: "text-2xl font-semibold text-slate-800",
-          barBg: "bg-slate-200 rounded-full overflow-hidden h-2",
-          barFill: "bg-slate-800 rounded-full",
-          alertBox: "bg-white/80 border border-white/50 p-8 rounded-3xl shadow-2xl backdrop-blur-2xl text-center",
-          alertAccent: "text-indigo-600 font-bold",
-          messageText: "text-lg mt-4 text-slate-600 font-medium"
-        };
-      case 'fire':
-        return {
-          container: "bg-transparent font-bold text-orange-500",
-          goalBox: "bg-red-950/80 border-b-4 border-orange-500 p-3 shadow-[0_4px_20px_rgba(255,100,0,0.4)]",
-          goalText: "text-3xl text-yellow-400 drop-shadow-[0_2px_5px_rgba(255,0,0,1)]",
-          barBg: "bg-red-950",
-          barFill: "bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400",
-          alertBox: "bg-red-950/90 border-2 border-orange-500 p-8 shadow-[0_0_50px_rgba(255,50,0,0.6)] rounded-lg",
-          alertAccent: "text-yellow-400 drop-shadow-[0_0_10px_rgba(255,100,0,1)]",
-          messageText: "text-xl mt-4 text-orange-200"
-        };
-      default: // matrix (original)
-        return {
-          container: "bg-transparent font-mono text-green-500 font-bold scanlines crt-flicker",
-          goalBox: "bg-black/85 border border-green-500 p-3 shadow-[0_0_10px_rgba(0,255,0,0.5)]",
-          goalText: "text-3xl numeral-pulse text-green-400 drop-shadow-[0_0_5px_rgba(0,255,0,1)] text-center",
-          barBg: "bg-green-900/20 border border-green-500/30",
-          barFill: "bg-green-500 shadow-[0_0_10px_rgba(0,255,0,1)]",
-          alertBox: "bg-black/95 border-2 border-green-500 p-8 text-center shadow-[0_0_40px_rgba(0,255,0,0.9)]",
-          alertAccent: "text-green-400 drop-shadow-[0_0_10px_rgba(0,255,0,1)]",
-          messageText: "text-xl mt-4 border-t border-green-500/50 pt-4 text-green-400 drop-shadow-[0_0_5px_rgba(0,255,0,1)]"
-        };
-    }
-  };
-
-  const t = getThemeClasses();
+  const progressPercent = Math.min(100, (currentAmount / (goalAmount || 1)) * 100);
 
   return (
-    <div className={`w-screen h-screen overflow-hidden relative ${t.container}`}>
-      {/* Goal Overlay */}
-      <div className={`absolute top-4 right-4 transition-all duration-500 ${t.goalBox}`}>
-        <div className="text-[10px] uppercase opacity-75 mb-1 font-mono tracking-widest text-right">{goalTitle}</div>
-        <div className={t.goalText}>
-          ${currentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}
-        </div>
-        <div className={`mt-2 w-48 h-1.5 ${t.barBg}`}>
-          <div
-            className={`h-full transition-all duration-1000 ease-out ${t.barFill}`}
-            style={{ width: `${progressPercent}%` }}
-          />
+    <div className="w-screen h-screen bg-transparent overflow-hidden relative p-8 select-none pointer-events-none">
+      
+      {/* 🎯 Real-Time Goal Progress Bar (Top Right) */}
+      <div className="absolute top-8 right-8 w-96">
+        <div className={`p-4 rounded-2xl backdrop-blur-xl border shadow-2xl transition-all duration-500 ${
+          theme === 'matrix' ? 'bg-black/90 border-green-500 text-green-400 shadow-[0_0_25px_rgba(0,255,0,0.3)]' :
+          theme === 'fire' ? 'bg-zinc-950/90 border-orange-500 text-orange-200 shadow-[0_0_25px_rgba(249,115,22,0.3)]' :
+          theme === 'minimal' ? 'bg-slate-900/90 border-white/20 text-slate-100' :
+          'bg-zinc-950/90 border-cyan-400 text-white shadow-[0_0_25px_rgba(6,182,212,0.3)]'
+        }`}>
+          <div className="flex justify-between items-center text-xs font-mono mb-2">
+            <span className="font-bold uppercase tracking-wider">🎯 {goalTitle}</span>
+            <span className="font-bold">
+              ${currentAmount.toFixed(2)} / ${goalAmount.toFixed(2)} USD
+            </span>
+          </div>
+
+          {/* Bar container */}
+          <div className="w-full h-3 bg-black/60 rounded-full overflow-hidden p-0.5 border border-white/10">
+            <div 
+              className={`h-full rounded-full transition-all duration-1000 ${
+                theme === 'matrix' ? 'bg-green-500 shadow-[0_0_10px_rgba(0,255,0,0.8)]' :
+                theme === 'fire' ? 'bg-gradient-to-r from-orange-500 via-amber-400 to-red-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]' :
+                theme === 'minimal' ? 'bg-white' :
+                'bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]'
+              }`}
+              style={{ width: `${progressPercent}%` }}
+            ></div>
+          </div>
         </div>
       </div>
 
-      {/* Donation Alert Animation */}
+      {/* ⚡ Real-Time Pop-Up Donation Alert (Center-Top) */}
       {donation && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className={`max-w-2xl transform transition-all duration-500 ${t.alertBox} ${isExiting ? 'scale-90 opacity-0' : 'scale-100 opacity-100 animate-bounce-short'}`}>
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 w-full max-w-lg z-50">
+          <div className={`p-6 rounded-2xl backdrop-blur-2xl border shadow-2xl transition-all ${
+            isExiting ? 'alert-exit' : 'alert-enter'
+          } ${
+            theme === 'matrix' ? 'bg-black/95 border-green-500 text-green-400 shadow-[0_0_50px_rgba(0,255,0,0.5)]' :
+            theme === 'fire' ? 'bg-zinc-950/95 border-orange-500 text-orange-100 shadow-[0_0_50px_rgba(249,115,22,0.5)]' :
+            theme === 'minimal' ? 'bg-slate-900/95 border-white/30 text-white shadow-2xl' :
+            'bg-zinc-900/95 border-cyan-400 text-white shadow-[0_0_50px_rgba(6,182,212,0.5)]'
+          }`}>
             
-            {/* Custom media display if configured */}
-            {mediaConfig.mediaUrl && (
-              <div className="flex justify-center mb-4 max-h-48 overflow-hidden">
-                <img src={mediaConfig.mediaUrl} alt="Alert GIF" className="object-contain max-h-48 rounded shadow-[0_0_15px_rgba(0,255,0,0.3)]" />
-              </div>
-            )}
-
-            <div className="text-4xl mb-4 tracking-widest text-center">
-              {theme === 'matrix' ? (
-                <MatrixText text={`${donation.sender.substring(0, 8)}...`} className={t.alertAccent} />
+            {/* Custom Media GIF / MP4 or Default Icon */}
+            <div className="flex items-center gap-5">
+              {mediaConfig.mediaUrl ? (
+                <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={mediaConfig.mediaUrl} alt="Alert Media" className="w-full h-full object-cover" />
+                </div>
               ) : (
-                <span className={t.alertAccent}>{donation.sender.substring(0, 8)}...</span>
-              )}
-              <span className="mx-2 opacity-80">SENT</span>
-              <span className={`font-bold ${t.alertAccent}`}>
-                {donation.amount} {donation.currency}
-              </span>
-              
-              {/* Fiat Value display (CoinGecko) */}
-              {donation.fiatValue && (
-                <div className="text-xl mt-2 opacity-80">
-                  (~${donation.fiatValue.toFixed(2)} USD)
+                <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl shrink-0 ${
+                  theme === 'matrix' ? 'bg-green-950/50 border-green-500 text-green-400' :
+                  theme === 'fire' ? 'bg-orange-950/50 border-orange-500 text-orange-400' :
+                  'bg-cyan-950/50 border-cyan-400 text-cyan-400'
+                }`}>
+                  ⚡
                 </div>
               )}
+
+              <div className="overflow-hidden">
+                <div className={`text-xs font-mono uppercase tracking-widest ${
+                  theme === 'matrix' ? 'text-green-500' : theme === 'fire' ? 'text-orange-400' : 'text-cyan-400'
+                }`}>
+                  NOVA DOAÇÃO CRIPTO!
+                </div>
+
+                <div className="text-2xl font-black mt-0.5 tracking-tight">
+                  {donation.amount} {donation.currency}
+                  {donation.fiatValue && (
+                    <span className="text-sm font-normal text-slate-300 ml-2">
+                      (~${donation.fiatValue} USD)
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-xs text-slate-300 font-mono mt-0.5 truncate">
+                  De: <MatrixText text={donation.sender} />
+                </div>
+              </div>
             </div>
 
+            {/* Donor Message */}
             {donation.message && (
-              <p className={`break-words text-center ${t.messageText}`}>
+              <div className="mt-4 pt-3 border-t border-white/10 text-sm font-medium italic text-slate-200 leading-relaxed">
                 &quot;{donation.message}&quot;
-              </p>
+              </div>
             )}
           </div>
         </div>

@@ -116,6 +116,93 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
+// GET /api/dashboard/analytics - Aggregate analytics metrics for creator
+router.get('/analytics', async (req, res) => {
+  const streamerId = req.user.id;
+  try {
+    const txRes = await db.query(
+      'SELECT amount, currency, status, timestamp FROM Transactions WHERE streamer_id = $1',
+      [streamerId]
+    );
+
+    const transactions = txRes.rows;
+    const totalTransactions = transactions.length;
+
+    // Aggregate by currency
+    const tokenBreakdown = {};
+    let estimatedTotalUSD = 0;
+
+    // Approximate USD values for display
+    const mockRates = {
+      'SOL': 150,
+      'MATIC': 0.60,
+      'POL': 0.60,
+      'ETH': 3200,
+      'BNB': 580,
+      'USDT': 1.0,
+      'USDC': 1.0,
+      'DAI': 1.0,
+      'NATIVE': 1.0
+    };
+
+    transactions.forEach(tx => {
+      const amt = parseFloat(tx.amount) || 0;
+      const curr = (tx.currency || 'USDC').toUpperCase();
+      tokenBreakdown[curr] = (tokenBreakdown[curr] || 0) + amt;
+
+      const rate = mockRates[curr] || 1.0;
+      estimatedTotalUSD += amt * rate;
+    });
+
+    res.json({
+      totalTransactions,
+      estimatedTotalUSD: estimatedTotalUSD.toFixed(2),
+      tokenBreakdown,
+      recentCount: transactions.slice(0, 7).length
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/dashboard/test-alert - Trigger an instant test donation alert to OBS overlay
+router.post('/test-alert', async (req, res) => {
+  const streamerId = req.user.id;
+  const { amount = 0.5, currency = 'SOL', sender = '0xTest...Donor', message = '⚡ Testing Live Crypto OBS Overlay!' } = req.body;
+
+  try {
+    // Fetch streamer alert configs for custom audio/media
+    const alertRes = await db.query(
+      'SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1',
+      [streamerId]
+    );
+
+    const alertConfig = alertRes.rows[0] || {};
+    const channel = `streamer:${streamerId}:events`;
+
+    const payload = JSON.stringify({
+      event: 'DONATION',
+      amount: parseFloat(amount),
+      currency: currency,
+      sender: sender,
+      message: message,
+      media_url: alertConfig.media_url || null,
+      audio_url: alertConfig.audio_url || null,
+      is_test: true,
+      timestamp: new Date().toISOString()
+    });
+
+    await pubClient.publish(channel, payload);
+    console.log(`[Test Alert] Dispatched test alert to streamer ${streamerId} (${channel})`);
+
+    res.json({ success: true, message: 'Test alert sent to OBS overlay!' });
+  } catch (error) {
+    console.error('Test alert dispatch error:', error);
+    res.status(500).json({ error: 'Failed to dispatch test alert' });
+  }
+});
+
 // Rotate OBS token - generates a new UUID and revokes the old one
 router.post('/rotate-token', async (req, res) => {
   const streamerId = req.user.id;
@@ -138,3 +225,4 @@ router.post('/rotate-token', async (req, res) => {
 });
 
 module.exports = router;
+

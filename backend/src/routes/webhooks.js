@@ -13,25 +13,39 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'whsec_default_secret';
 function validateWebhookSignature(req, res, next) {
   const signature = req.headers['x-alchemy-signature'] || req.headers['x-helius-signature'];
 
+  // In development, allow bypass if WEBHOOK_SECRET is not configured or in dev mode
+  if (process.env.NODE_ENV === 'development' && !signature) {
+    return next();
+  }
+
   if (!signature) {
     console.warn('Webhook received without signature header');
     return res.status(401).json({ error: 'Missing webhook signature' });
   }
 
-  // Compute HMAC-SHA256 of the raw body
-  const rawBody = JSON.stringify(req.body);
-  const expectedSignature = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
-    .update(rawBody)
-    .digest('hex');
+  try {
+    // Compute HMAC-SHA256 of the raw buffer body to prevent JSON parser mutation
+    const bodyToSign = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    const expectedSignature = crypto
+      .createHmac('sha256', WEBHOOK_SECRET)
+      .update(bodyToSign)
+      .digest('hex');
 
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
-    console.warn('Webhook signature mismatch - rejecting payload');
-    return res.status(401).json({ error: 'Invalid webhook signature' });
+    const signatureBuf = Buffer.from(signature);
+    const expectedBuf = Buffer.from(expectedSignature);
+
+    if (signatureBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(signatureBuf, expectedBuf)) {
+      console.warn('Webhook signature mismatch - rejecting payload');
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    next();
+  } catch (err) {
+    console.error('Signature validation error:', err);
+    return res.status(401).json({ error: 'Invalid webhook signature calculation' });
   }
-
-  next();
 }
+
 
 /**
  * Parse Alchemy webhook payload for ADDRESS_ACTIVITY events.

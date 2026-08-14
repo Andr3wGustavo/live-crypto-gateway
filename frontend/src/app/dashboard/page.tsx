@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [streamer, setStreamer] = useState({ public_address: '', obs_token: '' });
+  const [streamer, setStreamer] = useState<{ id?: number; public_address: string; obs_token: string }>({ public_address: '', obs_token: '' });
   const [wallets, setWallets] = useState<{ chain_id: string; public_address: string }[]>([]);
   
   // Alert Config and Goal state
@@ -12,70 +14,81 @@ export default function Dashboard() {
   const [activeTheme, setActiveTheme] = useState('cyberpunk');
   const [goalAmount, setGoalAmount] = useState('100.00');
   const [goalCurrent, setGoalCurrent] = useState('0.00');
-  const [goalTitle, setGoalTitle] = useState('Donation Goal');
+  const [goalTitle, setGoalTitle] = useState('Setup Novo');
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   // New Wallet form state
-  const [selectedChain, setSelectedChain] = useState('137');
+  const [selectedChain, setSelectedChain] = useState('solana');
   const [newWalletAddress, setNewWalletAddress] = useState('');
 
-  // Transactions and UI states
+  // Transactions & Analytics states
   const [transactions, setTransactions] = useState<{ tx_hash: string; sender_address: string; amount: string; currency: string; status: string; timestamp: string }[]>([]);
+  const [analytics, setAnalytics] = useState<{ totalTransactions: number; estimatedTotalUSD: string; tokenBreakdown: Record<string, number> }>({ totalTransactions: 0, estimatedTotalUSD: '0.00', tokenBreakdown: {} });
+  
+  // Upload and UI notifications
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [configSaveStatus, setConfigSaveStatus] = useState<'' | 'saving' | 'success' | 'error'>('');
   const [walletSaveStatus, setWalletSaveStatus] = useState<'' | 'saving' | 'success' | 'error'>('');
+  const [testAlertStatus, setTestAlertStatus] = useState<'' | 'sending' | 'success' | 'error'>('');
+  const [copiedLink, setCopiedLink] = useState<'obs' | 'pay' | null>(null);
 
-  useEffect(() => {
+  const fetchDashboardData = async () => {
     const token = localStorage.getItem('jwt');
     if (!token) {
       window.location.href = '/login';
       return;
     }
 
-    // Fetch dashboard settings
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const headers = { 'Authorization': `Bearer ${token}` };
-        
-        const dashboardRes = await fetch('http://localhost:8080/api/dashboard', { headers });
-        if (!dashboardRes.ok) throw new Error("Failed to load dashboard data");
-        const data = await dashboardRes.json();
+    try {
+      setLoading(true);
+      const headers = { 'Authorization': `Bearer ${token}` };
+      
+      const dashboardRes = await fetch('http://localhost:8080/api/dashboard', { headers });
+      if (!dashboardRes.ok) throw new Error("Failed to load dashboard data");
+      const data = await dashboardRes.json();
 
-        setStreamer(data.streamer || {});
-        setWallets(data.wallets || []);
-        
-        if (data.alertConfig) {
-          setMinAmount(parseFloat(data.alertConfig.min_amount || 0).toString());
-          setActiveTheme(data.alertConfig.active_theme || 'cyberpunk');
-          setGoalAmount(parseFloat(data.alertConfig.goal_amount || 0).toString());
-          setGoalCurrent(parseFloat(data.alertConfig.goal_current || 0).toString());
-          setGoalTitle(data.alertConfig.goal_title || 'Donation Goal');
-          setMediaUrl(data.alertConfig.media_url || null);
-          setAudioUrl(data.alertConfig.audio_url || null);
-        }
-
-        // Fetch recent transactions
-        const txRes = await fetch('http://localhost:8080/api/dashboard/transactions', { headers });
-        if (txRes.ok) {
-          const txData = await txRes.json();
-          setTransactions(txData);
-        }
-
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        localStorage.removeItem('jwt');
-        window.location.href = '/login';
+      setStreamer(data.streamer || {});
+      setWallets(data.wallets || []);
+      
+      if (data.alertConfig) {
+        setMinAmount(parseFloat(data.alertConfig.min_amount || 0).toString());
+        setActiveTheme(data.alertConfig.active_theme || 'cyberpunk');
+        setGoalAmount(parseFloat(data.alertConfig.goal_amount || 0).toString());
+        setGoalCurrent(parseFloat(data.alertConfig.goal_current || 0).toString());
+        setGoalTitle(data.alertConfig.goal_title || 'Setup Novo');
+        setMediaUrl(data.alertConfig.media_url || null);
+        setAudioUrl(data.alertConfig.audio_url || null);
       }
-    };
 
-    fetchData();
+      // Fetch recent transactions
+      const txRes = await fetch('http://localhost:8080/api/dashboard/transactions', { headers });
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(txData);
+      }
+
+      // Fetch analytics
+      const analyticsRes = await fetch('http://localhost:8080/api/dashboard/analytics', { headers });
+      if (analyticsRes.ok) {
+        const analyticsData = await analyticsRes.json();
+        setAnalytics(analyticsData);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      localStorage.removeItem('jwt');
+      window.location.href = '/login';
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
 
-  // Save general alert/theme/goal configuration
+  // Save Alert/Theme/Goal configuration
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('jwt');
@@ -129,7 +142,6 @@ export default function Dashboard() {
 
       if (!res.ok) throw new Error();
       
-      // Update local wallet state
       setWallets(prev => {
         const index = prev.findIndex(w => w.chain_id === selectedChain);
         if (index > -1) {
@@ -150,7 +162,58 @@ export default function Dashboard() {
     }
   };
 
-  // Handle IPFS Upload for Alert GIF/Video or Audio Sound
+  // Trigger Live Test Alert on OBS Overlay
+  const handleTriggerTestAlert = async () => {
+    const token = localStorage.getItem('jwt');
+    if (!token) return;
+
+    try {
+      setTestAlertStatus('sending');
+      const res = await fetch('http://localhost:8080/api/dashboard/test-alert', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: 0.5,
+          currency: 'SOL',
+          sender: streamer.public_address ? `${streamer.public_address.slice(0, 6)}...` : '0xDonor',
+          message: '⚡ Teste de alerta ao vivo no Live Crypto OBS!'
+        })
+      });
+
+      if (!res.ok) throw new Error();
+      setTestAlertStatus('success');
+      setTimeout(() => setTestAlertStatus(''), 2500);
+    } catch {
+      setTestAlertStatus('error');
+      setTimeout(() => setTestAlertStatus(''), 3000);
+    }
+  };
+
+  // Rotate OBS Token for security
+  const handleRotateToken = async () => {
+    if (!confirm('Deseja realmente gerar um novo link de OBS? Você precisará atualizar a URL no seu OBS Studio.')) return;
+    const token = localStorage.getItem('jwt');
+    if (!token) return;
+
+    try {
+      const res = await fetch('http://localhost:8080/api/dashboard/rotate-token', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStreamer(prev => ({ ...prev, obs_token: data.obs_token }));
+        alert('Novo token OBS gerado com sucesso!');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Handle IPFS Upload for Alert Media or Audio
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'media' | 'audio') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,382 +221,537 @@ export default function Dashboard() {
     const token = localStorage.getItem('jwt');
     if (!token) return;
 
-    const isMedia = type === 'media';
-    if (isMedia) setUploadingMedia(true);
-    else setUploadingAudio(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type);
+      if (type === 'media') setUploadingMedia(true);
+      else setUploadingAudio(true);
 
       const res = await fetch('http://localhost:8080/api/dashboard/upload', {
         method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}` 
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
 
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
-      
-      if (isMedia) {
+
+      if (type === 'media') {
         setMediaUrl(data.url);
+        setUploadingMedia(false);
       } else {
         setAudioUrl(data.url);
+        setUploadingAudio(false);
       }
-      alert(`${type.toUpperCase()} successfully uploaded to IPFS and updated!`);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert("Failed to upload file to IPFS. Please verify Pinata credentials.");
-    } finally {
-      if (isMedia) setUploadingMedia(false);
+      alert(`Falha no upload para o IPFS.`);
+      if (type === 'media') setUploadingMedia(false);
       else setUploadingAudio(false);
     }
   };
 
-  // Rotate OBS overlay token
-  const handleRotateToken = async () => {
-    const token = localStorage.getItem('jwt');
-    if (!token) return;
+  const copyToClipboard = (text: string, type: 'obs' | 'pay') => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(type);
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
 
-    if (!confirm("Are you sure you want to rotate your OBS overlay token? Any active OBS Browser Source will stop receiving alerts until you update its URL.")) return;
-
-    try {
-      const res = await fetch('http://localhost:8080/api/dashboard/rotate-token', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setStreamer(prev => ({ ...prev, obs_token: data.obs_token }));
-      alert("OBS Token successfully rotated!");
-    } catch {
-      alert("Failed to rotate OBS token.");
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('jwt');
+    window.location.href = '/login';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-cyan-400 flex items-center justify-center font-mono text-xl scanlines">
-        &gt; LOADING SECURE PROTOCOLS...
+      <div className="min-h-screen bg-[#08090d] text-cyan-400 flex flex-col items-center justify-center font-mono gap-4">
+        <div className="w-12 h-12 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-sm tracking-widest uppercase animate-pulse">Carregando Painel Live Crypto...</div>
       </div>
     );
   }
 
-  // Calculate stats
-  const totalReceived = transactions.reduce((acc, curr) => acc + parseFloat(curr.amount || '0'), 0);
+  const obsUrl = typeof window !== 'undefined' ? `${window.location.origin}/overlay/${streamer.obs_token}` : '';
+  const donationUrl = typeof window !== 'undefined' && streamer.id ? `${window.location.origin}/pay/${streamer.id}` : '';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-cyan-400 font-mono p-4 md:p-8 scanlines">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <header className="border-b border-cyan-500/40 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold uppercase tracking-widest text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
-              &gt; LIVE CRYPTO CONTROL CENTER_
-            </h1>
-            <p className="mt-2 text-xs text-cyan-400/70 break-all">
-              AUTHENTICATED ADDRESS: <span className="text-cyan-300 font-bold">{streamer.public_address}</span>
-            </p>
-          </div>
-          <button 
-            onClick={() => { localStorage.removeItem('jwt'); window.location.href = '/login'; }}
-            className="px-4 py-2 border border-red-500 text-red-500 hover:bg-red-500/10 uppercase font-bold text-xs tracking-wider transition-colors align-self-start md:align-self-auto"
-          >
-            [ DISCONNECT ]
-          </button>
-        </header>
-
-        {/* Stats Grid */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="border border-cyan-500/30 bg-cyan-950/5 p-4 rounded shadow-[0_0_10px_rgba(6,182,212,0.05)]">
-            <h3 className="text-xs uppercase text-cyan-400/60">Total Donations</h3>
-            <p className="text-3xl font-bold mt-1 text-cyan-300">{transactions.length}</p>
-          </div>
-          <div className="border border-cyan-500/30 bg-cyan-950/5 p-4 rounded shadow-[0_0_10px_rgba(6,182,212,0.05)]">
-            <h3 className="text-xs uppercase text-cyan-400/60">Current Goal Progress</h3>
-            <p className="text-3xl font-bold mt-1 text-cyan-300">${parseFloat(goalCurrent).toFixed(2)}</p>
-          </div>
-          <div className="border border-cyan-500/30 bg-cyan-950/5 p-4 rounded shadow-[0_0_10px_rgba(6,182,212,0.05)]">
-            <h3 className="text-xs uppercase text-cyan-400/60">Registered Payout Chains</h3>
-            <p className="text-3xl font-bold mt-1 text-cyan-300">{wallets.length}</p>
-          </div>
-        </section>
-
-        {/* Dynamic Integration Links */}
-        <section className="border border-cyan-500/30 bg-cyan-950/5 p-6 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)] space-y-4">
-          <h2 className="text-lg font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-2">-- INTEGRATIONS --</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs uppercase text-cyan-400/70 mb-1">OBS Browser Source Overlay Link</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`http://localhost:3000/overlay/${streamer.obs_token}`}
-                  className="flex-1 p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded text-xs select-all focus:outline-none"
-                />
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`http://localhost:3000/overlay/${streamer.obs_token}`);
-                    alert("OBS Overlay Link copied to clipboard!");
-                  }}
-                  className="px-4 bg-cyan-500 text-black text-xs font-bold uppercase hover:bg-cyan-400 transition-colors rounded"
-                >
-                  Copy
-                </button>
-              </div>
-              <p className="text-[10px] text-cyan-400/50 mt-1">Paste this URL as a Browser Source in OBS Studio. Width: 1920, Height: 1080.</p>
+    <div className="min-h-screen bg-[#08090d] text-slate-100 pb-16 relative">
+      {/* Top Navbar */}
+      <header className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-500/30 bg-zinc-900 flex items-center justify-center p-1">
+              <Image src="/brand/logo-png.png" alt="Logo" width={36} height={36} className="object-contain" />
             </div>
-            
             <div>
-              <label className="block text-xs uppercase text-cyan-400/70 mb-1">Public Donation Page Link (dApp)</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`http://localhost:3000/pay/${streamer.id}`}
-                  className="flex-1 p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded text-xs select-all focus:outline-none"
-                />
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`http://localhost:3000/pay/${streamer.id}`);
-                    alert("Donation Page Link copied to clipboard!");
-                  }}
-                  className="px-4 bg-cyan-500 text-black text-xs font-bold uppercase hover:bg-cyan-400 transition-colors rounded"
-                >
-                  Copy
-                </button>
-              </div>
-              <p className="text-[10px] text-cyan-400/50 mt-1">Share this link with your audience so they can send payments directly.</p>
+              <span className="font-black tracking-wider text-base text-white flex items-center gap-2">
+                PAINEL DO CRIADOR <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono">LIVE CRYPTO</span>
+              </span>
             </div>
-          </div>
+          </Link>
 
-          <div className="pt-2">
-            <button 
-              onClick={handleRotateToken}
-              className="px-4 py-1.5 border border-amber-500 text-amber-500 hover:bg-amber-500/10 uppercase font-bold text-[10px] tracking-wider transition-colors rounded"
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 text-xs font-mono bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="text-slate-400">Conectado:</span>
+              <span className="text-cyan-400 font-bold">{streamer.public_address.slice(0, 6)}...{streamer.public_address.slice(-4)}</span>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 text-xs font-mono border border-red-500/40 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
             >
-              [ Rotate OBS Token ]
+              SAIR
             </button>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Settings grid */}
+      {/* Main Content Container */}
+      <main className="max-w-7xl mx-auto px-6 pt-8 space-y-8">
+        
+        {/* Quick Link Share Banners */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* OBS Overlay Source Link */}
+          <div className="glass-card p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-2">
+                <span>📹 LINK DO OBS BROWSER SOURCE</span>
+              </span>
+              <button 
+                onClick={handleRotateToken} 
+                className="text-[10px] font-mono text-slate-400 hover:text-red-400 transition-colors"
+                title="Gera um novo link e cancela o anterior"
+              >
+                [ Redefinir Token ]
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                readOnly 
+                value={obsUrl}
+                className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
+              />
+              <button 
+                onClick={() => copyToClipboard(obsUrl, 'obs')}
+                className="px-4 py-2 bg-cyan-500 text-black text-xs font-mono font-bold rounded-xl hover:bg-cyan-400 transition-all shrink-0 cursor-pointer"
+              >
+                {copiedLink === 'obs' ? 'COPIADO!' : 'COPIAR'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">
+              Cole no OBS como <strong>Browser Source</strong> com resolução <strong>1920x1080</strong>.
+            </p>
+          </div>
+
+          {/* Public Donation Link for Donors */}
+          <div className="glass-card p-6 rounded-2xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-mono font-bold text-purple-400 flex items-center gap-2">
+                <span>🔗 SEU LINK PÚBLICO DE DOAÇÕES (DOADORES)</span>
+              </span>
+              {streamer.id && (
+                <Link 
+                  href={`/pay/${streamer.id}`} 
+                  target="_blank" 
+                  className="text-[10px] font-mono text-slate-400 hover:text-purple-300 transition-colors"
+                >
+                  [ Abrir Página ↗ ]
+                </Link>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                readOnly 
+                value={donationUrl}
+                className="w-full text-xs font-mono px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-slate-300 select-all"
+              />
+              <button 
+                onClick={() => copyToClipboard(donationUrl, 'pay')}
+                className="px-4 py-2 bg-purple-500 text-white text-xs font-mono font-bold rounded-xl hover:bg-purple-400 transition-all shrink-0 cursor-pointer"
+              >
+                {copiedLink === 'pay' ? 'COPIADO!' : 'COPIAR'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">
+              Divulgue no chat da Twitch/YouTube ou no comando <code>!donate</code>.
+            </p>
+          </div>
+        </div>
+
+        {/* Analytics Highlights */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="glass-card p-6 rounded-2xl border border-white/10">
+            <div className="text-xs font-mono text-slate-400 uppercase">Total Arrecadado (Est.)</div>
+            <div className="text-3xl font-black text-cyan-400 mt-2 font-mono">${analytics.estimatedTotalUSD} <span className="text-xs text-slate-400">USD</span></div>
+            <div className="text-[11px] text-slate-500 font-mono mt-1">100% recebido direto em carteira</div>
+          </div>
+
+          <div className="glass-card p-6 rounded-2xl border border-white/10">
+            <div className="text-xs font-mono text-slate-400 uppercase">Total de Doações</div>
+            <div className="text-3xl font-black text-purple-400 mt-2 font-mono">{analytics.totalTransactions}</div>
+            <div className="text-[11px] text-slate-500 font-mono mt-1">Transações confirmadas on-chain</div>
+          </div>
+
+          <div className="glass-card p-6 rounded-2xl border border-white/10">
+            <div className="text-xs font-mono text-slate-400 uppercase">Tokens Recebidos</div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {Object.entries(analytics.tokenBreakdown).length > 0 ? (
+                Object.entries(analytics.tokenBreakdown).map(([token, amount]) => (
+                  <span key={token} className="px-2 py-1 bg-zinc-800 rounded-lg text-xs font-mono text-slate-200">
+                    <strong>{amount.toFixed(2)}</strong> {token}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-500 font-mono">Aguardando primeira doação</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 2-Column Grid: Configs & Simulator */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* Configuration Form */}
-          <section className="border border-cyan-500/30 bg-cyan-950/5 p-6 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)] space-y-6">
-            <h2 className="text-lg font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-2">-- METAS & VISUALS --</h2>
-            
-            <form onSubmit={handleSaveConfig} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Active Theme</label>
-                  <select 
-                    value={activeTheme} 
-                    onChange={(e) => setActiveTheme(e.target.value)}
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:border-cyan-400 focus:outline-none text-xs"
-                  >
-                    <option value="cyberpunk">Cyberpunk (Cyan/Fuchsia)</option>
-                    <option value="matrix">Matrix (Classic Green/CRT)</option>
-                    <option value="fire">Fire (Orange/Red Glow)</option>
-                    <option value="minimal">Minimal White (Modern Clean)</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Min Alert Amt ($)</label>
-                  <input 
-                    type="number" step="0.01" value={minAmount} onChange={(e) => setMinAmount(e.target.value)}
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none focus:border-cyan-400 text-xs text-center"
-                  />
-                </div>
-              </div>
+          {/* Left Column: Alerts, Themes & Donation Goals */}
+          <div className="space-y-8">
+            {/* Visual Theme & Goals Settings */}
+            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+              <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono flex items-center gap-2">
+                <span>🎨 TEMA VISUAL & META DE DOAÇÕES</span>
+              </h2>
 
-              <div className="space-y-1">
-                <label className="block text-xs uppercase text-cyan-400/70">Goal Title</label>
-                <input 
-                  type="text" value={goalTitle} onChange={(e) => setGoalTitle(e.target.value)}
-                  className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none focus:border-cyan-400 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Goal Target ($)</label>
-                  <input 
-                    type="number" step="1.0" value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)}
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none focus:border-cyan-400 text-xs text-center"
-                  />
+              <form onSubmit={handleSaveConfig} className="space-y-5">
+                {/* Theme Selector */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-400 mb-2 uppercase">Tema Ativo do Overlay:</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'cyberpunk', label: 'Cyberpunk', color: 'border-cyan-500 text-cyan-400' },
+                      { id: 'matrix', label: 'Matrix', color: 'border-green-500 text-green-400' },
+                      { id: 'fire', label: 'Fire Ember', color: 'border-orange-500 text-orange-400' },
+                      { id: 'minimal', label: 'Minimal', color: 'border-slate-300 text-slate-200' },
+                    ].map(t => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        onClick={() => setActiveTheme(t.id)}
+                        className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold transition-all text-center ${
+                          activeTheme === t.id ? `${t.color} bg-white/10 shadow-md` : 'border-white/10 text-slate-500 hover:text-slate-300'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Goal Current ($)</label>
-                  <input 
-                    type="number" step="0.01" value={goalCurrent} onChange={(e) => setGoalCurrent(e.target.value)}
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none focus:border-cyan-400 text-xs text-center"
-                  />
+
+                {/* Goal Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Título da Meta:</label>
+                    <input 
+                      type="text" 
+                      value={goalTitle}
+                      onChange={e => setGoalTitle(e.target.value)}
+                      placeholder="Ex: Novo Microfone"
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Valor Alvo (USD):</label>
+                    <input 
+                      type="number" 
+                      step="1"
+                      value={goalAmount}
+                      onChange={e => setGoalAmount(e.target.value)}
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button 
-                type="submit" 
-                className="w-full py-2 bg-cyan-500 text-black hover:bg-cyan-400 uppercase font-bold text-xs tracking-wider transition-colors rounded"
-              >
-                {configSaveStatus === 'saving' ? '[ SAVING CHANGES... ]' : 
-                 configSaveStatus === 'success' ? '[ CONFIG UPDATED! ]' : 
-                 configSaveStatus === 'error' ? '[ ERROR SAVING CONFIG ]' : '[ SAVE CONFIG ]'}
-              </button>
-            </form>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Progresso Atual (USD):</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={goalCurrent}
+                      onChange={e => setGoalCurrent(e.target.value)}
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Valor Mínimo p/ Alerta ($):</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={minAmount}
+                      onChange={e => setMinAmount(e.target.value)}
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                </div>
 
-            {/* IPFS Media Upload */}
-            <div className="space-y-4 pt-4 border-t border-cyan-500/20">
-              <h3 className="text-xs uppercase font-bold text-cyan-400/70">Custom Alert Assets (IPFS via Pinata)</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3 border border-cyan-500/20 bg-black rounded text-center space-y-2">
-                  <span className="block text-xs text-cyan-400/70">ALERT MEDIA (GIF/MP4)</span>
-                  {mediaUrl && <span className="block text-[8px] text-green-400 break-all select-all font-mono">IPFS: {mediaUrl.slice(0, 30)}...</span>}
-                  <input 
-                    type="file" accept="image/gif,video/mp4" id="alert-media" className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'media')} 
-                  />
-                  <label 
-                    htmlFor="alert-media" 
-                    className="block cursor-pointer px-3 py-1.5 border border-cyan-400 text-cyan-400 hover:bg-cyan-500/10 text-xs uppercase font-bold transition-all rounded"
-                  >
-                    {uploadingMedia ? '[ UPLOADING... ]' : '[ UPLOAD MEDIA ]'}
+                <button 
+                  type="submit" 
+                  disabled={configSaveStatus === 'saving'}
+                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-bold text-xs font-mono tracking-wider uppercase rounded-xl hover:opacity-90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
+                >
+                  {configSaveStatus === 'saving' ? 'SALVANDO CONFIGURAÇÃO...' : 
+                   configSaveStatus === 'success' ? '✅ CONFIGURAÇÃO SALVA!' : 
+                   '💾 SALVAR ALTERAÇÕES NO OVERLAY'}
+                </button>
+              </form>
+            </div>
+
+            {/* Custom IPFS Media & Audio Uploader */}
+            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+              <h2 className="text-base font-bold uppercase tracking-wider text-purple-400 font-mono flex items-center gap-2">
+                <span>📁 MÍDIA & ÁUDIO PERSONALIZADOS (IPFS)</span>
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                {/* Media Uploader */}
+                <div className="p-4 rounded-xl border border-dashed border-white/20 bg-zinc-950/40 text-center space-y-2">
+                  <div className="text-slate-300 font-bold">GIF / MP4 do Alerta</div>
+                  <p className="text-[10px] text-slate-500">Exibido na tela quando doar</p>
+                  <label className="inline-block px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-cyan-400 font-bold cursor-pointer transition-colors">
+                    {uploadingMedia ? 'Enviando ao IPFS...' : 'Selecionar Arquivo'}
+                    <input 
+                      type="file" 
+                      accept="image/*,video/mp4" 
+                      onChange={e => handleFileUpload(e, 'media')} 
+                      disabled={uploadingMedia}
+                      className="hidden" 
+                    />
                   </label>
+                  {mediaUrl && (
+                    <div className="text-[10px] text-emerald-400 truncate">Ativo: {mediaUrl.slice(0, 30)}...</div>
+                  )}
                 </div>
-                
-                <div className="p-3 border border-cyan-500/20 bg-black rounded text-center space-y-2">
-                  <span className="block text-xs text-cyan-400/70">ALERT AUDIO (MP3/WAV)</span>
-                  {audioUrl && <span className="block text-[8px] text-green-400 break-all select-all font-mono">IPFS: {audioUrl.slice(0, 30)}...</span>}
-                  <input 
-                    type="file" accept="audio/mp3,audio/wav,audio/mpeg" id="alert-audio" className="hidden"
-                    onChange={(e) => handleFileUpload(e, 'audio')} 
-                  />
-                  <label 
-                    htmlFor="alert-audio" 
-                    className="block cursor-pointer px-3 py-1.5 border border-cyan-400 text-cyan-400 hover:bg-cyan-500/10 text-xs uppercase font-bold transition-all rounded"
-                  >
-                    {uploadingAudio ? '[ UPLOADING... ]' : '[ UPLOAD AUDIO ]'}
+
+                {/* Audio Uploader */}
+                <div className="p-4 rounded-xl border border-dashed border-white/20 bg-zinc-950/40 text-center space-y-2">
+                  <div className="text-slate-300 font-bold">Áudio / Chime do Alerta</div>
+                  <p className="text-[10px] text-slate-500">Tocado instantaneamente</p>
+                  <label className="inline-block px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-purple-400 font-bold cursor-pointer transition-colors">
+                    {uploadingAudio ? 'Enviando ao IPFS...' : 'Selecionar Áudio (MP3)'}
+                    <input 
+                      type="file" 
+                      accept="audio/*" 
+                      onChange={e => handleFileUpload(e, 'audio')} 
+                      disabled={uploadingAudio}
+                      className="hidden" 
+                    />
                   </label>
+                  {audioUrl && (
+                    <div className="text-[10px] text-emerald-400 truncate">Ativo: {audioUrl.slice(0, 30)}...</div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
-          </section>
-
-          {/* Wallet Config */}
-          <section className="border border-cyan-500/30 bg-cyan-950/5 p-6 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)] space-y-6">
-            <h2 className="text-lg font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-2">-- DESTINATIONS --</h2>
+          {/* Right Column: Interactive Overlay Simulator & Wallets */}
+          <div className="space-y-8">
             
-            {/* Wallet list */}
-            <div className="space-y-3">
-              <h3 className="text-xs uppercase text-cyan-400/70">Active Payout Addresses</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {/* Live OBS Overlay Simulator */}
+            <div className="glass-card p-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)] space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
+                  ⚡ SIMULADOR DO OVERLAY OBS
+                </h2>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30">
+                  WEBSOCKET ATIVO
+                </span>
+              </div>
+
+              {/* Visual Preview Box */}
+              <div className="p-6 rounded-2xl bg-black/80 border border-white/10 relative overflow-hidden min-h-[220px] flex flex-col justify-between">
+                {/* Goal Bar Preview */}
+                <div>
+                  <div className="flex justify-between items-center text-xs font-mono mb-1.5">
+                    <span className="text-slate-200 font-bold">🎯 {goalTitle}</span>
+                    <span className="text-cyan-400 font-bold">${parseFloat(goalCurrent).toFixed(2)} / ${parseFloat(goalAmount).toFixed(2)}</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        activeTheme === 'matrix' ? 'bg-green-500' :
+                        activeTheme === 'fire' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                        activeTheme === 'minimal' ? 'bg-white' :
+                        'bg-gradient-to-r from-cyan-500 to-blue-500'
+                      }`}
+                      style={{ width: `${Math.min(100, (parseFloat(goalCurrent) / (parseFloat(goalAmount) || 1)) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Sample Alert Box */}
+                <div className={`mt-4 p-4 rounded-xl border ${
+                  activeTheme === 'matrix' ? 'bg-black border-green-500 text-green-400 font-mono' :
+                  activeTheme === 'fire' ? 'bg-zinc-950 border-orange-500 text-orange-200' :
+                  activeTheme === 'minimal' ? 'bg-slate-900 border-white/20 text-slate-100' :
+                  'bg-zinc-900/90 border-cyan-400 text-white'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-lg shrink-0">
+                      ⚡
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-mono tracking-widest text-cyan-400">NOVA DOAÇÃO RECEBIDA</div>
+                      <div className="text-sm font-black">0.5 SOL ($75.00 USD)</div>
+                      <div className="text-[10px] text-slate-400 font-mono">de: 8x3s...F3aQ</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-white/10 text-xs italic text-slate-300">
+                    &quot;Parabéns pela live, continue com o conteúdo incrível! 🚀&quot;
+                  </div>
+                </div>
+
+                {/* Trigger Button */}
+                <button
+                  type="button"
+                  onClick={handleTriggerTestAlert}
+                  disabled={testAlertStatus === 'sending'}
+                  className="mt-4 w-full py-3 bg-cyan-500 text-black font-bold text-xs font-mono uppercase tracking-wider rounded-xl hover:bg-cyan-400 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {testAlertStatus === 'sending' ? 'DISPARANDO ALERTA...' :
+                   testAlertStatus === 'success' ? '✅ ALERTA ENVIADO AO OBS!' :
+                   '⚡ DISPARAR ALERTA DE TESTE NO OBS'}
+                </button>
+              </div>
+            </div>
+
+            {/* Payout Wallets Manager */}
+            <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+              <h2 className="text-base font-bold uppercase tracking-wider text-emerald-400 font-mono flex items-center gap-2">
+                <span>👛 CARTEIRAS DE RECEBIMENTO (MULTI-CHAIN)</span>
+              </h2>
+
+              {/* Registered Wallets List */}
+              <div className="space-y-2">
                 {wallets.length === 0 ? (
-                  <p className="text-xs text-cyan-500/50 italic py-2">No custom wallets registered. Fallback used.</p>
+                  <div className="text-xs text-slate-500 font-mono p-3 bg-black/40 rounded-xl">
+                    Nenhuma carteira customizada cadastrada. O sistema usará sua carteira de login.
+                  </div>
                 ) : (
-                  wallets.map((w, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2.5 bg-black border border-cyan-500/20 rounded text-xs">
+                  wallets.map(w => (
+                    <div key={w.chain_id} className="p-3 bg-zinc-950/60 rounded-xl border border-white/10 flex items-center justify-between text-xs font-mono">
                       <div>
-                        <span className="font-bold text-cyan-300 uppercase">{w.chain_id === '137' ? 'Polygon (137)' : w.chain_id === 'solana' ? 'Solana' : `Chain ID: ${w.chain_id}`}</span>
-                        <span className="block font-mono text-[10px] text-cyan-400/70 mt-0.5 break-all select-all">{w.public_address}</span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-800 text-slate-300 font-bold uppercase mr-2">
+                          {w.chain_id === 'solana' ? 'SOLANA' : w.chain_id === '137' ? 'POLYGON' : w.chain_id === '8453' ? 'BASE' : w.chain_id === '1' ? 'ETHEREUM' : `CHAIN ${w.chain_id}`}
+                        </span>
+                        <span className="text-slate-400">{w.public_address}</span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
+
+              {/* Add / Update Wallet Form */}
+              <form onSubmit={handleSaveWallet} className="space-y-4 pt-2 border-t border-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Rede:</label>
+                    <select 
+                      value={selectedChain}
+                      onChange={e => setSelectedChain(e.target.value)}
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    >
+                      <option value="solana">Solana (SOL)</option>
+                      <option value="137">Polygon (POL/MATIC)</option>
+                      <option value="8453">Base (USDC)</option>
+                      <option value="42161">Arbitrum</option>
+                      <option value="56">BNB Chain (BSC)</option>
+                      <option value="1">Ethereum Mainnet</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Endereço da Carteira:</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: 8x3s... ou 0x1234..."
+                      value={newWalletAddress}
+                      onChange={e => setNewWalletAddress(e.target.value)}
+                      className="w-full glass-input px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  type="submit"
+                  disabled={walletSaveStatus === 'saving' || !newWalletAddress}
+                  className="w-full py-2.5 bg-emerald-500 text-black font-bold text-xs font-mono uppercase tracking-wider rounded-xl hover:bg-emerald-400 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {walletSaveStatus === 'saving' ? 'SALVANDO...' : 
+                   walletSaveStatus === 'success' ? '✅ CARTEIRA SALVA!' : 
+                   '+ ADICIONAR / ATUALIZAR CARTEIRA'}
+                </button>
+              </form>
             </div>
-
-            {/* Wallet Register Form */}
-            <form onSubmit={handleSaveWallet} className="space-y-4 border-t border-cyan-500/20 pt-4">
-              <h3 className="text-xs uppercase font-bold text-cyan-400/70">Register / Update Payout Address</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Chain / Wallet</label>
-                  <select 
-                    value={selectedChain} 
-                    onChange={(e) => setSelectedChain(e.target.value)}
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none text-xs"
-                  >
-                    <option value="137">Polygon (137)</option>
-                    <option value="1">Ethereum (1)</option>
-                    <option value="8453">Base (8453)</option>
-                    <option value="solana">Solana</option>
-                  </select>
-                </div>
-                
-                <div className="space-y-1">
-                  <label className="block text-xs uppercase text-cyan-400/70">Payout Address</label>
-                  <input 
-                    type="text" 
-                    value={newWalletAddress} 
-                    onChange={(e) => setNewWalletAddress(e.target.value)}
-                    placeholder="0x... or Solana Base58"
-                    className="w-full p-2 bg-black text-cyan-400 border border-cyan-500/40 rounded focus:outline-none focus:border-cyan-400 text-xs font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                className="w-full py-2 border border-cyan-400 text-cyan-400 hover:bg-cyan-500 hover:text-black uppercase font-bold text-xs tracking-wider transition-all rounded"
-              >
-                {walletSaveStatus === 'saving' ? '[ SAVING carteira... ]' : 
-                 walletSaveStatus === 'success' ? '[ CARTEIRA SALVA! ]' : 
-                 walletSaveStatus === 'error' ? '[ ERRO AO SALVAR ]' : '[ REGISTER WALLET ]'}
-              </button>
-            </form>
-          </section>
-
+          </div>
         </div>
 
-        {/* Transactions Table */}
-        <section className="border border-cyan-500/30 bg-cyan-950/5 p-6 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)]">
-          <h2 className="text-lg font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-2">-- RECENT TRANSACTIONS --</h2>
-          <div className="overflow-x-auto mt-4 pr-1">
-            <table className="w-full text-left border-collapse font-mono text-xs">
+        {/* Recent Transactions Table */}
+        <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
+            📜 HISTÓRICO RECENTE DE DOAÇÕES
+          </h2>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="border-b border-cyan-500/40 text-cyan-400/70">
-                  <th className="p-2">TX Hash</th>
-                  <th className="p-2">Sender Address</th>
-                  <th className="p-2">Amount</th>
-                  <th className="p-2">Currency</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2">Time</th>
+                <tr className="bg-zinc-900/80 border-b border-white/10 text-slate-400">
+                  <th className="p-3">STATUS</th>
+                  <th className="p-3">VALOR & MOEDA</th>
+                  <th className="p-3">DOADOR</th>
+                  <th className="p-3">TX HASH</th>
+                  <th className="p-3">DATA</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/5 text-slate-300">
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-cyan-500/50 italic">No transactions detected. Waiting for webhook broadcasts...</td>
+                    <td colSpan={5} className="p-6 text-center text-slate-500 font-mono">
+                      Nenhuma transação registrada ainda.
+                    </td>
                   </tr>
                 ) : (
-                  transactions.map((tx, idx) => (
-                    <tr key={idx} className="border-b border-cyan-500/10 hover:bg-cyan-950/20 transition-colors">
-                      <td className="p-2 select-all text-cyan-300">{tx.tx_hash.slice(0, 16)}...</td>
-                      <td className="p-2 select-all">{tx.sender_address.slice(0, 16)}...</td>
-                      <td className="p-2 font-bold">{parseFloat(tx.amount).toFixed(4)}</td>
-                      <td className="p-2 uppercase text-cyan-300">{tx.currency}</td>
-                      <td className="p-2 font-bold text-cyan-300">[{tx.status}]</td>
-                      <td className="p-2 text-cyan-500/70">{new Date(tx.timestamp).toLocaleString()}</td>
+                  transactions.map(tx => (
+                    <tr key={tx.tx_hash} className="hover:bg-white/5 transition-colors">
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          tx.status === 'CONFIRMED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                        }`}>
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td className="p-3 font-bold text-white">
+                        {tx.amount} {tx.currency}
+                      </td>
+                      <td className="p-3 text-slate-400 truncate max-w-[120px]">
+                        {tx.sender_address}
+                      </td>
+                      <td className="p-3 text-cyan-400 truncate max-w-[140px]">
+                        {tx.tx_hash}
+                      </td>
+                      <td className="p-3 text-slate-500">
+                        {new Date(tx.timestamp).toLocaleString('pt-BR')}
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </section>
-
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
