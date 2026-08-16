@@ -9,12 +9,14 @@ export default function Home() {
   const [demoTheme, setDemoTheme] = useState<'cyberpunk' | 'matrix' | 'fire' | 'minimal'>('cyberpunk');
   const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<number>(1);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [selectedConceptIndex, setSelectedConceptIndex] = useState<number>(0);
+  const [calculatorAmount, setCalculatorAmount] = useState<number>(1000);
 
   const triggerDemoAlert = () => {
     setDemoAlertActive(true);
     setTimeout(() => {
       setDemoAlertActive(false);
-    }, 6000);
+    }, 6500);
   };
 
   const workflowNodes = [
@@ -24,7 +26,7 @@ export default function Home() {
       type: "Input / Web3 Trigger",
       badge: "SLUSH / PHANTOM / METAMASK",
       badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-      description: "O espectador seleciona a moeda (SUI, SOL, POL, USDT) e assina a transferência em 1-Click ou escaneia o QR Code no app mobile.",
+      description: "O espectador seleciona a moeda (SUI, SOL, POL, USDT, USDC, ETH) e assina a transferência em 1-Click ou escaneia o QR Code no app mobile da exchange.",
       payloadSnippet: `{\n  "network": "SUI_PROTOCOL",\n  "amount": "25.0",\n  "sender": "0x8f3c...Slush",\n  "message": "Top d+ a live! 🚀"\n}`
     },
     {
@@ -33,7 +35,7 @@ export default function Home() {
       type: "Execution / Split Atômico",
       badge: "100% NON-CUSTODIAL",
       badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-      description: "O contrato inteligente divide instantaneamente 98% para o criador e 2% de taxa da plataforma em uma única instrução atômica on-chain.",
+      description: "O contrato inteligente divide instantaneamente 98% para o criador e 2% de taxa da plataforma em uma única instrução atômica on-chain, sem intermediários.",
       payloadSnippet: `function donateNative(address payable streamer) external payable {\n    uint256 fee = (msg.value * 200) / 10000; // 2%\n    uint256 net = msg.value - fee;           // 98%\n    streamer.transfer(net);\n}`
     },
     {
@@ -42,7 +44,7 @@ export default function Home() {
       type: "Event Dispatch / < 400ms",
       badge: "ULTRA LOW LATENCY",
       badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-      description: "O backend detecta o bloco validado e publica o evento no canal Redis do streamer. O WebSocket túnel despacha o alerta ao OBS em sub-segundo.",
+      description: "O backend detecta o bloco validado e publica o evento no canal Redis do streamer. O WebSocket túnel despacha o alerta ao OBS Studio em sub-segundo.",
       payloadSnippet: `redis.publish("streamer:1:events", {\n  "event": "DONATION",\n  "amount": 25.0,\n  "currency": "SUI",\n  "fiatValue": 87.50\n});`
     },
     {
@@ -51,16 +53,54 @@ export default function Home() {
       type: "Visual Action / Áudio + TTS",
       badge: "BROWSER SOURCE",
       badgeColor: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-      description: "O OBS Studio toca o áudio customizado no IPFS, exibe o GIF animado, incrementa a barra da meta e lê a mensagem do fã com síntese de voz (TTS).",
+      description: "O OBS Studio toca o áudio customizado no IPFS, exibe a mídia animada, incrementa a barra da meta ao vivo e lê a mensagem do fã com voz sintetizada (TTS).",
       payloadSnippet: `speechSynthesis.speak("0x8f3c doou 25 SUI. Mensagem: Top d+ a live!");`
     }
   ];
+
+  const designConcepts = [
+    {
+      title: "Cyberpunk Terminal HUD",
+      category: "DESIGN SYSTEM",
+      image: "/brand/Generated Image August 09, 2026 - 1_03AM.jpg",
+      description: "Interface com estética retro-futurista e glassmorphism de alta densidade visual."
+    },
+    {
+      title: "Streamer Control Room",
+      category: "DASHBOARD ARCHITECTURE",
+      image: "/brand/Generated Image August 09, 2026 - 1_07AM.jpg",
+      description: "Painel modular para controle de tokens, metas ativas e rotatividade de overlays."
+    },
+    {
+      title: "Donor Experience UI",
+      category: "1-CLICK CHECKOUT",
+      image: "/brand/Generated Image August 09, 2026 - 1_08AM.jpg",
+      description: "Fluxo de doação frictionless compatível com Slush Wallet, Phantom e MetaMask."
+    },
+    {
+      title: "Real-time Block Engine",
+      category: "ON-CHAIN MONITOR",
+      image: "/brand/Generated Image August 09, 2026 - 1_19AM.jpg",
+      description: "Mecanismo de monitoramento sub-segundo com verificação de blocos em tempo real."
+    },
+    {
+      title: "Web3 Stream Ecosystem",
+      category: "PRODUCT VISION",
+      image: "/brand/ChatGPT Image Aug 12, 2026, 12_28_01 PM.png",
+      description: "Ecossistema descentralizado completo que devolve a soberania financeira aos streamers."
+    }
+  ];
+
+  const netPlatformTake = (calculatorAmount * 0.98).toFixed(2);
+  const platformFee = (calculatorAmount * 0.02).toFixed(2);
+  const traditionalTake = (calculatorAmount * 0.85).toFixed(2);
+  const moneySaved = (parseFloat(netPlatformTake) - parseFloat(traditionalTake)).toFixed(2);
 
   return (
     <div className="min-h-screen text-slate-100 selection:bg-cyan-500 selection:text-black overflow-hidden relative">
       {/* Floating Pill Navbar (n8n-inspired) */}
       <div className="max-w-6xl mx-auto px-6 pt-6 sticky top-4 z-40">
-        <header className="px-6 py-3.5 flex items-center justify-between border border-white/10 rounded-full backdrop-blur-2xl bg-black/45 shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
+        <header className="px-6 py-3.5 flex items-center justify-between border border-white/10 rounded-full backdrop-blur-2xl bg-black/55 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-500/30 bg-zinc-900 flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
               <Image 
@@ -80,7 +120,8 @@ export default function Home() {
             <a href="#pipeline" className="hover:text-cyan-400 transition-colors">Como Funciona</a>
             <a href="#demo" className="hover:text-cyan-400 transition-colors">Simulador OBS</a>
             <a href="#bento" className="hover:text-cyan-400 transition-colors">Recursos</a>
-            <a href="#comparison" className="hover:text-cyan-400 transition-colors">Por Que Web3?</a>
+            <a href="#concepts" className="hover:text-cyan-400 transition-colors">Conceitos</a>
+            <a href="#calculator" className="hover:text-cyan-400 transition-colors">Calculadora</a>
             <a href="#faq" className="hover:text-cyan-400 transition-colors">FAQ</a>
           </nav>
 
@@ -116,7 +157,7 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 text-sm sm:text-base md:text-lg text-slate-300 max-w-2xl leading-relaxed font-sans">
-          A infraestrutura não-custodial que conecta seus espectadores ao seu <strong className="text-white">OBS Studio</strong>. Aceite <strong className="text-cyan-400">SUI (Slush Wallet), SOL (Phantom), MATIC, USDT, USDC, ETH</strong> em menos de 400ms com alertas animados e voz TTS.
+          A infraestrutura não-custodial que conecta seus espectadores ao seu <strong className="text-white">OBS Studio</strong>. Aceite <strong className="text-cyan-400">SUI (Slush Wallet), SOL (Phantom), MATIC, USDT, USDC, ETH</strong> em menos de 400ms com alertas animados e voz sintetizada (TTS).
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-4 relative z-10">
@@ -305,8 +346,7 @@ export default function Home() {
                     &quot;Parabéns pela live, continue com o conteúdo incrível! 🚀&quot;
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Bottom Demo Trigger Bar */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
@@ -321,7 +361,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* BENTO GRID (n8n Style Modular Features) */}
+      {/* BENTO GRID (Modular Features) */}
       <section id="bento" className="max-w-6xl mx-auto px-6 py-16 relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white font-sans">
@@ -373,7 +413,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-extrabold text-white mb-2 font-sans">Voz TTS & Áudio IPFS</h3>
               <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                Suba seus próprios sons e GIFs customizados diretamente para a rede IPFS Pinata.
+                Suba seus próprios sons e GIFs customizados diretamente para a rede descentralizada IPFS Pinata.
               </p>
             </div>
             <div className="mt-6 text-purple-400 text-xs font-mono font-bold">✓ Sintetizador de voz inteligente</div>
@@ -395,6 +435,118 @@ export default function Home() {
               <span className="text-cyan-400 font-bold">≈ $87.50 USD</span>
               <span className="text-emerald-400 font-bold">Meta: 70% Concluída</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DESIGN CONCEPTS & INSPIRATION SHOWCASE (Interactive Concept Gallery) */}
+      <section id="concepts" className="max-w-6xl mx-auto px-6 py-16 relative z-10">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-400/30 text-teal-300 text-xs font-mono uppercase mb-3">
+            🎨 Design Lab & Inspiration
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white font-sans">
+            Conceitos Visuais Web3 & HUDs
+          </h2>
+          <p className="mt-2 text-xs text-slate-400 font-mono">INSPIRE-SE NOS CONCEITOS VISUAIS QUE DEFINEM O FUTURO DO STREAMING</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center glass-panel p-6 sm:p-10 rounded-3xl border border-white/10">
+          {/* Main Image Feature */}
+          <div className="lg:col-span-7 relative aspect-video rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-zinc-950">
+            <Image
+              src={designConcepts[selectedConceptIndex].image}
+              alt={designConcepts[selectedConceptIndex].title}
+              fill
+              className="object-cover transition-all duration-700 hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400">
+                {designConcepts[selectedConceptIndex].category}
+              </span>
+              <h3 className="text-lg sm:text-xl font-bold text-white font-sans">
+                {designConcepts[selectedConceptIndex].title}
+              </h3>
+              <p className="text-xs text-slate-300 font-sans mt-1">
+                {designConcepts[selectedConceptIndex].description}
+              </p>
+            </div>
+          </div>
+
+          {/* Selector Thumbnails */}
+          <div className="lg:col-span-5 space-y-3">
+            {designConcepts.map((concept, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedConceptIndex(idx)}
+                className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
+                  selectedConceptIndex === idx
+                    ? 'bg-zinc-900/90 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
+                    : 'bg-black/40 border-white/10 hover:border-white/20 hover:bg-zinc-900/40'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
+                  <Image src={concept.image} alt={concept.title} fill className="object-cover" />
+                </div>
+                <div className="overflow-hidden">
+                  <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase">{concept.category}</div>
+                  <div className="text-xs font-bold text-white font-sans truncate">{concept.title}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* INTERACTIVE FEE CALCULATOR */}
+      <section id="calculator" className="max-w-4xl mx-auto px-6 py-16 relative z-10">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-xs font-mono uppercase mb-3">
+            💰 Transparência Financeira
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white font-sans">
+            Quanto Você Economiza no Live Crypto?
+          </h2>
+          <p className="mt-2 text-xs text-slate-400 font-mono">COMPARE AS TAXAS DE UMA PLATAFORMA DESCENTRALIZADA COM GATEWAYS TRADICIONAIS</p>
+        </div>
+
+        <div className="glass-panel p-8 rounded-3xl border border-white/10">
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-xs font-mono text-slate-300 uppercase font-bold">Volume Mensal Estimado:</label>
+              <span className="text-2xl font-mono font-bold text-cyan-400">${calculatorAmount.toLocaleString()} USD</span>
+            </div>
+            <input
+              type="range"
+              min="100"
+              max="20000"
+              step="100"
+              value={calculatorAmount}
+              onChange={(e) => setCalculatorAmount(Number(e.target.value))}
+              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl bg-cyan-950/40 border border-cyan-500/30">
+              <div className="text-xs font-mono text-cyan-400 font-bold uppercase">LIVE CRYPTO (WEB3)</div>
+              <div className="text-3xl font-black text-white font-mono mt-2">${netPlatformTake} USD</div>
+              <div className="text-xs text-slate-300 mt-1">Taxa única on-chain de apenas 2% (${platformFee} USD).</div>
+              <div className="text-xs text-emerald-400 font-mono font-bold mt-3">✓ 0% taxa de saque • Liquidação no mesmo bloco</div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-zinc-950/70 border border-white/10">
+              <div className="text-xs font-mono text-slate-400 uppercase">GATEWAYS WEB2 / PAYPAL / TWITCH</div>
+              <div className="text-3xl font-black text-slate-400 font-mono mt-2">${traditionalTake} USD</div>
+              <div className="text-xs text-slate-400 mt-1">Perdas de 10% a 15% em taxas de intermediação e IOF.</div>
+              <div className="text-xs text-red-400 font-mono mt-3">✗ Risco de chargebacks e retenção bancária de até 30 dias</div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-center">
+            <span className="text-xs font-mono text-emerald-300 font-bold">
+              💡 Você economiza aproximadamente <strong className="text-emerald-400 text-sm font-black">${moneySaved} USD</strong> todos os meses usando o Live Crypto!
+            </span>
           </div>
         </div>
       </section>
@@ -474,7 +626,7 @@ export default function Home() {
             <div key={idx} className="glass-card rounded-2xl border border-white/10 overflow-hidden">
               <button
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full p-5 text-left flex justify-between items-center font-sans font-bold text-sm text-white hover:text-cyan-400 transition-colors"
+                className="w-full p-5 text-left flex justify-between items-center font-sans font-bold text-sm text-white hover:text-cyan-400 transition-colors cursor-pointer"
               >
                 <span>{item.q}</span>
                 <span className="text-cyan-400 font-mono text-base">{openFaq === idx ? '−' : '+'}</span>

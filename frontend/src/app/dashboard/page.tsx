@@ -701,9 +701,31 @@ export default function Dashboard() {
 
         {/* Recent Transactions Table */}
         <div className="glass-card p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
-          <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
-            📜 HISTÓRICO RECENTE DE DOAÇÕES
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-base font-bold uppercase tracking-wider text-cyan-400 font-mono">
+              📜 HISTÓRICO RECENTE DE DOAÇÕES
+            </h2>
+            
+            {transactions.length > 0 && (
+              <button
+                onClick={() => {
+                  const headers = ['Status', 'Valor', 'Moeda', 'Doador', 'TxHash', 'Data'];
+                  const rows = transactions.map(t => [t.status, t.amount, t.currency, t.sender_address, t.tx_hash, new Date(t.timestamp).toISOString()]);
+                  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement('a');
+                  link.setAttribute('href', encodedUri);
+                  link.setAttribute('download', `livecrypto_transactions_${Date.now()}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-200 text-xs font-mono font-bold border border-white/10 flex items-center gap-2 self-start sm:self-auto cursor-pointer transition-colors"
+              >
+                <span>📥 Exportar Relatório CSV</span>
+              </button>
+            )}
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">

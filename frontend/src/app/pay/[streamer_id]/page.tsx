@@ -59,6 +59,42 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
   const [isSendingCustomTx, setIsSendingCustomTx] = useState(false);
   const [customTxSuccess, setCustomTxSuccess] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [fiatPriceUSD, setFiatPriceUSD] = useState<number | null>(null);
+
+  // Fetch token price from CoinGecko
+  useEffect(() => {
+    const fetchPrice = async () => {
+      const coingeckoMap: Record<string, string> = {
+        'SUI': 'sui',
+        'SOL': 'solana',
+        'POLYGON': 'matic-network',
+        'ETH': 'ethereum',
+        'USDT': 'tether',
+        'USDC': 'usd-coin',
+      };
+      const id = coingeckoMap[paymentType];
+      if (!id) return;
+      try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+        const data = await res.json();
+        if (data[id]?.usd) {
+          setFiatPriceUSD(data[id].usd);
+        }
+      } catch (err) {
+        // Fallback default market prices
+        const defaults: Record<string, number> = {
+          'SUI': 3.50,
+          'SOL': 190.00,
+          'POLYGON': 0.55,
+          'ETH': 3400.00,
+          'USDT': 1.00,
+          'USDC': 1.00,
+        };
+        setFiatPriceUSD(defaults[paymentType] || 1.0);
+      }
+    };
+    fetchPrice();
+  }, [paymentType]);
 
   useEffect(() => {
     setIsLoadingConfig(true);
@@ -343,6 +379,12 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
                 {paymentType}
               </span>
             </div>
+            {fiatPriceUSD && (
+              <div className="text-[11px] font-mono text-cyan-300 mt-1.5 flex justify-between">
+                <span>Estimativa USD:</span>
+                <span className="font-bold">≈ ${(parseFloat(amount || '0') * fiatPriceUSD).toFixed(2)} USD</span>
+              </div>
+            )}
           </div>
 
           <div>

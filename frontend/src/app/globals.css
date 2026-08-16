@@ -259,3 +259,28 @@ body {
 .radar-badge {
   animation: radar-pulse 2s infinite;
 }
+
+/* OBS Transparent Browser Source Isolation */
+html.obs-transparent-mode,
+body.obs-transparent-mode {
+  background-color: transparent !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+/* Radial Gradient Utility */
+.bg-radial-gradient {
+  background-image: radial-gradient(circle at center, var(--tw-gradient-stops));
+}
+
+/* Glass border hover pulse */
+.glass-card-interactive {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 12px 40px -10px rgba(6, 182, 212, 0.2);
+}
+
