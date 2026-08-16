@@ -320,7 +320,7 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="mt-2 text-base font-black text-slate-100 font-mono">
-                    ${price.toLocaleString('en-US', { minimumFractionDigits: price < 1 ? 4 : 2, maximumFractionDigits: 2 })}
+                    ${price.toLocaleString('en-US', { minimumFractionDigits: price < 1 ? 4 : 2, maximumFractionDigits: price < 1 ? 4 : 2 })}
                   </div>
                 </div>
               );

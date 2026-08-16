@@ -19,6 +19,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Live Crypto — Non-Custodial Web3 Donation Gateway for Streamers",
   description: "Accept crypto donations in real-time with sub-second OBS overlays, multi-chain support (Solana, SUI, Polygon, Base, Ethereum, Bitcoin Lightning), and zero middleman fees.",
   keywords: ["Crypto Donations", "OBS Overlay", "Streamer Crypto", "Web3 Live Streaming", "Solana Pay", "SUI Donation", "Twitch Crypto", "YouTube Streamer"],
