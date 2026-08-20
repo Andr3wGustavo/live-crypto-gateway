@@ -1,245 +1,271 @@
-<p align="center">
-  <!-- TODO: Replace with your actual logo -->
-  <!-- <img src="./assets/logo.png" alt="Live Crypto Logo" width="280" /> -->
-  <h1 align="center">⚡ LIVE CRYPTO</h1>
-  <p align="center"><strong>Non-Custodial Web3 Donation Platform & Real-Time Streaming Overlay System</strong></p>
-</p>
+# Live Crypto Gateway
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Solidity-0.8.19-363636?style=for-the-badge&logo=solidity&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
-</p>
+Non-Custodial Web3 Donation Infrastructure & Real-Time OBS Streaming Overlay Engine.
 
 ---
 
-## 📸 Screenshots
+## Executive Summary & Value Proposition
 
-<!-- TODO: Add screenshots of the dashboard, overlay, and payment gateway -->
+Live Crypto is a decentralized, non-custodial streaming donation SaaS designed for content creators across Twitch, YouTube, Kick, and X. It bridges the gap between decentralized finance and live broadcasting by enabling viewers to send cryptocurrency donations directly to streamers' self-custody wallets with sub-400ms animated alert overlays in OBS Studio.
 
-| Dashboard | OBS Overlay | Payment dApp |
-|-----------|-------------|--------------|
-| ![Dashboard Screenshot](./assets/screenshots/dashboard.png) | ![OBS Overlay Screenshot](./assets/screenshots/overlay.png) | ![Payment dApp Screenshot](./assets/screenshots/pay.png) |
+### The Creator Economy Problem
 
-| Login (SIWE) | CEX Manual Mode |
-|--------------|-----------------|
-| ![Login Screenshot](./assets/screenshots/login.png) | ![CEX Mode Screenshot](./assets/screenshots/cex_mode.png) |
+Traditional streaming monetization platforms impose severe constraints:
+- Heavy platform revenue cuts ranging from 15% to 50% (Twitch Bits, YouTube Super Chats, Stripe processing).
+- Chargeback fraud and rolling payment holds lasting up to 90 days.
+- Geographic restrictions and currency conversion penalties.
+- Custodial risks where creator funds are held in platform intermediaries.
 
----
+### The Live Crypto Solution
 
-## 🧠 What is Live Crypto?
-
-Live Crypto is a **non-custodial, blockchain-native donation platform** designed for streamers — analogous to LivePix, but built entirely on Web3 infrastructure. It allows anyone to send crypto donations to a streamer, with real-time alerts appearing on OBS Studio via a Browser Source overlay.
-
-### Key Principles
-
-- 🔒 **Non-Custodial**: The backend **never** stores, processes, or touches user private keys.
-- ⚡ **Real-Time**: Donations trigger instant WebSocket alerts to the OBS overlay.
-- 🌐 **Universal Gateway**: Works with Web3 wallets (MetaMask, WalletConnect) **and** centralized exchanges (Binance, Coinbase) via QR code manual send.
-- 💸 **Atomic Fee Splitting**: A Solidity Router Smart Contract handles the platform fee (1-2%) and streamer payout in a single atomic transaction.
+- 100% Non-Custodial: Funds route directly peer-to-peer into the streamer's personal wallets. The platform never holds private keys or user balances.
+- Zero Chargeback Risk: Blockchain settlement guarantees irreversible transactions.
+- Sub-400ms Latency: High-performance WebSocket architecture dispatches visual alerts, sound chimes, and Text-to-Speech to OBS Studio in under 400 milliseconds.
+- Universal Multi-Chain Coverage: Native support for Solana, Sui, Polygon, Base, Arbitrum, Ethereum, Bitcoin Lightning, BNB Chain, TRON, TON, Avalanche, and Dogecoin.
+- Dual Checkout Experience: 1-Click Web3 wallet signing or dynamic mobile QR codes compatible with Binance, Coinbase, Phantom, Slush, and TrustWallet.
 
 ---
 
-## 🏗️ Architecture
+## System Architecture
 
 ```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Next.js App    │     │  Express Backend  │     │   PostgreSQL     │
-│                  │     │                   │     │                  │
-│  /login (SIWE)   │────▶│  /api/auth        │────▶│  Streamers       │
-│  /dashboard      │────▶│  /api/dashboard   │────▶│  Wallets         │
-│  /pay/:id        │     │  /api/webhooks    │────▶│  Transactions    │
-│  /overlay/:token │◀────│  WebSocket Server │     │  Alert_Configs   │
-└──────────────────┘     └────────┬─────────┘     └──────────────────┘
-                                  │
-                           ┌──────┴──────┐
-                           │    Redis     │
-                           │  Pub/Sub    │
-                           └─────────────┘
+                       [ Viewer / Donor ]
+                               │
+                 ┌─────────────┴─────────────┐
+                 │                           │
+          [ 1-Click Web3 ]           [ Mobile QR Scan ]
+          (Phantom, Slush,           (Binance, Coinbase,
+           MetaMask, Rabby)           TrustWallet Mobile)
+                 │                           │
+                 └─────────────┬─────────────┘
+                               │
+                               ▼
+                   [ Blockchain Settlement ]
+            (Solana, Sui, EVM, Bitcoin Lightning)
+                               │
+                               ▼ (On-Chain Event / RPC Indexer)
+                 ┌───────────────────────────┐
+                 │   Live Crypto Backend     │
+                 │   Express + ChainVerifier │
+                 │   Anti-Replay Protection  │
+                 └─────────────┬─────────────┘
+                               │
+                               ▼ (Redis Pub/Sub < 400ms)
+                 ┌───────────────────────────┐
+                 │  WebSocket Connection     │
+                 │  Pool Manager             │
+                 └─────────────┬─────────────┘
+                               │
+                               ▼ (Secure obs_token URI)
+                 ┌───────────────────────────┐
+                 │  OBS Studio Browser       │
+                 │  Source Overlay Engine    │
+                 │  - Glassmorphic Card      │
+                 │  - IPFS Audio Chime       │
+                 │  - Web Speech Voice TTS   │
+                 │  - Live Goal Progress Bar │
+                 └───────────────────────────┘
 ```
 
 ---
 
-## 🚀 Quick Start
+## Supported Blockchain Ecosystems
 
-### Prerequisites
+| Network | Native Currency | Supported Assets | Confirmation Speed | Settlement Type |
+|---|---|---|---|---|
+| Solana | SOL | SOL, USDC-SPL, USDT-SPL | < 400 ms | Native P2P / Anchor Router |
+| Sui Network | SUI | SUI, USDC-SUI | < 500 ms | Native Coin Transfer |
+| Polygon | POL | POL, USDT, USDC, DAI | 2 - 3 sec | LiveCryptoRouter (ERC-20 & Native) |
+| Base | ETH | ETH, USDC, USDT | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
+| Arbitrum One | ETH | ETH, USDT, USDC | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
+| Ethereum Mainnet | ETH | ETH, USDT, USDC, DAI | 12 - 15 sec | LiveCryptoRouter (ERC-20 & Native) |
+| Bitcoin Lightning | BTC | Satoshis (LN-URL) | < 1 sec | BOLT11 Invoice Settlement |
+| BNB Chain | BNB | BNB, USDT-BEP20 | 3 sec | LiveCryptoRouter (BEP-20 & Native) |
+| Avalanche C-Chain | AVAX | AVAX, USDC | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
+| TRON | TRX | TRX, USDT-TRC20 | 3 sec | TRC-20 Trigger Contract |
+| TON | TON | TON, Jettons (USDT) | 2 - 4 sec | TON In-Message Transfer |
+| Dogecoin | DOGE | DOGE | 1 min | UTXO On-Chain Verification |
 
-- **Node.js** >= 18
-- **Docker** & **Docker Compose**
-- **npm**
+---
 
-### 1. Clone the Repository
+## Core Components & Repository Structure
+
+```
+live-crypto-gateway/
+├── backend/
+│   ├── src/
+│   │   ├── db/
+│   │   │   └── index.js             # PostgreSQL pool with high-resilience in-memory fallback
+│   │   ├── middleware/
+│   │   │   └── auth.js              # JWT cryptographic verification middleware
+│   │   ├── redis/
+│   │   │   └── index.js             # Redis Pub/Sub client with in-memory fallback engine
+│   │   ├── routes/
+│   │   │   ├── auth.js              # Dual-wallet auth: SIWE (EVM) and Solana Sign-In
+│   │   │   ├── dashboard.js         # Creator configs, telemetry, goals, and test alert trigger
+│   │   │   ├── public.js            # Sanitized public profile endpoint (no private token leak)
+│   │   │   ├── upload.js            # IPFS file pinning via Pinata (GIFs, MP4s, MP3s)
+│   │   │   └── webhooks.js          # Universal verification endpoint and HMAC webhooks
+│   │   ├── services/
+│   │   │   ├── chainVerifier.js     # Universal multi-chain transaction inspector
+│   │   │   └── polling.js           # Cron fallback scanner for pending on-chain blocks
+│   │   ├── utils/
+│   │   │   └── logger.js            # Structured production logger
+│   │   ├── ws/
+│   │   │   └── index.js             # Streamer WebSocket connection pool
+│   │   └── server.js                # Express entry point, rate limiting, and rawBody HMAC
+│   └── tests/
+│       └── system.test.js           # Automated cryptographic and security test suite
+│
+├── frontend/
+│   ├── public/
+│   │   └── brand/                   # Brand logos, cinematic video loops, and HUD concepts
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── dashboard/page.tsx   # Streamer Command Center (Liquid Glass UI & KPIs)
+│   │   │   ├── login/page.tsx       # Dual Web3 Sign-In (EVM + Solana)
+│   │   │   ├── overlay/[obs_token]/ # Transparent OBS Browser Source Overlay
+│   │   │   ├── pay/[streamer_id]/   # Multi-chain donation checkout (1-Click & QR)
+│   │   │   ├── globals.css          # Liquid glassmorphism, glowing borders, animations
+│   │   │   ├── layout.tsx           # Universal HTML shell and metadata
+│   │   │   └── page.tsx             # Interactive landing page and OBS simulator
+│   │   ├── components/
+│   │   │   ├── BackgroundLayer.tsx  # Ambient video background with OBS isolation
+│   │   │   └── Web3Provider.tsx     # Reown AppKit & Wagmi multi-chain connector
+│   │   └── services/
+│   │       └── coingecko.ts         # Real-time multi-token price feed and fiat converter
+│   └── package.json
+│
+├── contracts/
+│   ├── LiveCryptoRouter.sol         # Solidity atomic fee-splitting router (ERC-20 + Native)
+│   ├── hardhat.config.js            # Multi-network deployment config (Polygon, Base, Amoy)
+│   └── test/
+│       └── LiveCryptoRouter.test.js # Smart contract automated test suite
+│
+├── solana-programs/
+│   └── live_crypto/
+│       └── programs/live_crypto/src/lib.rs # Anchor program for Solana fee routing
+│
+├── dev-runner.js                    # Single-terminal concurrent launcher
+├── docker-compose.yml               # PostgreSQL 15 and Redis 7 container configuration
+└── start-dev.bat                    # 1-Click developer execution script
+```
+
+---
+
+## OBS Studio Setup Guide (Streamer Workflow)
+
+Live Crypto requires zero local plugin installations. It operates natively through the universal OBS Browser Source standard.
+
+### Step-by-Step Configuration
+
+1. Streamer Authentication:
+   Log in at `http://localhost:3000/login` using your Web3 wallet (MetaMask, Phantom, Rabby, etc.).
+
+2. Copy Overlay URL:
+   In the Creator Command Center (`/dashboard`), copy your unique Overlay URL:
+   `https://app.livecrypto.io/overlay/obs_tok_9f8a7c6b5e...`
+
+3. Add Browser Source in OBS Studio:
+   - Click `+` (Add Source) in the Sources panel.
+   - Select `Browser`.
+   - Paste your unique Overlay URL into the `URL` input.
+   - Set Width to `1920` and Height to `1080` (or `800x600`).
+   - Enable `Refresh browser when scene becomes active`.
+   - Disable `Shutdown source when not visible` to maintain persistent WebSocket connectivity.
+
+4. Test Live Broadcast:
+   In your dashboard, click `Test Live OBS Broadcast`. The animated frosted glass card, custom IPFS sound chime, and Text-to-Speech voice will render instantly on stream.
+
+---
+
+## Security and Cryptographic Integrity
+
+### 1. Anti-Replay and Deduplication
+Every incoming transaction hash is recorded with a unique constraint. Duplicate submission of previously confirmed transaction hashes is rejected immediately with HTTP 409, preventing double-alert replay attacks.
+
+### 2. Strict HMAC Signature Validation
+Webhooks received from external indexers (Alchemy, Helius, QuickNode) are verified against the raw request buffer (`req.rawBody`) using HMAC-SHA256:
+```
+signature = HMAC_SHA256(rawBody, WEBHOOK_SECRET)
+```
+This eliminates signature mismatches caused by JSON parser key reordering.
+
+### 3. Recipient Wallet Address Enforcement
+The `ChainVerifier` cross-references on-chain destination addresses against the streamer's registered payout addresses before marking any transaction as confirmed.
+
+### 4. XSS Sanitization on Speech Synthesis
+Viewer donation messages are stripped of all HTML tags, script injections, and non-printable characters before being processed by the browser speech synthesis engine.
+
+---
+
+## Quick Start & Local Execution
+
+### Option A: 1-Click Launcher (Recommended for Windows)
+
+Double-click `start-dev.bat` in the repository root. This initiates `dev-runner.js`, starting both the backend API (:8080) and frontend (:3000) concurrently in a single terminal with automated browser launching.
 
 ```bash
-git clone https://github.com/your-username/live-crypto.git
-cd live-crypto
+.\start-dev.bat
 ```
 
-### 2. Start Infrastructure (PostgreSQL + Redis)
+### Option B: Manual Execution
 
-```bash
-docker-compose up -d
-```
-
-> This automatically runs the DDL schema (`db/init.sql`) on first boot.
-
-### 3. Start the Backend
+#### 1. Backend Server
 
 ```bash
 cd backend
-cp .env.example .env   # Edit with your values
 npm install
 npm run dev
 ```
+The backend API and WebSocket server will run at `http://localhost:8080`.
 
-The API will be running at `http://localhost:8080`.
-
-### 4. Start the Frontend
+#### 2. Frontend Web Application
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+The Next.js web application will run at `http://localhost:3000`.
 
-The app will be running at `http://localhost:3000`.
+#### 3. Run Automated Security Test Suite
 
-### 5. Compile Smart Contracts (Optional)
+```bash
+cd backend
+npm test
+```
+
+---
+
+## Smart Contract Deployment
+
+### Solidity Router (EVM)
+
+The `LiveCryptoRouter.sol` contract handles atomic fee splitting for EVM networks:
+
+```solidity
+function donateNative(address payable streamer) external payable;
+function donateERC20(address token, address streamer, uint256 amount) external;
+```
+
+To compile and test the contracts:
 
 ```bash
 cd contracts
 npm install
 npx hardhat compile
+npx hardhat test
 ```
 
-The compiled ABI is already exported to `frontend/src/abi/LiveCryptoRouter.json`.
+To deploy to Polygon Amoy Testnet:
 
----
-
-## 📂 Project Structure
-
-```
-live-crypto/
-├── backend/                    # Node.js + Express API
-│   ├── src/
-│   │   ├── db/index.js         # PostgreSQL connection pool
-│   │   ├── redis/index.js      # Redis Pub/Sub clients
-│   │   ├── ws/index.js         # WebSocket server (OBS connections)
-│   │   ├── routes/
-│   │   │   ├── auth.js         # SIWE authentication (nonce + verify)
-│   │   │   ├── dashboard.js    # Wallet config, transactions, token rotation
-│   │   │   └── webhooks.js     # HMAC-validated webhook listener
-│   │   ├── services/
-│   │   │   └── polling.js      # Fallback cron job for missed webhooks
-│   │   └── server.js           # Express entry point with rate limiting
-│   └── .env
-│
-├── frontend/                   # Next.js 16 + Tailwind CSS
-│   ├── src/
-│   │   ├── abi/                # Compiled Smart Contract ABIs
-│   │   ├── components/
-│   │   │   └── Web3Provider.tsx # Wagmi + Web3Modal provider
-│   │   └── app/
-│   │       ├── login/          # SIWE streamer authentication
-│   │       ├── dashboard/      # Streamer dashboard (Green-on-Black)
-│   │       ├── pay/[streamer_id]/ # Universal Payment Gateway (Dual Mode)
-│   │       └── overlay/[obs_token]/ # OBS Browser Source overlay
-│   └── globals.css             # CRT scanlines, Matrix decode, flicker FX
-│
-├── contracts/                  # Solidity Smart Contracts (Hardhat 3)
-│   ├── src/
-│   │   └── LiveCryptoRouter.sol # Non-custodial fee-splitting router
-│   └── hardhat.config.js
-│
-├── db/
-│   └── init.sql                # PostgreSQL DDL schema
-│
-└── docker-compose.yml          # PostgreSQL 15 + Redis 7
+```bash
+npx hardhat run scripts/deploy.js --network amoy
 ```
 
 ---
 
-## 🔐 Security Features
+## License
 
-| Feature | Implementation |
-|---------|---------------|
-| **SIWE Authentication** | EIP-4361 — Streamers sign a nonce with their wallet. No passwords. |
-| **HMAC Webhook Validation** | `x-alchemy-signature` verified via `crypto.timingSafeEqual`. |
-| **Rate Limiting** | 3-tier: Global (100/15min), Auth (20/15min), Webhooks (60/min). |
-| **OBS Token Rotation** | `POST /api/dashboard/rotate-token` regenerates the UUID instantly. |
-| **Fallback Polling** | Cron job every 2 minutes catches transactions missed by webhooks. |
-| **XSS Sanitization** | Donation messages are sanitized before DOM render and TTS output. |
-| **Non-Custodial** | Backend **never** handles private keys. All signing happens client-side. |
-
----
-
-## 🎨 OBS Overlay Features
-
-<!-- TODO: Add a GIF of the overlay in action -->
-<!-- ![Overlay Demo](./assets/screenshots/overlay_demo.gif) -->
-
-- **CRT Scanline Effect** — Authentic retro terminal aesthetic.
-- **Matrix Decode Animation** — Donor addresses scramble before revealing.
-- **Text Glow & Flicker** — Pulsating green neon glow on all text.
-- **Web Speech TTS** — Donations are spoken aloud via the browser's speech engine.
-- **Strict Numeral-Only Goals** — No descriptive text. Only raw pulsating numerals (e.g., `1240.50 / 1500.00`).
-
----
-
-## 💳 Universal Payment Gateway
-
-The `/pay/[streamer_id]` page provides two modes:
-
-| Mode | Use Case | How it Works |
-|------|----------|--------------|
-| **Web3 Native** | MetaMask, WalletConnect, Phantom | One-click connect + sign via Wagmi v2 |
-| **CEX / Manual** | Binance, Coinbase, Exchange Apps | Scan QR code, copy address, long-poll detection |
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend API** | Node.js, Express, JWT |
-| **Database** | PostgreSQL 15 |
-| **Cache / Pub-Sub** | Redis 7 |
-| **Real-Time** | WebSockets (ws) |
-| **Frontend** | Next.js 16, React 19, Tailwind CSS v4 |
-| **Web3** | Wagmi v2, Viem, Web3Modal, SIWE |
-| **Smart Contracts** | Solidity 0.8.19, Hardhat 3 |
-| **Infrastructure** | Docker Compose |
-
----
-
-## 📄 Environment Variables
-
-Create a `.env` file in `backend/`:
-
-```env
-PORT=8080
-POSTGRES_USER=postgres
-POSTGRES_HOST=localhost
-POSTGRES_DB=livecrypto
-POSTGRES_PASSWORD=password
-POSTGRES_PORT=5432
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
-WEBHOOK_SECRET=your-webhook-hmac-secret
-```
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  Built with 💚 by the Live Crypto Team
-</p>
+This project is licensed under the MIT License.
