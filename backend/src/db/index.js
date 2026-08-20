@@ -10,7 +10,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 1500,
 });
 
-pool.on('error', (err) => {
+pool.on('error', () => {
   // Silent background handling
 });
 
@@ -20,9 +20,12 @@ const memoryStore = {
     { id: 1, public_address: '0x71c7656ec7ab88b098defb751b7401b5f6d8976f', obs_token: '789a-bcde-1234-fghi' }
   ],
   wallets: [
-    { streamer_id: 1, chain_id: 'sui', public_address: '0x8f3c7e9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c' },
     { streamer_id: 1, chain_id: 'solana', public_address: '8x3sK2vPz1Lm9NxQa7Rt5Wb4Ey2Cg1Vj6F3aQ' },
-    { streamer_id: 1, chain_id: '137', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' }
+    { streamer_id: 1, chain_id: 'sui', public_address: '0x8f3c7e9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c' },
+    { streamer_id: 1, chain_id: '137', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
+    { streamer_id: 1, chain_id: '8453', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
+    { streamer_id: 1, chain_id: '1', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
+    { streamer_id: 1, chain_id: 'btc', public_address: 'lnurl1dp68gurn8ghj7ampd3kx2ar0veekzar0wd5xjtnrdakj7tnhv4kxctttdehhwm30d3h82unvwqhksetjv35kuee5' }
   ],
   alertConfigs: [
     {
@@ -31,18 +34,29 @@ const memoryStore = {
       active_theme: 'cyberpunk',
       goal_amount: '100.00',
       goal_current: '35.00',
-      goal_title: 'Setup Novo',
+      goal_title: 'Streamer Setup Goal',
       media_url: null,
       audio_url: null
     }
   ],
   transactions: [
     {
-      tx_hash: 'sui_demo_tx_001',
+      id: 1,
+      tx_hash: '0x8f2d...4a1c',
       streamer_id: 1,
-      sender_address: '0x8f3c...Slush',
-      amount: '25.00',
-      currency: 'SUI',
+      sender_address: 'alex.sol',
+      amount: '25.0',
+      currency: 'SOL',
+      status: 'CONFIRMED',
+      timestamp: new Date().toISOString()
+    },
+    {
+      id: 2,
+      tx_hash: '0x3e1b...99f0',
+      streamer_id: 1,
+      sender_address: 'satoshi.eth',
+      amount: '0.15',
+      currency: 'ETH',
       status: 'CONFIRMED',
       timestamp: new Date().toISOString()
     }
@@ -84,6 +98,14 @@ async function query(text, params = []) {
       const match = memoryStore.streamers.filter(s => s.public_address.toLowerCase() === String(params[0]).toLowerCase());
       return { rows: match };
     }
+    if (queryLower.includes('inner join wallets')) {
+      const walletAddr = String(params[0]).toLowerCase();
+      const matchedWallet = memoryStore.wallets.find(w => w.public_address.toLowerCase() === walletAddr);
+      if (matchedWallet) {
+        return { rows: [{ id: matchedWallet.streamer_id }] };
+      }
+      return { rows: [] };
+    }
     return { rows: memoryStore.streamers };
   }
 
@@ -102,7 +124,12 @@ async function query(text, params = []) {
   // 3. Wallets queries
   if (queryLower.includes('from wallets')) {
     const streamerId = parseInt(params[0]) || 1;
-    const match = memoryStore.wallets.filter(w => w.streamer_id === streamerId);
+    let match = memoryStore.wallets.filter(w => w.streamer_id === streamerId);
+    if (params.length > 1) {
+      const chainSearch = String(params[1]).toLowerCase();
+      const filtered = match.filter(w => w.chain_id.toLowerCase() === chainSearch || w.chain_id === String(params[2] || ''));
+      if (filtered.length > 0) match = filtered;
+    }
     return { rows: match };
   }
 
@@ -131,7 +158,9 @@ async function query(text, params = []) {
         active_theme: 'cyberpunk',
         goal_amount: '100.00',
         goal_current: '0.00',
-        goal_title: 'Meta de Doações'
+        goal_title: 'Donation Goal',
+        media_url: null,
+        audio_url: null
       };
       memoryStore.alertConfigs.push(match);
     }
@@ -150,26 +179,62 @@ async function query(text, params = []) {
     if (params[3]) cfg.goal_amount = params[3];
     if (params[4]) cfg.goal_current = params[4];
     if (params[5]) cfg.goal_title = params[5];
+    if (params[6] !== undefined) cfg.media_url = params[6];
+    if (params[7] !== undefined) cfg.audio_url = params[7];
     return { rows: [cfg] };
   }
 
   // 5. Transactions queries
   if (queryLower.includes('from transactions')) {
+    if (queryLower.includes('where tx_hash = $1')) {
+      const match = memoryStore.transactions.filter(t => t.tx_hash === params[0]);
+      return { rows: match };
+    }
+    if (queryLower.includes('where status = \'pending\'')) {
+      const match = memoryStore.transactions.filter(t => t.status === 'PENDING');
+      return { rows: match };
+    }
+    if (queryLower.includes('where streamer_id = $1')) {
+      const streamerId = parseInt(params[0]) || 1;
+      const match = memoryStore.transactions.filter(t => t.streamer_id === streamerId);
+      return { rows: match };
+    }
     return { rows: memoryStore.transactions };
   }
 
   if (queryLower.includes('insert into transactions')) {
+    const txHash = params[0] || `tx_${Date.now()}`;
+    const streamerId = parseInt(params[1]) || 1;
+    const sender = params[2] || 'Anonymous';
+    const amount = String(params[3] || '0');
+    const currency = params[4] || 'SOL';
+
+    const existingIdx = memoryStore.transactions.findIndex(t => t.tx_hash === txHash);
+    if (existingIdx > -1) {
+      memoryStore.transactions[existingIdx].status = 'CONFIRMED';
+      return { rows: [memoryStore.transactions[existingIdx]] };
+    }
+
     const newTx = {
-      tx_hash: params[0] || `tx_${Date.now()}`,
-      streamer_id: parseInt(params[1]) || 1,
-      sender_address: params[2] || '0xDonor',
-      amount: String(params[3] || '0'),
-      currency: params[4] || 'SUI',
+      id: memoryStore.transactions.length + 1,
+      tx_hash: txHash,
+      streamer_id: streamerId,
+      sender_address: sender,
+      amount: amount,
+      currency: currency,
       status: 'CONFIRMED',
       timestamp: new Date().toISOString()
     };
     memoryStore.transactions.unshift(newTx);
     return { rows: [newTx] };
+  }
+
+  if (queryLower.includes('update transactions set status')) {
+    const status = queryLower.includes("'confirmed'") ? 'CONFIRMED' : queryLower.includes("'failed'") ? 'FAILED' : 'PENDING';
+    const txId = parseInt(params[0]);
+    const target = memoryStore.transactions.find(t => t.id === txId);
+    if (target) target.status = status;
+    return { rows: target ? [target] : [] };
   }
 
   return { rows: [] };

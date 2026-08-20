@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
-const http = require('http');
+const chainVerifier = require('../src/services/chainVerifier');
 
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:8080';
 
@@ -86,5 +86,19 @@ test('🔒 Security & API Integration Test Suite', async (t) => {
     } catch (e) {
       // Offline fallback
     }
+  });
+
+  await t.test('5. Multi-Chain Verifier Architecture & Interface Integrity', async () => {
+    assert.ok(typeof chainVerifier.verifyEVM === 'function', 'verifyEVM must be a function');
+    assert.ok(typeof chainVerifier.verifySolana === 'function', 'verifySolana must be a function');
+    assert.ok(typeof chainVerifier.verifySui === 'function', 'verifySui must be a function');
+    assert.ok(typeof chainVerifier.verifyBitcoinOnChain === 'function', 'verifyBitcoinOnChain must be a function');
+    assert.ok(typeof chainVerifier.verifyTransaction === 'function', 'verifyTransaction must be a function');
+
+    // Test invalid hash rejection
+    const emptyResult = await chainVerifier.verifyTransaction({ tx_hash: '' });
+    assert.strictEqual(emptyResult.verified, false, 'Empty hash must be rejected');
+
+    console.log('   ✓ Universal Multi-Chain Verifier engine interface validated');
   });
 });

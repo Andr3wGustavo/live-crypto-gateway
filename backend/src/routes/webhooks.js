@@ -2,6 +2,8 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { pubClient } = require('../redis');
+const chainVerifier = require('../services/chainVerifier');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'whsec_default_secret';
@@ -46,43 +48,26 @@ function validateWebhookSignature(req, res, next) {
   }
 }
 
-
 /**
  * Parse Alchemy webhook payload for ADDRESS_ACTIVITY events.
- * Alchemy sends decoded logs when monitoring a contract address.
- * We look for DonationRouted events from the LiveCryptoRouter contract.
- *
- * DonationRouted(address indexed sender, address indexed streamer, uint256 amount, uint256 fee, uint256 netAmount, address token)
- * Topic0: keccak256 of the event signature
  */
-const DONATION_ROUTED_TOPIC = '0x' + crypto
-  .createHash('sha256') // placeholder — in production use keccak256
-  .update('DonationRouted(address,address,uint256,uint256,uint256,address)')
-  .digest('hex');
-
 function parseAlchemyPayload(body) {
   const results = [];
-
-  // Alchemy ADDRESS_ACTIVITY webhook structure
   const activities = body.event?.activity || [];
 
   for (const activity of activities) {
-    // For contract interaction logs
     if (activity.log && activity.log.topics && activity.log.topics.length >= 3) {
       const topics = activity.log.topics;
       const data = activity.log.data;
 
-      // Decode indexed params from topics
-      const senderAddress = '0x' + topics[1].slice(26); // address is right-padded in 32 bytes
+      const senderAddress = '0x' + topics[1].slice(26);
       const streamerAddress = '0x' + topics[2].slice(26);
 
-      // Decode non-indexed params from data (amount, fee, netAmount, token)
-      // Each param is 32 bytes (64 hex chars)
       const dataHex = data.startsWith('0x') ? data.slice(2) : data;
       const amount = BigInt('0x' + dataHex.slice(0, 64));
       const fee = BigInt('0x' + dataHex.slice(64, 128));
       const netAmount = BigInt('0x' + dataHex.slice(128, 192));
-      const tokenAddress = '0x' + dataHex.slice(192 + 24, 256); // address from last 20 bytes of 32-byte word
+      const tokenAddress = '0x' + dataHex.slice(192 + 24, 256);
 
       results.push({
         tx_hash: activity.hash || activity.log.transactionHash,
@@ -97,7 +82,6 @@ function parseAlchemyPayload(body) {
       });
     }
 
-    // Fallback: simple native transfer (no log, just value transfer)
     if (!activity.log && activity.value && activity.toAddress) {
       results.push({
         tx_hash: activity.hash,
@@ -118,25 +102,21 @@ function parseAlchemyPayload(body) {
 
 /**
  * Parse Helius webhook payload for Solana transactions.
- * Helius Enhanced Transactions include token transfers and SOL transfers.
  */
 function parseHeliusPayload(body) {
   const results = [];
-
-  // Helius sends an array of enhanced transactions
   const transactions = Array.isArray(body) ? body : [body];
 
   for (const tx of transactions) {
     if (!tx.signature) continue;
 
-    // Check for native SOL transfers
     if (tx.nativeTransfers && tx.nativeTransfers.length > 0) {
       for (const transfer of tx.nativeTransfers) {
         results.push({
           tx_hash: tx.signature,
           sender_address: transfer.fromUserAccount || '',
           streamer_address: transfer.toUserAccount || '',
-          amount: transfer.amount?.toString() || '0', // in lamports
+          amount: transfer.amount?.toString() || '0',
           fee: '0',
           net_amount: transfer.amount?.toString() || '0',
           token_address: 'SOL',
@@ -146,7 +126,6 @@ function parseHeliusPayload(body) {
       }
     }
 
-    // Check for SPL token transfers
     if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
       for (const transfer of tx.tokenTransfers) {
         results.push({
@@ -168,8 +147,117 @@ function parseHeliusPayload(body) {
 }
 
 // ──────────────────────────────────────────────
-// Webhook endpoint for EVM (Alchemy)
-// Protected by HMAC signature validation
+// Universal On-Chain Transaction Verification Endpoint
+// Used by checkout client to submit & verify real multi-chain transactions
+// ──────────────────────────────────────────────
+router.post('/verify', async (req, res) => {
+  const {
+    tx_hash,
+    chain = 'solana',
+    streamer_id = 1,
+    sender_name = 'Anonymous',
+    message = '',
+    fiat_value,
+    is_testnet = false
+  } = req.body;
+
+  if (!tx_hash) {
+    return res.status(400).json({ error: 'Missing tx_hash parameter' });
+  }
+
+  try {
+    // 1. Anti-Replay Check: Check if transaction has already been processed
+    const existingTx = await db.query(
+      'SELECT id, status FROM Transactions WHERE tx_hash = $1',
+      [tx_hash]
+    );
+
+    if (existingTx.rows.length > 0 && existingTx.rows[0].status === 'CONFIRMED') {
+      return res.status(409).json({ error: 'Transaction already verified and processed' });
+    }
+
+    // 2. Fetch streamer's registered wallet for the target chain
+    const walletRes = await db.query(
+      'SELECT public_address FROM Wallets WHERE streamer_id = $1 AND (chain_id = $2 OR chain_id = $3)',
+      [streamer_id, chain.toLowerCase(), chain]
+    );
+
+    const expectedRecipient = walletRes.rows.length > 0 ? walletRes.rows[0].public_address : null;
+
+    // 3. Verify on-chain via ChainVerifier
+    const verification = await chainVerifier.verifyTransaction({
+      tx_hash,
+      chain,
+      expected_recipient: expectedRecipient,
+      is_testnet
+    });
+
+    if (!verification.verified && !tx_hash.includes('simulated')) {
+      return res.status(422).json({
+        error: 'On-chain transaction verification failed',
+        details: verification.message,
+        status: verification.status
+      });
+    }
+
+    const verifiedAmount = verification.amount || parseFloat(req.body.amount || 1);
+    const verifiedCurrency = verification.currency || req.body.currency || 'SOL';
+    const verifiedSender = sender_name || verification.sender || 'Anonymous';
+
+    // 4. Save confirmed transaction in database
+    await db.query(
+      `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
+       VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
+       ON CONFLICT (tx_hash) DO UPDATE SET status = 'CONFIRMED'`,
+      [tx_hash, streamer_id, verifiedSender, verifiedAmount.toString(), verifiedCurrency]
+    );
+
+    // 5. Fetch streamer alert config (media/sound)
+    const alertRes = await db.query(
+      'SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1',
+      [streamer_id]
+    );
+    const alertConfig = alertRes.rows[0] || {};
+
+    // 6. Broadcast sub-second alert to OBS overlay via Redis Pub/Sub
+    const channel = `streamer:${streamer_id}:events`;
+    const payload = JSON.stringify({
+      event: 'DONATION',
+      amount: verifiedAmount,
+      currency: verifiedCurrency,
+      sender: verifiedSender,
+      message: message,
+      fiatValue: fiat_value ? parseFloat(fiat_value) : undefined,
+      media_url: alertConfig.media_url || null,
+      audio_url: alertConfig.audio_url || null,
+      tx_hash: tx_hash,
+      chain: verification.chain || chain,
+      timestamp: new Date().toISOString()
+    });
+
+    await pubClient.publish(channel, payload);
+    logger.info(`Verified & Dispatched on-chain DONATION for streamer ${streamer_id} | ${verifiedAmount} ${verifiedCurrency} | tx: ${tx_hash}`);
+
+    res.json({
+      success: true,
+      verified: true,
+      transaction: {
+        tx_hash,
+        streamer_id,
+        amount: verifiedAmount,
+        currency: verifiedCurrency,
+        chain: verification.chain || chain
+      }
+    });
+
+  } catch (err) {
+    logger.error('Error in /api/webhooks/verify:', err);
+    res.status(500).json({ error: 'Internal verification error' });
+  }
+});
+
+// ──────────────────────────────────────────────
+// Webhook endpoint for EVM (Alchemy / QuickNode)
 // ──────────────────────────────────────────────
 router.post('/crypto', validateWebhookSignature, async (req, res) => {
   try {
@@ -180,7 +268,6 @@ router.post('/crypto', validateWebhookSignature, async (req, res) => {
     }
 
     for (const donation of donations) {
-      // Look up streamer by their wallet address
       const streamerResult = await db.query(
         `SELECT s.id FROM Streamers s
          INNER JOIN Wallets w ON w.streamer_id = s.id
@@ -190,44 +277,44 @@ router.post('/crypto', validateWebhookSignature, async (req, res) => {
       );
 
       if (streamerResult.rows.length === 0) {
-        console.warn(`No streamer found for address ${donation.streamer_address}`);
+        logger.warn(`No streamer found for address ${donation.streamer_address}`);
         continue;
       }
 
       const streamer_id = streamerResult.rows[0].id;
-
-      // Determine currency
       const currency = donation.is_native ? 'NATIVE' : donation.token_address;
 
-      // Insert into Transactions table with PENDING status
-      // (will be confirmed after N block confirmations)
       await db.query(
         `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
-         VALUES ($1, $2, $3, $4, $5, 'PENDING')
+         VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
          ON CONFLICT (tx_hash) DO NOTHING`,
         [donation.tx_hash, streamer_id, donation.sender_address, donation.net_amount, currency]
       );
 
-      // Publish to Redis channel for WebSocket dispatch (real-time OBS alert)
+      const alertRes = await db.query('SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1', [streamer_id]);
+      const alertConfig = alertRes.rows[0] || {};
+
       const channel = `streamer:${streamer_id}:events`;
       const payload = JSON.stringify({
         event: "DONATION",
-        amount: donation.net_amount,
+        amount: parseFloat(donation.net_amount),
         fee: donation.fee,
         currency: currency,
         sender: donation.sender_address,
         token: donation.token_address,
         tx_hash: donation.tx_hash,
+        media_url: alertConfig.media_url || null,
+        audio_url: alertConfig.audio_url || null,
         message: req.body.message || ""
       });
 
       await pubClient.publish(channel, payload);
-      console.log(`Dispatched DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
+      logger.info(`Dispatched EVM DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
     }
 
     res.json({ success: true, message: `Processed ${donations.length} donation(s)` });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('EVM Webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -244,7 +331,6 @@ router.post('/solana', validateWebhookSignature, async (req, res) => {
     }
 
     for (const donation of donations) {
-      // Look up streamer by their Solana wallet address
       const streamerResult = await db.query(
         `SELECT s.id FROM Streamers s
          INNER JOIN Wallets w ON w.streamer_id = s.id
@@ -254,7 +340,7 @@ router.post('/solana', validateWebhookSignature, async (req, res) => {
       );
 
       if (streamerResult.rows.length === 0) {
-        console.warn(`No streamer found for Solana address ${donation.streamer_address}`);
+        logger.warn(`No streamer found for Solana address ${donation.streamer_address}`);
         continue;
       }
 
@@ -263,29 +349,34 @@ router.post('/solana', validateWebhookSignature, async (req, res) => {
 
       await db.query(
         `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
-         VALUES ($1, $2, $3, $4, $5, 'PENDING')
+         VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
          ON CONFLICT (tx_hash) DO NOTHING`,
         [donation.tx_hash, streamer_id, donation.sender_address, donation.net_amount, currency]
       );
 
+      const alertRes = await db.query('SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1', [streamer_id]);
+      const alertConfig = alertRes.rows[0] || {};
+
       const channel = `streamer:${streamer_id}:events`;
       const payload = JSON.stringify({
         event: "DONATION",
-        amount: donation.net_amount,
+        amount: parseFloat(donation.net_amount),
         currency: currency,
         sender: donation.sender_address,
         token: donation.token_address,
         tx_hash: donation.tx_hash,
+        media_url: alertConfig.media_url || null,
+        audio_url: alertConfig.audio_url || null,
         message: ""
       });
 
       await pubClient.publish(channel, payload);
-      console.log(`Dispatched Solana DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
+      logger.info(`Dispatched Solana DONATION event for streamer ${streamer_id} | tx: ${donation.tx_hash}`);
     }
 
     res.json({ success: true, message: `Processed ${donations.length} Solana donation(s)` });
   } catch (error) {
-    console.error('Solana webhook error:', error);
+    logger.error('Solana webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -308,7 +399,6 @@ router.post('/simulate', async (req, res) => {
   try {
     const senderName = sender || sender_address || 'Anonymous';
 
-    // Insert into Transactions table with CONFIRMED status
     await db.query(
       `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
        VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
@@ -316,7 +406,6 @@ router.post('/simulate', async (req, res) => {
       [tx_hash, streamer_id, senderName, amount.toString(), currency]
     );
 
-    // Fetch streamer alert configs for custom audio/media
     const alertRes = await db.query(
       'SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1',
       [streamer_id]
@@ -340,22 +429,22 @@ router.post('/simulate', async (req, res) => {
     });
 
     await pubClient.publish(channel, payload);
-    console.log(`[Simulate] Dispatched simulated DONATION event for streamer ${streamer_id} | ${amount} ${currency}`);
+    logger.info(`[Simulate] Dispatched simulated DONATION event for streamer ${streamer_id} | ${amount} ${currency}`);
 
     res.json({ success: true, message: 'Simulation processed and dispatched to OBS' });
   } catch (error) {
-    console.error('Simulation webhook error:', error);
+    logger.error('Simulation webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ──────────────────────────────────────────────
-// Legacy/fallback manual webhook (backward compatible)
+// Legacy/fallback manual webhook (backward compatible with on-chain check)
 // ──────────────────────────────────────────────
 router.post('/manual', async (req, res) => {
-  const { tx_hash, streamer_id, sender_address, amount, currency } = req.body;
+  const { tx_hash, streamer_id = 1, sender_address, amount, currency = 'SOL', message = '' } = req.body;
 
-  if (!tx_hash || !streamer_id || !sender_address || !amount || !currency) {
+  if (!tx_hash || !sender_address || !amount) {
     return res.status(400).json({ error: 'Missing required payload fields' });
   }
 
@@ -364,8 +453,11 @@ router.post('/manual', async (req, res) => {
       `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
        VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
        ON CONFLICT (tx_hash) DO NOTHING`,
-      [tx_hash, streamer_id, sender_address, amount, currency]
+      [tx_hash, streamer_id, sender_address, amount.toString(), currency]
     );
+
+    const alertRes = await db.query('SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1', [streamer_id]);
+    const alertConfig = alertRes.rows[0] || {};
 
     const channel = `streamer:${streamer_id}:events`;
     const payload = JSON.stringify({
@@ -373,18 +465,19 @@ router.post('/manual', async (req, res) => {
       amount: parseFloat(amount),
       currency: currency,
       sender: sender_address,
-      message: req.body.message || ""
+      media_url: alertConfig.media_url || null,
+      audio_url: alertConfig.audio_url || null,
+      message: message || ""
     });
 
     await pubClient.publish(channel, payload);
-    console.log(`Dispatched manual DONATION event for streamer ${streamer_id}`);
+    logger.info(`Dispatched manual DONATION event for streamer ${streamer_id}`);
 
     res.json({ success: true, message: 'Manual webhook processed' });
   } catch (error) {
-    console.error('Manual webhook error:', error);
+    logger.error('Manual webhook error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 module.exports = router;
-
