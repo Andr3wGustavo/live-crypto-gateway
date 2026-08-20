@@ -56,30 +56,34 @@ router.post('/wallet', async (req, res) => {
   }
 });
 
-// Update Alert Config, Theme, and Goal
+// Update Alert Config, Theme, Media, Audio, and Goal
 router.post('/config', async (req, res) => {
   const streamerId = req.user.id;
-  const { min_amount, active_theme, goal_amount, goal_current, goal_title } = req.body;
+  const { min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url } = req.body;
 
   try {
     const { rows } = await db.query(
-      `INSERT INTO Alert_Configs (streamer_id, min_amount, active_theme, goal_amount, goal_current, goal_title)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO Alert_Configs (streamer_id, min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (streamer_id)
        DO UPDATE SET 
          min_amount = COALESCE(EXCLUDED.min_amount, Alert_Configs.min_amount),
          active_theme = COALESCE(EXCLUDED.active_theme, Alert_Configs.active_theme),
          goal_amount = COALESCE(EXCLUDED.goal_amount, Alert_Configs.goal_amount),
          goal_current = COALESCE(EXCLUDED.goal_current, Alert_Configs.goal_current),
-         goal_title = COALESCE(EXCLUDED.goal_title, Alert_Configs.goal_title)
-       RETURNING min_amount, active_theme, goal_amount, goal_current, goal_title`,
+         goal_title = COALESCE(EXCLUDED.goal_title, Alert_Configs.goal_title),
+         media_url = COALESCE(EXCLUDED.media_url, Alert_Configs.media_url),
+         audio_url = COALESCE(EXCLUDED.audio_url, Alert_Configs.audio_url)
+       RETURNING min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url`,
       [
         streamerId, 
         min_amount || '0.0', 
         active_theme || 'cyberpunk', 
         goal_amount || '0.0', 
         goal_current || '0.0', 
-        goal_title || 'Donation Goal'
+        goal_title || 'Donation Goal',
+        media_url || null,
+        audio_url || null
       ]
     );
 
@@ -90,7 +94,9 @@ router.post('/config', async (req, res) => {
       theme: active_theme || 'cyberpunk',
       goal_amount: parseFloat(goal_amount || '0.0'),
       goal_current: parseFloat(goal_current || '0.0'),
-      goal_title: goal_title || 'Donation Goal'
+      goal_title: goal_title || 'Donation Goal',
+      media_url: rows[0].media_url,
+      audio_url: rows[0].audio_url
     });
     
     await pubClient.publish(channel, payload);

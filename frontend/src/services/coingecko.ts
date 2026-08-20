@@ -5,21 +5,28 @@ export interface CryptoPriceData {
   id: string;
   symbol: string;
   name: string;
-  priceUSD: number;
-  change24h: number;
+  chain: string;
+  chainId: string;
+  defaultUSD: number;
   icon: string;
+  explorerUrl?: string;
 }
 
-export const SUPPORTED_TOKENS = [
-  { symbol: 'SOL', id: 'solana', name: 'Solana', defaultUSD: 190.0, icon: '⚡' },
-  { symbol: 'SUI', id: 'sui', name: 'Sui Network', defaultUSD: 3.50, icon: '💧' },
-  { symbol: 'ETH', id: 'ethereum', name: 'Ethereum', defaultUSD: 3400.0, icon: '🔷' },
-  { symbol: 'POL', id: 'matic-network', name: 'Polygon', defaultUSD: 0.55, icon: '🟣' },
-  { symbol: 'BTC', id: 'bitcoin', name: 'Bitcoin (Lightning)', defaultUSD: 96000.0, icon: '🟠' },
-  { symbol: 'USDT', id: 'tether', name: 'Tether USD', defaultUSD: 1.00, icon: '💵' },
-  { symbol: 'USDC', id: 'usd-coin', name: 'USD Coin', defaultUSD: 1.00, icon: '🪙' },
-  { symbol: 'BNB', id: 'binancecoin', name: 'BNB Chain', defaultUSD: 650.0, icon: '🟡' },
-  { symbol: 'DOGE', id: 'dogecoin', name: 'Dogecoin', defaultUSD: 0.25, icon: '🐕' },
+export const SUPPORTED_TOKENS: CryptoPriceData[] = [
+  { symbol: 'SOL', id: 'solana', name: 'Solana', chain: 'Solana', chainId: 'solana', defaultUSD: 190.0, icon: '⚡' },
+  { symbol: 'SUI', id: 'sui', name: 'Sui Network', chain: 'Sui', chainId: 'sui', defaultUSD: 3.50, icon: '💧' },
+  { symbol: 'ETH', id: 'ethereum', name: 'Ethereum', chain: 'Ethereum', chainId: '1', defaultUSD: 3400.0, icon: '🔷' },
+  { symbol: 'POL', id: 'matic-network', name: 'Polygon', chain: 'Polygon', chainId: '137', defaultUSD: 0.55, icon: '🟣' },
+  { symbol: 'BASE-ETH', id: 'ethereum', name: 'Base (ETH)', chain: 'Base', chainId: '8453', defaultUSD: 3400.0, icon: '🔵' },
+  { symbol: 'ARB-ETH', id: 'ethereum', name: 'Arbitrum (ETH)', chain: 'Arbitrum', chainId: '42161', defaultUSD: 3400.0, icon: '🔷' },
+  { symbol: 'BTC', id: 'bitcoin', name: 'Bitcoin (Lightning)', chain: 'Lightning', chainId: 'btc', defaultUSD: 96000.0, icon: '🟠' },
+  { symbol: 'USDT', id: 'tether', name: 'Tether USD (Multi-chain)', chain: 'Multi-chain', chainId: '137', defaultUSD: 1.00, icon: '💵' },
+  { symbol: 'USDC', id: 'usd-coin', name: 'USD Coin (Multi-chain)', chain: 'Multi-chain', chainId: 'solana', defaultUSD: 1.00, icon: '🪙' },
+  { symbol: 'BNB', id: 'binancecoin', name: 'BNB Chain', chain: 'BNB Chain', chainId: '56', defaultUSD: 650.0, icon: '🟡' },
+  { symbol: 'TRX', id: 'tron', name: 'TRON (TRC20)', chain: 'TRON', chainId: 'tron', defaultUSD: 0.24, icon: '🔴' },
+  { symbol: 'TON', id: 'the-open-network', name: 'Toncoin', chain: 'TON', chainId: 'ton', defaultUSD: 5.40, icon: '💎' },
+  { symbol: 'AVAX', id: 'avalanche-2', name: 'Avalanche', chain: 'Avalanche', chainId: '43114', defaultUSD: 32.0, icon: '🔺' },
+  { symbol: 'DOGE', id: 'dogecoin', name: 'Dogecoin', chain: 'Dogecoin', chainId: 'doge', defaultUSD: 0.25, icon: '🐕' },
 ];
 
 let priceCache: Record<string, { usd: number; usd_24h_change?: number }> = {};
@@ -40,10 +47,10 @@ export async function fetchLiveCryptoPrices(): Promise<Record<string, { usd: num
     return result;
   }
 
-  const ids = SUPPORTED_TOKENS.map((t) => t.id).join(',');
+  const uniqueIds = Array.from(new Set(SUPPORTED_TOKENS.map((t) => t.id))).join(',');
   try {
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
+      `https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=usd&include_24hr_change=true`
     );
     if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
     const data = await res.json();
@@ -72,13 +79,20 @@ export async function fetchLiveCryptoPrices(): Promise<Record<string, { usd: num
   }
 }
 
-export function convertCryptoToFiat(amount: number, tokenSymbol: string, rates: Record<string, { usd: number }>, fiatRateUSD = 1): number {
+export function convertCryptoToFiat(amount: number, tokenSymbol: string, rates: Record<string, { usd: number }>, fiatCurrency: 'USD' | 'BRL' | 'EUR' = 'USD'): { value: number; formatted: string } {
   const tokenRate = rates[tokenSymbol]?.usd || 1;
-  return amount * tokenRate * fiatRateUSD;
+  const fiatMultiplier = fiatCurrency === 'BRL' ? 5.80 : fiatCurrency === 'EUR' ? 0.92 : 1.0;
+  const val = amount * tokenRate * fiatMultiplier;
+  const symbolPrefix = fiatCurrency === 'BRL' ? 'R$' : fiatCurrency === 'EUR' ? '€' : '$';
+  return {
+    value: val,
+    formatted: `${symbolPrefix}${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  };
 }
 
-export function convertFiatToCrypto(fiatAmount: number, tokenSymbol: string, rates: Record<string, { usd: number }>, fiatRateUSD = 1): number {
+export function convertFiatToCrypto(fiatAmount: number, tokenSymbol: string, rates: Record<string, { usd: number }>, fiatCurrency: 'USD' | 'BRL' | 'EUR' = 'USD'): number {
   const tokenRate = rates[tokenSymbol]?.usd || 1;
-  const usdAmount = fiatAmount / fiatRateUSD;
+  const fiatMultiplier = fiatCurrency === 'BRL' ? 5.80 : fiatCurrency === 'EUR' ? 0.92 : 1.0;
+  const usdAmount = fiatAmount / fiatMultiplier;
   return usdAmount / tokenRate;
 }

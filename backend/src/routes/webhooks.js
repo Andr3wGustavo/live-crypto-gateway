@@ -291,6 +291,65 @@ router.post('/solana', validateWebhookSignature, async (req, res) => {
 });
 
 // ──────────────────────────────────────────────
+// Simulation endpoint for test alerts & local checkouts
+// ──────────────────────────────────────────────
+router.post('/simulate', async (req, res) => {
+  const { 
+    tx_hash = `0x${crypto.randomBytes(8).toString('hex')}...simulated`, 
+    streamer_id = 1, 
+    sender = 'Anonymous', 
+    sender_address, 
+    amount = 1.0, 
+    currency = 'SOL', 
+    message = 'Great stream!', 
+    fiatValue 
+  } = req.body;
+
+  try {
+    const senderName = sender || sender_address || 'Anonymous';
+
+    // Insert into Transactions table with CONFIRMED status
+    await db.query(
+      `INSERT INTO Transactions (tx_hash, streamer_id, sender_address, amount, currency, status)
+       VALUES ($1, $2, $3, $4, $5, 'CONFIRMED')
+       ON CONFLICT (tx_hash) DO NOTHING`,
+      [tx_hash, streamer_id, senderName, amount.toString(), currency]
+    );
+
+    // Fetch streamer alert configs for custom audio/media
+    const alertRes = await db.query(
+      'SELECT media_url, audio_url FROM Alert_Configs WHERE streamer_id = $1',
+      [streamer_id]
+    );
+
+    const alertConfig = alertRes.rows[0] || {};
+    const channel = `streamer:${streamer_id}:events`;
+
+    const payload = JSON.stringify({
+      event: "DONATION",
+      amount: parseFloat(amount),
+      currency: currency,
+      sender: senderName,
+      message: message,
+      fiatValue: fiatValue ? parseFloat(fiatValue) : undefined,
+      media_url: alertConfig.media_url || null,
+      audio_url: alertConfig.audio_url || null,
+      tx_hash: tx_hash,
+      is_simulated: true,
+      timestamp: new Date().toISOString()
+    });
+
+    await pubClient.publish(channel, payload);
+    console.log(`[Simulate] Dispatched simulated DONATION event for streamer ${streamer_id} | ${amount} ${currency}`);
+
+    res.json({ success: true, message: 'Simulation processed and dispatched to OBS' });
+  } catch (error) {
+    console.error('Simulation webhook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ──────────────────────────────────────────────
 // Legacy/fallback manual webhook (backward compatible)
 // ──────────────────────────────────────────────
 router.post('/manual', async (req, res) => {
@@ -328,3 +387,4 @@ router.post('/manual', async (req, res) => {
 });
 
 module.exports = router;
+
