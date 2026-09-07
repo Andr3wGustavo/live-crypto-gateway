@@ -98,7 +98,9 @@ router.post('/config', async (req, res) => {
       media_url: rows[0].media_url,
       audio_url: rows[0].audio_url,
       position: req.body.position || 'bottom-center',
-      sound_preset: req.body.sound_preset || 'arcade_coin'
+      sound_preset: req.body.sound_preset || 'arcade_coin',
+      voice_profile: req.body.voice_profile || 'cyber_announcer',
+      show_leaderboard: req.body.show_leaderboard !== undefined ? req.body.show_leaderboard : true
     });
     
     await pubClient.publish(channel, payload);
@@ -108,7 +110,9 @@ router.post('/config', async (req, res) => {
       config: {
         ...rows[0],
         position: req.body.position || 'bottom-center',
-        sound_preset: req.body.sound_preset || 'arcade_coin'
+        sound_preset: req.body.sound_preset || 'arcade_coin',
+        voice_profile: req.body.voice_profile || 'cyber_announcer',
+        show_leaderboard: req.body.show_leaderboard !== undefined ? req.body.show_leaderboard : true
       } 
     });
   } catch (error) {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { use } from 'react';
 import { playSynthesizedSound, SoundPresetId } from '@/services/soundEffects';
+import { speakWithProfile, VoiceProfileId } from '@/services/voiceSynthesis';
 
 // Matrix decoding effect for crypto sender names
 function MatrixText({ text, className = '' }: { text: string, className?: string }) {
@@ -40,6 +41,12 @@ function TokenBadge({ currency }: { currency: string }) {
   return <span className="text-xl">💰</span>;
 }
 
+interface LeaderboardItem {
+  sender: string;
+  totalFiat: number;
+  lastCurrency: string;
+}
+
 export default function OverlayPage({ params }: { params: Promise<{ obs_token: string }> }) {
   const { obs_token } = use(params);
   const [donation, setDonation] = useState<{ 
@@ -55,6 +62,14 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
   const [theme, setTheme] = useState<'matrix' | 'cyberpunk' | 'minimal' | 'fire'>('cyberpunk');
   const [position, setPosition] = useState<'bottom-center' | 'top-right' | 'top-left' | 'center' | 'bottom-right'>('bottom-center');
   const [soundPreset, setSoundPreset] = useState<SoundPresetId>('arcade_coin');
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfileId>('cyber_announcer');
+  const [showLeaderboard, setShowLeaderboard] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([
+    { sender: 'alex.sol', totalFiat: 4750.00, lastCurrency: 'SOL' },
+    { sender: 'satoshi.eth', totalFiat: 480.00, lastCurrency: 'ETH' },
+    { sender: 'slush_whale', totalFiat: 420.00, lastCurrency: 'SUI' }
+  ]);
+
   const [goalAmount, setGoalAmount] = useState(100.00);
   const [currentAmount, setCurrentAmount] = useState(0.00);
   const [goalTitle, setGoalTitle] = useState('Stream Donation Goal');
@@ -63,25 +78,17 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
 
   const activeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Text-to-Speech using Web Speech API (English)
+  // Text-to-Speech using configured AI Voice Profile
   const speakDonation = useCallback((donationData: { amount: number, currency: string, sender: string, message: string }) => {
     if (isTtsMuted) return;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const senderShort = donationData.sender.substring(0, 14);
-      let utteranceText = `${senderShort} donated ${donationData.amount} ${donationData.currency}!`;
-      if (donationData.message) {
-        const sanitized = donationData.message.replace(/<[^>]*>/g, '').substring(0, 200);
-        utteranceText += ` Message: ${sanitized}`;
-      }
-      const utterance = new SpeechSynthesisUtterance(utteranceText);
-      utterance.rate = 0.95;
-      utterance.pitch = 0.98;
-      utterance.volume = 1.0;
-      utterance.lang = 'en-US';
-      window.speechSynthesis.speak(utterance);
+    const senderShort = donationData.sender.substring(0, 14);
+    let utteranceText = `${senderShort} donated ${donationData.amount} ${donationData.currency}!`;
+    if (donationData.message) {
+      const sanitized = donationData.message.replace(/<[^>]*>/g, '').substring(0, 200);
+      utteranceText += ` Message: ${sanitized}`;
     }
-  }, [isTtsMuted]);
+    speakWithProfile(utteranceText, voiceProfile, 1.0);
+  }, [isTtsMuted, voiceProfile]);
 
   useEffect(() => {
     // Add OBS transparent mode class
@@ -110,6 +117,8 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
               setMediaConfig({ mediaUrl: data.config.media_url, audioUrl: data.config.audio_url });
               if (data.config.position) setPosition(data.config.position);
               if (data.config.sound_preset) setSoundPreset(data.config.sound_preset);
+              if (data.config.voice_profile) setVoiceProfile(data.config.voice_profile);
+              if (data.config.show_leaderboard !== undefined) setShowLeaderboard(data.config.show_leaderboard);
             }
 
             if (data.event === 'CONFIG_UPDATE') {
@@ -119,6 +128,8 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
               if (data.goal_title !== undefined) setGoalTitle(data.goal_title);
               if (data.position) setPosition(data.position);
               if (data.sound_preset) setSoundPreset(data.sound_preset);
+              if (data.voice_profile) setVoiceProfile(data.voice_profile);
+              if (data.show_leaderboard !== undefined) setShowLeaderboard(data.show_leaderboard);
               if (data.media_url !== undefined) setMediaConfig(prev => ({ ...prev, mediaUrl: data.media_url }));
               if (data.audio_url !== undefined) setMediaConfig(prev => ({ ...prev, audioUrl: data.audio_url }));
             }
@@ -142,19 +153,35 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
 
             if (data.event === 'DONATION') {
               const donationAmount = parseFloat(data.amount);
+              const fiatValue = data.fiatValue ? parseFloat(data.fiatValue) : donationAmount * 10;
               const donationData = {
                 amount: donationAmount,
                 currency: data.currency,
                 sender: data.sender || 'Anonymous',
                 message: data.message || '',
-                fiatValue: data.fiatValue ? parseFloat(data.fiatValue) : undefined,
+                fiatValue: fiatValue,
                 mediaUrl: data.media_url || mediaConfig.mediaUrl
               };
               
               setDonation(donationData);
               setIsExiting(false);
               
-              setCurrentAmount(prev => prev + (donationData.fiatValue || donationAmount));
+              setCurrentAmount(prev => prev + fiatValue);
+
+              // Update live on-chain leaderboard
+              setLeaderboard(prev => {
+                const existing = prev.find(item => item.sender.toLowerCase() === donationData.sender.toLowerCase());
+                let updated: LeaderboardItem[];
+                if (existing) {
+                  updated = prev.map(item => item.sender.toLowerCase() === donationData.sender.toLowerCase() 
+                    ? { ...item, totalFiat: item.totalFiat + fiatValue, lastCurrency: donationData.currency }
+                    : item
+                  );
+                } else {
+                  updated = [...prev, { sender: donationData.sender, totalFiat: fiatValue, lastCurrency: donationData.currency }];
+                }
+                return updated.sort((a, b) => b.totalFiat - a.totalFiat).slice(0, 3);
+              });
 
               // Play audio chime if configured, or trigger procedural synthesized sound
               const audioToPlay = data.audio_url || mediaConfig.audioUrl;
@@ -228,9 +255,40 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
   return (
     <div className="w-screen h-screen overflow-hidden pointer-events-none p-8 flex flex-col justify-between select-none font-sans relative">
       
-      {/* Top Donation Goal Widget */}
-      <div className="w-full flex justify-end z-10">
-        <div className="glass-panel p-4 rounded-2xl border border-white/10 max-w-sm w-full shadow-[0_15px_35px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+      {/* Top Header Row: Top 3 Leaderboard Widget + Donation Goal Widget */}
+      <div className="w-full flex justify-between items-start z-10">
+        
+        {/* On-Chain Top 3 Leaderboard Widget */}
+        {showLeaderboard && (
+          <div className="glass-panel p-3.5 rounded-2xl border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.7)] backdrop-blur-xl max-w-xs w-full">
+            <div className="flex items-center justify-between text-[10px] font-mono mb-2 pb-1.5 border-b border-white/10">
+              <span className="text-white font-bold flex items-center gap-1.5 uppercase">
+                <span>🏆</span> TOP SUPPORTERS
+              </span>
+              <span className="text-cyan-400 font-bold">ON-CHAIN</span>
+            </div>
+            <div className="space-y-1.5">
+              {leaderboard.map((supporter, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs font-mono">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-xs">
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                    </span>
+                    <span className="text-slate-200 font-bold truncate max-w-[120px]">
+                      {supporter.sender}
+                    </span>
+                  </div>
+                  <span className="text-cyan-300 font-bold text-[11px] flex-shrink-0">
+                    ${supporter.totalFiat.toFixed(0)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Top Right Donation Goal Widget */}
+        <div className="glass-panel p-4 rounded-2xl border border-white/10 max-w-sm w-full shadow-[0_15px_35px_rgba(0,0,0,0.7)] backdrop-blur-xl ml-auto">
           <div className="flex justify-between items-center text-xs font-mono mb-2">
             <span className="text-white font-bold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-cyan-400 radar-dot"></span>

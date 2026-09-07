@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { fetchLiveCryptoPrices } from '@/services/coingecko';
 import { playSynthesizedSound, SOUND_PRESETS, SoundPresetId } from '@/services/soundEffects';
+import { speakWithProfile, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
 
 interface StreamerData {
   id?: number;
@@ -31,11 +32,13 @@ export default function Dashboard() {
   const [streamer, setStreamer] = useState<StreamerData>({ public_address: '', obs_token: '' });
   const [wallets, setWallets] = useState<WalletItem[]>([]);
   
-  // Alert Config, Theme, Sound & Goal state
+  // Alert Config, Theme, Sound, Voice & Goal state
   const [minAmount, setMinAmount] = useState('0.00');
   const [activeTheme, setActiveTheme] = useState<'cyberpunk' | 'matrix' | 'fire' | 'minimal'>('cyberpunk');
   const [alertPosition, setAlertPosition] = useState<'bottom-center' | 'top-right' | 'top-left' | 'center' | 'bottom-right'>('bottom-center');
   const [soundPreset, setSoundPreset] = useState<SoundPresetId>('arcade_coin');
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfileId>('cyber_announcer');
+  const [showLeaderboard, setShowLeaderboard] = useState(true);
   const [goalAmount, setGoalAmount] = useState('100.00');
   const [goalCurrent, setGoalCurrent] = useState('35.00');
   const [goalTitle, setGoalTitle] = useState('Streamer Setup Goal');
@@ -113,6 +116,8 @@ export default function Dashboard() {
         setAudioUrl(data.alertConfig.audio_url || null);
         if (data.alertConfig.position) setAlertPosition(data.alertConfig.position);
         if (data.alertConfig.sound_preset) setSoundPreset(data.alertConfig.sound_preset);
+        if (data.alertConfig.voice_profile) setVoiceProfile(data.alertConfig.voice_profile);
+        if (data.alertConfig.show_leaderboard !== undefined) setShowLeaderboard(data.alertConfig.show_leaderboard);
       }
 
       const txRes = await fetch('http://localhost:8080/api/dashboard/transactions', { headers });
@@ -139,7 +144,7 @@ export default function Dashboard() {
     fetchLiveCryptoPrices().then(prices => setCryptoPrices(prices));
   }, []);
 
-  // Save Alert/Theme/Goal/Sound/Position configuration
+  // Save Alert/Theme/Goal/Sound/Position/Voice configuration
   const handleSaveConfig = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const token = localStorage.getItem('jwt');
@@ -166,7 +171,9 @@ export default function Dashboard() {
           media_url: mediaUrl,
           audio_url: audioUrl,
           position: alertPosition,
-          sound_preset: soundPreset
+          sound_preset: soundPreset,
+          voice_profile: voiceProfile,
+          show_leaderboard: showLeaderboard
         })
       });
 
@@ -706,9 +713,15 @@ export default function Dashboard() {
 
             {/* Mini OBS Screen Simulator */}
             <div className="relative w-full h-56 rounded-2xl bg-zinc-950 border border-white/10 overflow-hidden flex flex-col justify-between p-4 shadow-inner">
-              {/* Screen Top Right Goal bar mock */}
-              <div className="w-full flex justify-end">
-                <div className="px-3 py-1.5 rounded-xl bg-black/80 border border-white/10 text-[10px] font-mono text-white flex items-center gap-2">
+              {/* Screen Top Row: Leaderboard mock + Goal bar mock */}
+              <div className="w-full flex justify-between items-center text-[10px] font-mono">
+                {showLeaderboard ? (
+                  <div className="px-2 py-1 rounded-xl bg-black/80 border border-white/10 text-cyan-300 font-bold">
+                    🏆 1st: alex.sol ($4.7k)
+                  </div>
+                ) : <div />}
+
+                <div className="px-3 py-1 rounded-xl bg-black/80 border border-white/10 text-white flex items-center gap-2">
                   <span className="text-cyan-300 font-bold">{goalTitle}</span>
                   <span className="text-slate-400">${goalCurrent} / ${goalAmount}</span>
                 </div>
@@ -816,6 +829,70 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* AI Voice Synthesis Profile Selector */}
+            <div className="pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-mono text-slate-400 uppercase">AI Text-to-Speech (TTS) Voice Profile:</label>
+                <span className="text-[10px] font-mono text-purple-400 font-bold">ELEVENLABS / NEURAL READY</span>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {VOICE_PROFILES.map((voice) => (
+                  <div
+                    key={voice.id}
+                    onClick={() => setVoiceProfile(voice.id)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      voiceProfile === voice.id
+                        ? 'bg-purple-950/40 border-purple-400/50 text-white shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                        : 'bg-black/40 border-white/5 text-slate-400 hover:border-white/15'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono font-bold">{voice.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-black/60 font-mono text-purple-400 border border-purple-400/30">
+                          {voice.tag}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">{voice.description}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakWithProfile("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!", voice.id, 1.0);
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-purple-500/20 text-purple-300 text-xs font-mono"
+                      title="Listen Voice Preview"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Leaderboard Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-black/50 border border-white/10">
+              <div>
+                <div className="text-xs font-mono font-bold text-white flex items-center gap-2">
+                  <span>🏆</span> SHOW ON-STREAM TOP 3 SUPPORTERS LEADERBOARD
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Displays live gamified podium ranking of top session donors on the stream
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLeaderboard(!showLeaderboard)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                  showLeaderboard ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40' : 'bg-black/40 text-slate-500 border border-white/5'
+                }`}
+              >
+                {showLeaderboard ? 'ACTIVE' : 'HIDDEN'}
+              </button>
             </div>
           </div>
 

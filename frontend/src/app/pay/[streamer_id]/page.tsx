@@ -4,7 +4,8 @@ import { use } from 'react';
 import { useState, useEffect } from 'react';
 import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
-import { parseEther } from 'viem';
+import { parseEther, encodeFunctionData } from 'viem';
+import LiveCryptoRouterABI from '@/abi/LiveCryptoRouter.json';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { QRCodeSVG } from 'qrcode.react';
 import Image from 'next/image';
@@ -283,10 +284,39 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
         return;
       }
 
-      const tx = await sendTransactionAsync({
-        to: recipient as `0x${string}`,
-        value: parseEther(amount || '0.01'),
-      });
+      const ROUTER_ADDRESS = process.env.NEXT_PUBLIC_ROUTER_ADDRESS as `0x${string}` | undefined;
+      const isConfiguredRouter = ROUTER_ADDRESS && ROUTER_ADDRESS !== '0x0000000000000000000000000000000000000000';
+
+      let tx: `0x${string}`;
+
+      if (isConfiguredRouter) {
+        try {
+          // Route donation through LiveCryptoRouter on-chain contract for fee-splitting
+          const routerCallData = encodeFunctionData({
+            abi: LiveCryptoRouterABI,
+            functionName: 'donateNative',
+            args: [recipient as `0x${string}`],
+          });
+
+          tx = await sendTransactionAsync({
+            to: ROUTER_ADDRESS,
+            value: parseEther(amount || '0.01'),
+            data: routerCallData,
+          });
+        } catch (routerErr) {
+          console.warn("Smart contract router call reverted or un-deployed, fallback to direct P2P:", routerErr);
+          tx = await sendTransactionAsync({
+            to: recipient as `0x${string}`,
+            value: parseEther(amount || '0.01'),
+          });
+        }
+      } else {
+        // Direct non-custodial P2P transfer
+        tx = await sendTransactionAsync({
+          to: recipient as `0x${string}`,
+          value: parseEther(amount || '0.01'),
+        });
+      }
 
       await submitToVerifier(tx, paymentType, numericAmount);
 
