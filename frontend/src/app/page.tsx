@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchLiveCryptoPrices, SUPPORTED_TOKENS } from '@/services/coingecko';
+import { playSynthesizedSound } from '@/services/soundEffects';
+import { speakWithNeuralOrFallback } from '@/services/voiceSynthesis';
 
 export default function Home() {
   const [demoAlertActive, setDemoAlertActive] = useState(false);
@@ -26,13 +28,8 @@ export default function Home() {
 
   const triggerDemoAlert = () => {
     setDemoAlertActive(true);
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!");
-      utterance.rate = 0.95;
-      utterance.lang = 'en-US';
-      window.speechSynthesis.speak(utterance);
-    }
+    playSynthesizedSound('arcade_coin', 0.5);
+    speakWithNeuralOrFallback("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!", 'cyber_announcer', 1.0);
     setTimeout(() => {
       setDemoAlertActive(false);
     }, 6500);

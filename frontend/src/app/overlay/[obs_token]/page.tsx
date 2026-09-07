@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { use } from 'react';
 import { playSynthesizedSound, SoundPresetId } from '@/services/soundEffects';
-import { speakWithProfile, VoiceProfileId } from '@/services/voiceSynthesis';
+import { speakWithNeuralOrFallback, VoiceProfileId } from '@/services/voiceSynthesis';
 
 // Matrix decoding effect for crypto sender names
 function MatrixText({ text, className = '' }: { text: string, className?: string }) {
@@ -87,7 +87,7 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
       const sanitized = donationData.message.replace(/<[^>]*>/g, '').substring(0, 200);
       utteranceText += ` Message: ${sanitized}`;
     }
-    speakWithProfile(utteranceText, voiceProfile, 1.0);
+    speakWithNeuralOrFallback(utteranceText, voiceProfile, 1.0);
   }, [isTtsMuted, voiceProfile]);
 
   useEffect(() => {

@@ -61,19 +61,28 @@ O **Live Crypto Gateway** é um SaaS descentralizado e não-custodial análogo a
 - [x] **Fundo 100% Transparente (`bg-transparent` & `.obs-transparent-mode`):** Integração como Browser Source sem obstruir a live.
 - [x] **Renderização de Mídia IPFS Dinâmica:** Renderiza GIFs, imagens e vídeos curtos MP4/WebM do streamer, com fallback em badges luminosos de moedas.
 - [x] **Síntese de Som Procedural Web Audio ([`soundEffects.ts`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/frontend/src/services/soundEffects.ts)):** Efeitos sonoros instantâneos gerados via osciladores senoidais/triangulares (Arcade Coin, Cyber Chime, Cash Register, Neon Laser) sem depender de download de MP3 ou CORS.
+- [x] **Voz Neural com IA & Fallback Procedural ([`voiceSynthesis.ts`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/frontend/src/services/voiceSynthesis.ts)):** Proxy de streaming neural ElevenLabs com rota backend `/api/public/tts-synthesize` e fallback resiliente Web Speech.
+- [x] **HUD de Leaderboard On-Chain em Tempo Real:** Widget no topo do overlay exibindo pódio dos Top 3 maiores apoiadores (🥇, 🥈, 🥉) com controle liga/desliga no dashboard.
 - [x] **Posicionamento de Tela Customizável:** Suporte a 5 posições dinâmicas (`top-left`, `top-right`, `center`, `bottom-center`, `bottom-right`).
 - [x] **4 Temas Visuais Dinâmicos:** Cyberpunk, Matrix, Solar Fire e Minimal.
-- [x] **Text-To-Speech (TTS):** Sintetizador Web Speech com sanitização contra scripts maliciosos e tags HTML.
+- [x] **Text-To-Speech (TTS):** Sintetizador com sanitização contra scripts maliciosos e tags HTML.
 - [x] **Barra de Meta em Tempo Real:** Atualização automática da meta de doações na tela.
 
 ### 5. 🎛️ Creator Command Center & Live Studio ([`dashboard/page.tsx`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/frontend/src/app/dashboard/page.tsx))
 - [x] **Simulador de Monitor OBS Interativo:** Visualização em tempo real de como o alerta se comporta no canvas 1920x1080.
 - [x] **Seletor de Posição do Alerta:** Botoeira gráfica com 5 pontos de ancoragem da tela.
 - [x] **Seletor & Player de Efeitos Sonoros:** Catálogo com audição prévia dos 4 presets sonoros via Web Audio.
+- [x] **Seletor de Voz IA com Preview:** 4 perfis vocais com audição imediata via Web Audio / ElevenLabs.
 - [x] **Barra de Controle de Emergência:** Disparo de teste ao vivo, botão de Skip de alerta ativo e Mute/Unmute de TTS.
 - [x] **Gerenciador de Carteiras Multi-Chain:** Suporte a 12 redes descentralizadas.
 
-### 6. 🚀 Developer Experience & Qualidade de Código
+### 6. ⛓️ Smart Contracts & Roteamento On-Chain ([`contracts/`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/contracts))
+- [x] **Router EVM ([`LiveCryptoRouter.sol`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/contracts/src/LiveCryptoRouter.sol)):** Divisão de taxas nativa e ERC-20 (98% streamer / 2% tesouraria) com teto máximo de 10%.
+- [x] **Suíte de Testes em Solidity Nativo ([`LiveCryptoRouter.t.sol`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/contracts/test/LiveCryptoRouter.t.sol)):** 3/3 testes unitários passando em execução no Hardhat 3.
+- [x] **Solana Atomic Fee Splitting:** Bundle de instruções nativas no `@solana/web3.js` executando split atômico direto na blockchain Solana sem intermediários.
+
+### 7. 🚀 Developer Experience & Qualidade de Código
 - [x] **Single-Terminal Dev Runner ([`dev-runner.js`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/dev-runner.js)):** Execução concorrente do Backend (:8080) e Frontend (:3000).
 - [x] **Launcher 1-Click ([`start-dev.bat`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/start-dev.bat)):** Inicialização instantânea sem necessidade de configurações manuais.
-- [x] **Testes Automatizados:** 6/6 testes de segurança passando em [`system.test.js`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/backend/tests/system.test.js).
+- [x] **Testes Automatizados do Backend:** 6/6 testes de segurança passando em [`system.test.js`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/backend/tests/system.test.js).
+

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { fetchLiveCryptoPrices } from '@/services/coingecko';
 import { playSynthesizedSound, SOUND_PRESETS, SoundPresetId } from '@/services/soundEffects';
-import { speakWithProfile, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
+import { speakWithProfile, speakWithNeuralOrFallback, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
 
 interface StreamerData {
   id?: number;
@@ -862,7 +862,7 @@ export default function Dashboard() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakWithProfile("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!", voice.id, 1.0);
+                        speakWithNeuralOrFallback("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!", voice.id, 1.0);
                       }}
                       className="p-1.5 rounded-lg bg-white/5 hover:bg-purple-500/20 text-purple-300 text-xs font-mono"
                       title="Listen Voice Preview"

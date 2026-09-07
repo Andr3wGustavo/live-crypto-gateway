@@ -195,23 +195,52 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
       // ──────────────────────────────────────────────
       if (paymentType === 'SOL') {
         const win = window as any;
-        const solanaProvider = win.phantom?.solana || win.solana;
+        const solanaProvider = win.phantom?.solana || win.solflare || win.backpack || win.solana;
 
-        if (solanaProvider && solanaProvider.isPhantom) {
-          await solanaProvider.connect();
+        if (solanaProvider) {
+          if (!solanaProvider.publicKey && solanaProvider.connect) {
+            await solanaProvider.connect();
+          }
           const fromPubkey = new PublicKey(solanaProvider.publicKey.toString());
           const toPubkey = new PublicKey(recipient);
 
           const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
           const { blockhash } = await connection.getLatestBlockhash('confirmed');
 
-          const transaction = new Transaction().add(
+          const transaction = new Transaction();
+          const TREASURY_SOL = process.env.NEXT_PUBLIC_TREASURY_SOL_ADDRESS;
+          const totalLamports = Math.floor(numericAmount * LAMPORTS_PER_SOL);
+          
+          // Non-custodial fee splitting: 2% platform fee if treasury address is configured
+          let feeLamports = 0;
+          if (TREASURY_SOL && TREASURY_SOL !== '0000000000000000000000000000000000000000') {
+            try {
+              const treasuryPubkey = new PublicKey(TREASURY_SOL);
+              feeLamports = Math.floor((totalLamports * 200) / 10000); // 2%
+              if (feeLamports > 0) {
+                transaction.add(
+                  SystemProgram.transfer({
+                    fromPubkey,
+                    toPubkey: treasuryPubkey,
+                    lamports: feeLamports,
+                  })
+                );
+              }
+            } catch (err) {
+              console.warn("Invalid Solana treasury pubkey, skipping fee split:", err);
+              feeLamports = 0;
+            }
+          }
+
+          const netLamports = totalLamports - feeLamports;
+          transaction.add(
             SystemProgram.transfer({
               fromPubkey,
               toPubkey,
-              lamports: Math.floor(numericAmount * LAMPORTS_PER_SOL),
+              lamports: netLamports > 0 ? netLamports : totalLamports,
             })
           );
+
           transaction.recentBlockhash = blockhash;
           transaction.feePayer = fromPubkey;
 

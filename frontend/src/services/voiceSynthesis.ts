@@ -86,3 +86,42 @@ export function speakWithProfile(
 
   window.speechSynthesis.speak(utterance);
 }
+
+/**
+ * Speaks message prioritizing ElevenLabs Neural AI voice streaming via backend proxy,
+ * gracefully falling back to browser Web Speech API if backend or API key is absent.
+ */
+export async function speakWithNeuralOrFallback(
+  text: string, 
+  profileId: VoiceProfileId = 'cyber_announcer', 
+  volume: number = 1.0
+): Promise<void> {
+  const profile = VOICE_PROFILES.find(p => p.id === profileId) || VOICE_PROFILES[0];
+  const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 250);
+
+  try {
+    const res = await fetch('http://localhost:8080/api/public/tts-synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: sanitized,
+        voice_id: profile.elevenLabsVoiceId
+      })
+    });
+
+    const contentType = res.headers.get('content-type');
+    if (res.ok && contentType && contentType.includes('audio/mpeg')) {
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.volume = Math.min(1.0, Math.max(0, volume));
+      await audio.play();
+      return;
+    }
+  } catch (err) {
+    console.debug('Neural TTS unreachable, using procedural Web Speech fallback:', err);
+  }
+
+  // Fallback to procedural synthesis
+  speakWithProfile(sanitized, profileId, volume);
+}

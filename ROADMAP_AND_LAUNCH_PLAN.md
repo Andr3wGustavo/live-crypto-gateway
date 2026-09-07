@@ -81,12 +81,13 @@
 - **Feature:** Zero-latency Web Audio API procedural synthesis with 4 presets (Retro Arcade Coin, Cyberpunk Chime, Cash Register, Neon Laser Pulse) without external audio file dependencies.
 - **Status:** ✅ Completed in Sprint 6.
 
-### 3. ElevenLabs AI Voice Synthesis (NEXT)
-- **Feature:** Offer premium AI voices (Celebrity, Anime, Robot, Deep Announcer) for Text-to-Speech donation messages.
-- **Monetization:** Included in Live Crypto Pro tier ($9.99/month).
+### 3. ElevenLabs AI Voice Synthesis (COMPLETED)
+- **Feature:** Offer premium AI voices (Cyber Stadium Announcer, Anime Vtuber, Cyborg Synthesizer, Natural Host) for Text-to-Speech donation messages with streaming audio backend proxy (`/api/public/tts-synthesize`) and Web Speech fallback.
+- **Status:** ✅ Completed in Sprint 6.
 
-### 4. Real-time On-Chain Leaderboard
-- **Feature:** Top 3 donors widget for the stream overlay.
+### 4. Real-time On-Chain Leaderboard (COMPLETED)
+- **Feature:** Live top 3 donors widget for the stream overlay HUD (🥇, 🥈, 🥉 medals) with real-time score updates and toggle control from creator dashboard.
+- **Status:** ✅ Completed in Sprint 6.
 
 ---
 
@@ -114,5 +115,5 @@
 | **Phase 1** | Core Architecture & Multi-Chain Backend | Security, Verification & WS Pool | ✅ Complete |
 | **Phase 2** | Liquid Glass UI & Multi-Wallet 1-Click | Donor UX & Streamer Dashboard | ✅ Complete |
 | **Phase 3** | Smart Contract Testnet Deploys | On-Chain Verification & Routing | 🔄 Next Step |
-| **Phase 4** | OBS Customizer & Procedural Sound Studio | Overlay Editor & Sound Synthesizer | ✅ Active / Partial |
+| **Phase 4** | OBS Customizer & Procedural Sound Studio | Overlay Editor, Sound Synth & AI Voice | ✅ Complete |
 | **Phase 5** | Cloud Launch & Production Scale | Global Hosting & Mainnet Release | 🚀 Target Launch |

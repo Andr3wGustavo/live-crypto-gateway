@@ -52,10 +52,59 @@ router.get('/streamer/:id', async (req, res) => {
       alertConfig: alertConfig
     });
 
+// POST /api/public/tts-synthesize - High-fidelity AI speech synthesis using ElevenLabs API (with fallback)
+router.post('/tts-synthesize', async (req, res) => {
+  const { text, voice_id = '21m00Tcm4TlvDq8ikWAM' } = req.body;
+  
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Text string is required for TTS synthesis' });
+  }
+
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    return res.json({ 
+      success: false, 
+      mode: 'web_speech_fallback', 
+      message: 'ElevenLabs API key not configured. Using client Web Speech engine.' 
+    });
+  }
+
+  try {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey
+      },
+      body: JSON.stringify({
+        text: text.substring(0, 250),
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn('[ElevenLabs] API error:', response.status, errText);
+      return res.status(502).json({ error: 'ElevenLabs API synthesis error', details: errText });
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.byteLength,
+      'Cache-Control': 'public, max-age=3600'
+    });
+    return res.send(Buffer.from(audioBuffer));
   } catch (error) {
-    console.error('Error fetching public streamer config:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('TTS synthesis server error:', error);
+    res.status(500).json({ error: 'Internal TTS processing error' });
   }
 });
 
 module.exports = router;
+
