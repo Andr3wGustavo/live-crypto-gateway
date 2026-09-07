@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { parseEther } from 'viem';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -21,19 +21,19 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
   const [message, setMessage] = useState('');
   const [paymentType, setPaymentType] = useState<string>('SOL');
   const [fiatCurrency, setFiatCurrency] = useState<'USD' | 'BRL' | 'EUR'>('USD');
-  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [, setIsLoadingConfig] = useState(true);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, { usd: number; change24h: number }>>({});
   
   // Streamer details
   const [streamerAddress, setStreamerAddress] = useState<string>('0x71C7656EC7ab88b098defB751B7401B5f6d8976F');
   const [streamerWallets, setStreamerWallets] = useState<{ chain_id: string; public_address: string }[]>([]);
-  const [alertConfig, setAlertConfig] = useState<any>(null);
+  const [, setAlertConfig] = useState<any>(null);
 
   // AppKit / Wagmi EVM Hooks
   const { address, isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const { data: evmTxHash, sendTransactionAsync, isPending: isSigningEvm } = useSendTransaction();
-  const { isLoading: isConfirmingEvm, isSuccess: isConfirmedEvm } = useWaitForTransactionReceipt({ hash: evmTxHash });
+  const { isConfirming: isConfirmingEvm } = useWaitForTransactionReceipt({ hash: evmTxHash });
 
   // Custom multi-chain tx states
   const [isProcessingTx, setIsProcessingTx] = useState(false);
@@ -122,6 +122,23 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
   // Calculate live fiat estimation
   const tokenAmountNum = parseFloat(amount || '0');
   const fiatEstimate = convertCryptoToFiat(tokenAmountNum, paymentType, cryptoPrices, fiatCurrency);
+
+  // Quick Fiat Preset Click Handler ($5, $10, $25, $50, $100)
+  const handleFiatPreset = (targetUsd: number) => {
+    const tokenPrice = cryptoPrices[paymentType]?.usd || 1;
+    let exchangeMultiplier = 1;
+    if (fiatCurrency === 'BRL') exchangeMultiplier = 5.5;
+    if (fiatCurrency === 'EUR') exchangeMultiplier = 0.92;
+
+    const targetInToken = (targetUsd / exchangeMultiplier) / tokenPrice;
+    let formatted: string;
+    if (targetInToken < 0.001) formatted = targetInToken.toFixed(5);
+    else if (targetInToken < 0.1) formatted = targetInToken.toFixed(4);
+    else if (targetInToken < 1) formatted = targetInToken.toFixed(3);
+    else formatted = targetInToken.toFixed(2);
+
+    setAmount(formatted);
+  };
 
   // Submit on-chain transaction hash to Backend Verifier
   const submitToVerifier = async (txHash: string, chainName: string, actualAmount: number) => {
@@ -283,8 +300,7 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
       setIsProcessingTx(false);
 
     } catch (err: any) {
-      console.warn("Direct wallet payment caught fallback:", err);
-      // If user is testing locally, trigger simulation fallback
+      console.warn("Direct wallet payment fallback:", err);
       const simHash = `0x${Math.random().toString(16).substring(2, 10)}...simulated`;
       await submitToVerifier(simHash, paymentType, numericAmount);
 
@@ -430,17 +446,34 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
             </div>
           </div>
 
-          {/* Quick preset amount chips */}
-          <div className="flex gap-2 mt-2">
-            {['0.5', '1.0', '5.0', '10.0', '50.0'].map((preset) => (
-              <button
-                key={preset}
-                onClick={() => setAmount(preset)}
-                className="px-3 py-1 rounded-xl text-xs font-mono font-bold bg-black/60 border border-white/10 text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
-              >
-                +{preset}
-              </button>
-            ))}
+          {/* Quick preset amount chips (Fiat & Tokens) */}
+          <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-mono text-slate-500 uppercase">Fast Fiat:</span>
+              {[5, 10, 25, 50, 100].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => handleFiatPreset(val)}
+                  className="px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-cyan-950/50 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/20 transition-all cursor-pointer"
+                >
+                  {fiatCurrency === 'BRL' ? `R$${val}` : fiatCurrency === 'EUR' ? `€${val}` : `$${val}`}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {['1.0', '5.0', '10.0'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setAmount(preset)}
+                  className="px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-black/60 border border-white/10 text-slate-400 hover:border-white/30 hover:text-white transition-colors cursor-pointer"
+                >
+                  +{preset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -454,7 +487,7 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
               type="text"
               value={donorName}
               onChange={(e) => setDonorName(e.target.value)}
-              placeholder="e.g. Satoshi, anonymous.sol"
+              placeholder="e.g. Satoshi, alex.sol, Anonymous"
               className="glass-input w-full px-4 py-2.5 rounded-2xl text-xs font-mono text-white"
             />
           </div>
@@ -470,6 +503,32 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
               placeholder="Send a live message to the broadcast..."
               className="glass-input w-full px-4 py-2.5 rounded-2xl text-xs font-sans text-white resize-none"
             />
+          </div>
+        </div>
+
+        {/* Live On-Stream Alert Simulation Card */}
+        <div className="mt-6 p-4 rounded-2xl bg-zinc-950/90 border border-cyan-400/25 space-y-2">
+          <div className="flex justify-between items-center text-[10px] font-mono">
+            <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 radar-dot"></span>
+              Live OBS Broadcast Preview:
+            </span>
+            <span className="text-cyan-400">Will appear in &lt; 400ms</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/80 border border-white/10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-lg flex-shrink-0">
+              ⚡
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center text-xs font-mono font-bold">
+                <span className="text-white truncate">{donorName || 'Anonymous Donor'}</span>
+                <span className="text-cyan-300">+{amount || '1.0'} {paymentType}</span>
+              </div>
+              <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                &quot;{message || 'Loving the stream! Keep it up! 🚀'}&quot;
+              </p>
+            </div>
           </div>
         </div>
 
@@ -509,7 +568,7 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
                 {isProcessingTx || isSigningEvm ? (
                   <span>⏳ Awaiting Wallet Signature...</span>
                 ) : (
-                  <span>⚡ 1-Click Send {amount} {paymentType}</span>
+                  <span>⚡ 1-Click Send {amount} {paymentType} ({fiatEstimate.formatted})</span>
                 )}
               </button>
 

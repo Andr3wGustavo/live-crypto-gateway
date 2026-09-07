@@ -96,12 +96,21 @@ router.post('/config', async (req, res) => {
       goal_current: parseFloat(goal_current || '0.0'),
       goal_title: goal_title || 'Donation Goal',
       media_url: rows[0].media_url,
-      audio_url: rows[0].audio_url
+      audio_url: rows[0].audio_url,
+      position: req.body.position || 'bottom-center',
+      sound_preset: req.body.sound_preset || 'arcade_coin'
     });
     
     await pubClient.publish(channel, payload);
 
-    res.json({ success: true, config: rows[0] });
+    res.json({ 
+      success: true, 
+      config: {
+        ...rows[0],
+        position: req.body.position || 'bottom-center',
+        sound_preset: req.body.sound_preset || 'arcade_coin'
+      } 
+    });
   } catch (error) {
     console.error('Config update error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -229,6 +238,32 @@ router.post('/rotate-token', async (req, res) => {
   } catch (error) {
     console.error('Token rotation error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Skip active alert immediately on connected OBS overlays
+router.post('/skip-alert', async (req, res) => {
+  const streamerId = req.user.id;
+  try {
+    const channel = `streamer:${streamerId}:events`;
+    await pubClient.publish(channel, JSON.stringify({ event: 'ALERT_SKIP' }));
+    res.json({ success: true, message: 'Alert skipped on OBS overlay' });
+  } catch (error) {
+    console.error('Skip alert error:', error);
+    res.status(500).json({ error: 'Failed to skip alert' });
+  }
+});
+
+// Toggle TTS mute on connected OBS overlays
+router.post('/mute-tts', async (req, res) => {
+  const streamerId = req.user.id;
+  try {
+    const channel = `streamer:${streamerId}:events`;
+    await pubClient.publish(channel, JSON.stringify({ event: 'TTS_MUTE_TOGGLE' }));
+    res.json({ success: true, message: 'Toggled TTS mute' });
+  } catch (error) {
+    console.error('Mute TTS error:', error);
+    res.status(500).json({ error: 'Failed to toggle TTS' });
   }
 });
 

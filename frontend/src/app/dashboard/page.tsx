@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { fetchLiveCryptoPrices, SUPPORTED_TOKENS } from '@/services/coingecko';
+import { fetchLiveCryptoPrices } from '@/services/coingecko';
+import { playSynthesizedSound, SOUND_PRESETS, SoundPresetId } from '@/services/soundEffects';
 
 interface StreamerData {
   id?: number;
@@ -30,14 +31,17 @@ export default function Dashboard() {
   const [streamer, setStreamer] = useState<StreamerData>({ public_address: '', obs_token: '' });
   const [wallets, setWallets] = useState<WalletItem[]>([]);
   
-  // Alert Config and Goal state
+  // Alert Config, Theme, Sound & Goal state
   const [minAmount, setMinAmount] = useState('0.00');
-  const [activeTheme, setActiveTheme] = useState('cyberpunk');
+  const [activeTheme, setActiveTheme] = useState<'cyberpunk' | 'matrix' | 'fire' | 'minimal'>('cyberpunk');
+  const [alertPosition, setAlertPosition] = useState<'bottom-center' | 'top-right' | 'top-left' | 'center' | 'bottom-right'>('bottom-center');
+  const [soundPreset, setSoundPreset] = useState<SoundPresetId>('arcade_coin');
   const [goalAmount, setGoalAmount] = useState('100.00');
-  const [goalCurrent, setGoalCurrent] = useState('0.00');
+  const [goalCurrent, setGoalCurrent] = useState('35.00');
   const [goalTitle, setGoalTitle] = useState('Streamer Setup Goal');
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isTtsMuted, setIsTtsMuted] = useState(false);
 
   // New Wallet form state
   const [selectedChain, setSelectedChain] = useState('solana');
@@ -50,7 +54,7 @@ export default function Dashboard() {
     estimatedTotalUSD: '0.00',
     tokenBreakdown: {}
   });
-  const [cryptoPrices, setCryptoPrices] = useState<Record<string, { usd: number; change24h: number }>>({});
+  const [, setCryptoPrices] = useState<Record<string, { usd: number; change24h: number }>>({});
   
   // Drag-and-drop & Uploader state
   const [uploadType, setUploadType] = useState<'media' | 'audio'>('media');
@@ -62,13 +66,14 @@ export default function Dashboard() {
   const [configSaveStatus, setConfigSaveStatus] = useState<'' | 'saving' | 'success' | 'error'>('');
   const [walletSaveStatus, setWalletSaveStatus] = useState<'' | 'saving' | 'success' | 'error'>('');
   const [testAlertStatus, setTestAlertStatus] = useState<'' | 'sending' | 'success' | 'error'>('');
+  const [emergencyStatus, setEmergencyStatus] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<'obs' | 'pay' | string | null>(null);
 
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('jwt');
     if (!token) {
       // Local dev demo mode
-      setStreamer({ id: 1, public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', obs_token: 'obs_tok_live_demo_987654' });
+      setStreamer({ id: 1, public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', obs_token: '789a-bcde-1234-fghi' });
       setWallets([
         { chain_id: 'solana', public_address: '8x3sK2vPz1Lm9NxQa7Rt5Wb4Ey2Cg1Vj6F3aQ' },
         { chain_id: 'sui', public_address: '0x8f3c7e9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c' },
@@ -101,11 +106,13 @@ export default function Dashboard() {
       if (data.alertConfig) {
         setMinAmount(parseFloat(data.alertConfig.min_amount || 0).toString());
         setActiveTheme(data.alertConfig.active_theme || 'cyberpunk');
-        setGoalAmount(parseFloat(data.alertConfig.goal_amount || 0).toString());
+        setGoalAmount(parseFloat(data.alertConfig.goal_amount || 100).toString());
         setGoalCurrent(parseFloat(data.alertConfig.goal_current || 0).toString());
         setGoalTitle(data.alertConfig.goal_title || 'Streamer Setup Goal');
         setMediaUrl(data.alertConfig.media_url || null);
         setAudioUrl(data.alertConfig.audio_url || null);
+        if (data.alertConfig.position) setAlertPosition(data.alertConfig.position);
+        if (data.alertConfig.sound_preset) setSoundPreset(data.alertConfig.sound_preset);
       }
 
       const txRes = await fetch('http://localhost:8080/api/dashboard/transactions', { headers });
@@ -132,13 +139,13 @@ export default function Dashboard() {
     fetchLiveCryptoPrices().then(prices => setCryptoPrices(prices));
   }, []);
 
-  // Save Alert/Theme/Goal configuration
+  // Save Alert/Theme/Goal/Sound/Position configuration
   const handleSaveConfig = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const token = localStorage.getItem('jwt');
     if (!token) {
       setConfigSaveStatus('success');
-      setTimeout(() => setConfigSaveStatus(''), 2000);
+      setTimeout(() => setConfigSaveStatus(''), 2500);
       return;
     }
 
@@ -157,13 +164,15 @@ export default function Dashboard() {
           goal_current: goalCurrent,
           goal_title: goalTitle,
           media_url: mediaUrl,
-          audio_url: audioUrl
+          audio_url: audioUrl,
+          position: alertPosition,
+          sound_preset: soundPreset
         })
       });
 
       if (!res.ok) throw new Error();
       setConfigSaveStatus('success');
-      setTimeout(() => setConfigSaveStatus(''), 2000);
+      setTimeout(() => setConfigSaveStatus(''), 2500);
     } catch {
       setConfigSaveStatus('error');
       setTimeout(() => setConfigSaveStatus(''), 3000);
@@ -260,16 +269,16 @@ export default function Dashboard() {
         } else {
           setAudioUrl(localBlobUrl);
         }
-        setUploadSuccessMsg(`✓ Local asset configured for live broadcast`);
+        setUploadSuccessMsg(`✓ Asset loaded locally for live broadcast`);
       }
-    } catch (e) {
+    } catch {
       const localBlobUrl = URL.createObjectURL(file);
       if (uploadType === 'media') {
         setMediaUrl(localBlobUrl);
       } else {
         setAudioUrl(localBlobUrl);
       }
-      setUploadSuccessMsg(`✓ Asset loaded successfully`);
+      setUploadSuccessMsg(`✓ Asset configured successfully`);
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadSuccessMsg(''), 4000);
@@ -280,8 +289,10 @@ export default function Dashboard() {
   const handleTriggerTestAlert = async () => {
     try {
       setTestAlertStatus('sending');
+      playSynthesizedSound(soundPreset, 0.5);
+
       const token = localStorage.getItem('jwt');
-      const res = await fetch('http://localhost:8080/api/dashboard/test-alert', {
+      await fetch('http://localhost:8080/api/dashboard/test-alert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -292,15 +303,48 @@ export default function Dashboard() {
           amount: 25.0,
           currency: 'SOL',
           sender: 'LiveCryptoTester.sol',
-          message: 'Testing instant OBS broadcast with real-time audio and voice TTS!'
+          message: 'Testing instant OBS broadcast with real-time sound and Web Speech TTS!'
         })
       });
 
       setTestAlertStatus('success');
       setTimeout(() => setTestAlertStatus(''), 3000);
-    } catch (e) {
+    } catch {
       setTestAlertStatus('success');
       setTimeout(() => setTestAlertStatus(''), 3000);
+    }
+  };
+
+  // Emergency Panic Controls
+  const handleEmergencySkip = async () => {
+    const token = localStorage.getItem('jwt');
+    try {
+      await fetch('http://localhost:8080/api/dashboard/skip-alert', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      setEmergencyStatus('Alert skipped on stream!');
+      setTimeout(() => setEmergencyStatus(null), 2500);
+    } catch {
+      setEmergencyStatus('Alert skip signal dispatched');
+      setTimeout(() => setEmergencyStatus(null), 2500);
+    }
+  };
+
+  const handleToggleTts = async () => {
+    const token = localStorage.getItem('jwt');
+    try {
+      await fetch('http://localhost:8080/api/dashboard/mute-tts', {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      setIsTtsMuted(prev => !prev);
+      setEmergencyStatus(isTtsMuted ? 'TTS unmuted' : 'TTS muted on stream');
+      setTimeout(() => setEmergencyStatus(null), 2500);
+    } catch {
+      setIsTtsMuted(prev => !prev);
+      setEmergencyStatus(isTtsMuted ? 'TTS unmuted' : 'TTS muted on stream');
+      setTimeout(() => setEmergencyStatus(null), 2500);
     }
   };
 
@@ -310,10 +354,21 @@ export default function Dashboard() {
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const obsUrl = typeof window !== 'undefined' ? `${window.location.origin}/overlay/${streamer.obs_token || 'obs_tok_demo'}` : `/overlay/${streamer.obs_token || 'obs_tok_demo'}`;
+  const obsUrl = typeof window !== 'undefined' ? `${window.location.origin}/overlay/${streamer.obs_token || '789a-bcde-1234-fghi'}` : `/overlay/${streamer.obs_token || '789a-bcde-1234-fghi'}`;
   const payUrl = typeof window !== 'undefined' ? `${window.location.origin}/pay/${streamer.id || 'demo'}` : `/pay/${streamer.id || 'demo'}`;
 
   const goalPercentage = Math.min(100, Math.max(0, (parseFloat(goalCurrent) / (parseFloat(goalAmount) || 1)) * 100));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-cyan-400 font-mono text-sm flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 radar-dot"></span>
+          INITIALIZING COMMAND CENTER...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-slate-100 selection:bg-cyan-400 selection:text-black py-8 px-4 sm:px-6 relative overflow-hidden font-sans">
@@ -351,7 +406,7 @@ export default function Dashboard() {
           <button
             onClick={() => {
               localStorage.removeItem('jwt');
-              window.location.href = '/';
+              window.location.href = '/login';
             }}
             className="px-3.5 py-2 text-xs font-mono text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
           >
@@ -387,11 +442,56 @@ export default function Dashboard() {
         </div>
 
         <div className="liquid-card p-4 sm:p-5 rounded-3xl border border-white/10">
-          <div className="text-[11px] font-mono text-slate-400 uppercase">Active Overlay Theme</div>
-          <div className="text-lg sm:text-xl font-bold text-white font-mono mt-1 capitalize">
-            {activeTheme}
+          <div className="text-[11px] font-mono text-slate-400 uppercase">Active Theme & Position</div>
+          <div className="text-lg sm:text-xl font-bold text-white font-mono mt-1 capitalize truncate">
+            {activeTheme} • {alertPosition.split('-')[0]}
           </div>
           <div className="text-[10px] font-mono text-cyan-400 mt-1">● WebSocket Sub-400ms</div>
+        </div>
+      </div>
+
+      {/* Emergency & Quick Action Bar */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="p-4 rounded-3xl bg-zinc-950/80 border border-white/10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold text-white uppercase flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 radar-dot"></span>
+              Live Control Bar:
+            </span>
+            {emergencyStatus && (
+              <span className="text-xs font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-400/40">
+                {emergencyStatus}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={handleTriggerTestAlert}
+              disabled={testAlertStatus === 'sending'}
+              className="glass-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>⚡ {testAlertStatus === 'sending' ? 'Broadcasting...' : 'Test Live OBS'}</span>
+            </button>
+
+            <button
+              onClick={handleEmergencySkip}
+              className="glass-btn px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold uppercase text-amber-300 hover:border-amber-400/50 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>⏹️ Skip Active Alert</span>
+            </button>
+
+            <button
+              onClick={handleToggleTts}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold uppercase cursor-pointer border transition-all ${
+                isTtsMuted 
+                  ? 'bg-red-500/20 text-red-300 border-red-500/40' 
+                  : 'glass-btn text-slate-300'
+              }`}
+            >
+              <span>{isTtsMuted ? '🔇 TTS Muted' : '🔊 TTS Active'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -429,7 +529,7 @@ export default function Dashboard() {
                   {copiedLink === 'obs' ? '✓ Copied to Clipboard!' : '📋 Copy OBS URL'}
                 </button>
                 <Link
-                  href={`/overlay/${streamer.obs_token || 'obs_tok_demo'}`}
+                  href={obsUrl}
                   target="_blank"
                   className="px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-xs font-mono text-slate-300 hover:text-white"
                 >
@@ -437,15 +537,6 @@ export default function Dashboard() {
                 </Link>
               </div>
             </div>
-
-            {/* Test Trigger Button */}
-            <button
-              onClick={handleTriggerTestAlert}
-              disabled={testAlertStatus === 'sending'}
-              className="w-full glass-btn-primary py-3 rounded-2xl text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>{testAlertStatus === 'sending' ? 'Sending Test...' : testAlertStatus === 'success' ? '✓ Test Alert Sent to OBS!' : '⚡ Test Live OBS Broadcast'}</span>
-            </button>
           </div>
 
           {/* IPFS Media & Audio Uploader */}
@@ -511,11 +602,11 @@ export default function Dashboard() {
             <div className="space-y-1.5 text-[11px] font-mono">
               <div className="flex justify-between text-slate-400">
                 <span>Active Media:</span>
-                <span className="text-cyan-300 truncate max-w-[220px]">{mediaUrl || 'Default Cyber HUD'}</span>
+                <span className="text-cyan-300 truncate max-w-[220px]">{mediaUrl || 'Default Cyber Glow'}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Active Audio:</span>
-                <span className="text-purple-300 truncate max-w-[220px]">{audioUrl || 'Default Cyber Chime'}</span>
+                <span className="text-purple-300 truncate max-w-[220px]">{audioUrl || 'Synthesizer Active'}</span>
               </div>
             </div>
           </div>
@@ -595,9 +686,139 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column: Theme, Goal, and Donation Ledger */}
+        {/* Right Column: OBS Live Studio & Customizer, Theme & Goal Settings */}
         <div className="lg:col-span-7 space-y-6">
           
+          {/* Interactive OBS Overlay Studio (Live Visual Preview & Positioner) */}
+          <div className="liquid-card p-6 rounded-3xl border border-white/10 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                <span>🎛️</span> LIVE OVERLAY STUDIO &amp; CUSTOMIZER
+              </h3>
+              <span className="badge-punchy bg-cyan-950/60 text-cyan-300 border-cyan-400/30 text-[9px]">
+                INTERACTIVE PREVIEW
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Customize how alerts appear on your live broadcast. Select the screen position, theme aesthetics, and zero-latency synthesized sound effect.
+            </p>
+
+            {/* Mini OBS Screen Simulator */}
+            <div className="relative w-full h-56 rounded-2xl bg-zinc-950 border border-white/10 overflow-hidden flex flex-col justify-between p-4 shadow-inner">
+              {/* Screen Top Right Goal bar mock */}
+              <div className="w-full flex justify-end">
+                <div className="px-3 py-1.5 rounded-xl bg-black/80 border border-white/10 text-[10px] font-mono text-white flex items-center gap-2">
+                  <span className="text-cyan-300 font-bold">{goalTitle}</span>
+                  <span className="text-slate-400">${goalCurrent} / ${goalAmount}</span>
+                </div>
+              </div>
+
+              {/* Dynamic Alert Box preview placed in configured position */}
+              <div className={`w-full flex-1 flex ${
+                alertPosition === 'top-left' ? 'items-start justify-start' :
+                alertPosition === 'top-right' ? 'items-start justify-end' :
+                alertPosition === 'center' ? 'items-center justify-center' :
+                alertPosition === 'bottom-right' ? 'items-end justify-end' :
+                'items-end justify-center'
+              }`}>
+                <div className={`p-3.5 rounded-2xl border shadow-lg max-w-xs w-full transition-all duration-300 ${
+                  activeTheme === 'cyberpunk' ? 'bg-black/90 border-cyan-400 shadow-[0_0_20px_rgba(0,242,254,0.3)] text-white' :
+                  activeTheme === 'matrix' ? 'bg-black/90 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-400' :
+                  activeTheme === 'fire' ? 'bg-black/90 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.3)] text-orange-300' :
+                  'bg-black/95 border-white/40 text-white'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-base flex-shrink-0">
+                      ⚡
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center text-xs font-mono font-bold">
+                        <span className="truncate">alex.sol</span>
+                        <span className="text-cyan-300 text-[11px]">+25 SOL</span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 truncate mt-0.5">
+                        &quot;Awesome stream! 🚀&quot;
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Watermark */}
+              <div className="text-[9px] font-mono text-slate-600 flex justify-between">
+                <span>OBS 1920x1080 CANVAS</span>
+                <span>POSITION: {alertPosition.toUpperCase()}</span>
+              </div>
+            </div>
+
+            {/* Position Selector Buttons */}
+            <div>
+              <label className="text-xs font-mono text-slate-400 block mb-2 uppercase">Screen Alert Position:</label>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { id: 'top-left', label: 'Top Left' },
+                  { id: 'top-right', label: 'Top Right' },
+                  { id: 'center', label: 'Center' },
+                  { id: 'bottom-center', label: 'Bottom Center' },
+                  { id: 'bottom-right', label: 'Bottom Right' },
+                ].map((pos) => (
+                  <button
+                    key={pos.id}
+                    type="button"
+                    onClick={() => setAlertPosition(pos.id as any)}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                      alertPosition === pos.id 
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,242,254,0.25)]' 
+                        : 'bg-black/50 text-slate-400 border border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    {pos.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sound Synthesizer Presets */}
+            <div>
+              <label className="text-xs font-mono text-slate-400 block mb-2 uppercase">Procedural Alert Audio Preset:</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {SOUND_PRESETS.map((preset) => (
+                  <div
+                    key={preset.id}
+                    onClick={() => setSoundPreset(preset.id)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      soundPreset === preset.id
+                        ? 'bg-cyan-950/40 border-cyan-400/50 text-white shadow-[0_0_15px_rgba(0,242,254,0.15)]'
+                        : 'bg-black/40 border-white/5 text-slate-400 hover:border-white/15'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono font-bold">{preset.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-black/60 font-mono text-cyan-400 border border-cyan-400/30">
+                          {preset.tag}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">{preset.description}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playSynthesizedSound(preset.id, 0.5);
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-cyan-300 text-xs font-mono"
+                      title="Play Preview"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Overlay Theme & Donation Goal Settings */}
           <div className="liquid-card p-6 rounded-3xl border border-white/10 space-y-6">
             <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
@@ -610,7 +831,7 @@ export default function Dashboard() {
                   <label className="text-xs font-mono text-slate-400 block mb-1.5 uppercase">Overlay Aesthetic Theme</label>
                   <select
                     value={activeTheme}
-                    onChange={(e) => setActiveTheme(e.target.value)}
+                    onChange={(e) => setActiveTheme(e.target.value as any)}
                     className="glass-input w-full px-3 py-2.5 rounded-xl text-xs font-mono text-white"
                   >
                     <option value="cyberpunk">Cyberpunk Neon Glass</option>
