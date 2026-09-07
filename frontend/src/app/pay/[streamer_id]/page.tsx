@@ -33,7 +33,7 @@ export default function PayStreamerPage({ params }: { params: Promise<{ streamer
   const { address, isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const { data: evmTxHash, sendTransactionAsync, isPending: isSigningEvm } = useSendTransaction();
-  const { isConfirming: isConfirmingEvm } = useWaitForTransactionReceipt({ hash: evmTxHash });
+  const { isLoading: isConfirmingEvm } = useWaitForTransactionReceipt({ hash: evmTxHash });
 
   // Custom multi-chain tx states
   const [isProcessingTx, setIsProcessingTx] = useState(false);
