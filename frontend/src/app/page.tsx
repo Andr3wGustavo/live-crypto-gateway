@@ -4,18 +4,25 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchLiveCryptoPrices, SUPPORTED_TOKENS } from '@/services/coingecko';
-import { playSynthesizedSound } from '@/services/soundEffects';
-import { speakWithNeuralOrFallback } from '@/services/voiceSynthesis';
+import { playSynthesizedSound, SOUND_PRESETS, SoundPresetId } from '@/services/soundEffects';
+import { speakWithNeuralOrFallback, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
 
 export default function Home() {
+  // Live Simulator state
   const [demoAlertActive, setDemoAlertActive] = useState(false);
   const [demoTheme, setDemoTheme] = useState<'cyberpunk' | 'matrix' | 'fire' | 'minimal'>('cyberpunk');
+  const [demoSound, setDemoSound] = useState<SoundPresetId>('arcade_coin');
+  const [demoVoice, setDemoVoice] = useState<VoiceProfileId>('cyber_announcer');
+  const [demoDonorName, setDemoDonorName] = useState('alex.sol');
+  const [demoAmount, setDemoAmount] = useState('25.0');
+  const [demoCurrency, setDemoCurrency] = useState('SOL');
+  const [demoMessage, setDemoMessage] = useState('Loving the stream, keep grinding champion! 🚀');
+
+  // Interactive UI states
   const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<number>(1);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [selectedConceptIndex, setSelectedConceptIndex] = useState<number>(0);
-  const [calculatorAmount, setCalculatorAmount] = useState<number>(1000);
+  const [calculatorAmount, setCalculatorAmount] = useState<number>(2500);
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, { usd: number; change24h: number }>>({});
-  const [isPlayingVideo, setIsPlayingVideo] = useState(true);
 
   // Fetch CoinGecko live prices
   useEffect(() => {
@@ -28,61 +35,65 @@ export default function Home() {
 
   const triggerDemoAlert = () => {
     setDemoAlertActive(true);
-    playSynthesizedSound('arcade_coin', 0.5);
-    speakWithNeuralOrFallback("Alex donated 25 Solana! Message: Loving the stream, keep grinding champion!", 'cyber_announcer', 1.0);
+    playSynthesizedSound(demoSound, 0.55);
+    speakWithNeuralOrFallback(
+      `${demoDonorName} donated ${demoAmount} ${demoCurrency}! Message: ${demoMessage}`,
+      demoVoice,
+      1.0
+    );
     setTimeout(() => {
       setDemoAlertActive(false);
-    }, 6500);
+    }, 7000);
   };
 
   const workflowNodes = [
     {
       id: 1,
-      name: "1. Web3 Donation Trigger",
-      type: "Input / Web3 & QR Trigger",
+      name: "1. Web3 1-Click Trigger",
+      type: "Donor Input / Multi-Chain",
       badge: "PHANTOM / METAMASK / SUI / QR",
       badgeColor: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
-      description: "The viewer selects their preferred cryptocurrency (SOL, SUI, ETH, POL, BTC Lightning, USDT, USDC) and executes a 1-Click Web3 transaction or scans the dynamic QR code on their mobile wallet.",
-      payloadSnippet: `{\n  "network": "SOLANA_MAINNET",\n  "amount": "25.0",\n  "sender": "alex.sol",\n  "message": "Loving the stream, keep grinding! 🚀"\n}`
+      description: "Viewer chooses their preferred cryptocurrency (SOL, SUI, ETH, POL, Base, Bitcoin Lightning, USDT, USDC) and clicks 1-Click sign or scans the dynamic QR code on their mobile wallet.",
+      payloadSnippet: `{\n  "chain": "SOLANA_MAINNET",\n  "amount": "${demoAmount}",\n  "currency": "${demoCurrency}",\n  "sender": "${demoDonorName}",\n  "message": "${demoMessage}"\n}`
     },
     {
       id: 2,
       name: "2. Non-Custodial Settlement",
-      type: "Execution / Direct P2P Transfer",
+      type: "Atomic Smart Contract / P2P",
       badge: "100% NON-CUSTODIAL",
       badgeColor: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-      description: "Funds transfer peer-to-peer straight into the streamer's personal self-custody wallet. Zero custody, zero escrow delays, and zero chargeback risks.",
-      payloadSnippet: `// Direct P2P on-chain settlement\nawait connection.sendTransaction(tx, [payer]);\n// Immediate finality in < 400ms`
+      description: "Funds settle peer-to-peer straight into the streamer's personal self-custody wallet. Zero custody, zero holding period, zero chargebacks, and 98-99% creator revenue retention.",
+      payloadSnippet: `// Direct atomic on-chain settlement\nawait connection.sendTransaction(tx, [payer]);\n// Immediate finality in < 400ms`
     },
     {
       id: 3,
-      name: "3. WebSocket & Redis Pub/Sub",
-      type: "Event Dispatch / < 400ms Latency",
-      badge: "ULTRA-LOW LATENCY",
+      name: "3. Redis Pub/Sub Event Engine",
+      type: "High-Speed Dispatch / Sub-400ms",
+      badge: "SUB-400MS LATENCY",
       badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
       description: "Our high-speed node engine detects block confirmation and publishes the donation payload through Redis Pub/Sub. The event streams to the OBS Studio WebSocket tunnel in under 400 milliseconds.",
-      payloadSnippet: `redis.publish("streamer:42:events", {\n  "event": "DONATION",\n  "amount": 25.0,\n  "currency": "SOL",\n  "fiatValue": 4750.00\n});`
+      payloadSnippet: `redis.publish("streamer:42:events", {\n  "event": "DONATION",\n  "amount": ${demoAmount},\n  "currency": "${demoCurrency}",\n  "fiatValue": 4750.00\n});`
     },
     {
       id: 4,
       name: "4. OBS Studio Browser Overlay",
       type: "Visual Action / Audio + Voice TTS",
-      badge: "BROWSER SOURCE (NO PLUGIN)",
+      badge: "ZERO PLUGIN BROWSER SOURCE",
       badgeColor: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-      description: "OBS Studio displays the animated frosted-glass alert card, plays custom sound chimes, increments the live goal progress bar, and reads the donor's message using speech synthesis.",
-      payloadSnippet: `speechSynthesis.speak("Alex donated 25 SOL. Message: Loving the stream!");`
+      description: "OBS Studio displays the animated frosted-glass alert card, synthesizes zero-latency procedural audio, updates the on-screen leaderboard, and reads the message using AI voice synthesis.",
+      payloadSnippet: `speakWithNeuralOrFallback("${demoDonorName} donated ${demoAmount} ${demoCurrency}!");`
     }
   ];
 
   const designConcepts = [
     {
       title: "Cyberpunk Terminal HUD",
-      category: "DESIGN SYSTEM",
+      category: "OVERLAY DESIGN SYSTEM",
       image: "/brand/Generated Image August 09, 2026 - 1_03AM.jpg",
       description: "Ultra-modern glassmorphic HUD designed specifically for high-intensity gaming and IRL streaming."
     },
     {
-      title: "Streamer Control Room",
+      title: "Streamer Command Center",
       category: "DASHBOARD ARCHITECTURE",
       image: "/brand/Generated Image August 09, 2026 - 1_07AM.jpg",
       description: "Modular creator command center to manage multi-chain payout addresses, live goal widgets, and alert sounds."
@@ -107,6 +118,7 @@ export default function Home() {
     }
   ];
 
+  // Fee Calculation math
   const netPlatformTake = (calculatorAmount * 0.99).toFixed(2);
   const platformFee = (calculatorAmount * 0.01).toFixed(2);
   const traditionalTake = (calculatorAmount * 0.82).toFixed(2);
@@ -115,11 +127,16 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-slate-100 selection:bg-cyan-400 selection:text-black overflow-hidden relative font-sans">
       
+      {/* Ambient Cyber Neon Background Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-cyan-500/10 via-purple-600/5 to-transparent blur-[140px] pointer-events-none -z-10"></div>
+      <div className="absolute top-[35%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 blur-[150px] pointer-events-none -z-10"></div>
+      <div className="absolute bottom-[20%] left-[-10%] w-[600px] h-[600px] bg-cyan-500/10 blur-[150px] pointer-events-none -z-10"></div>
+
       {/* Floating Pill Navbar */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sticky top-4 z-50">
-        <header className="px-5 py-3 flex items-center justify-between border border-white/10 rounded-full backdrop-blur-2xl bg-black/75 shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
+        <header className="px-5 py-3.5 flex items-center justify-between border border-white/10 rounded-full backdrop-blur-2xl bg-black/80 shadow-[0_12px_40px_rgba(0,0,0,0.85)]">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,242,254,0.35)] border border-cyan-400/30 bg-zinc-950 flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,242,254,0.4)] border border-cyan-400/40 bg-zinc-950 flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
               <Image 
                 src="/brand/logo-png.png" 
                 alt="Live Crypto Logo" 
@@ -134,11 +151,11 @@ export default function Home() {
           </Link>
           
           <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
-            <a href="#pipeline" className="hover:text-cyan-400 transition-colors">How It Works</a>
-            <a href="#demo" className="hover:text-cyan-400 transition-colors">OBS Simulator</a>
-            <a href="#ticker" className="hover:text-cyan-400 transition-colors">Live Prices</a>
-            <a href="#concepts" className="hover:text-cyan-400 transition-colors">Showcase</a>
-            <a href="#calculator" className="hover:text-cyan-400 transition-colors">Earnings Calculator</a>
+            <a href="#demo" className="hover:text-cyan-400 transition-colors">OBS Studio Simulator</a>
+            <a href="#ticker" className="hover:text-cyan-400 transition-colors">Live Rates</a>
+            <a href="#pipeline" className="hover:text-cyan-400 transition-colors">Architecture</a>
+            <a href="#comparison" className="hover:text-cyan-400 transition-colors">Comparison</a>
+            <a href="#calculator" className="hover:text-cyan-400 transition-colors">Fee Calculator</a>
             <a href="#faq" className="hover:text-cyan-400 transition-colors">FAQ</a>
           </nav>
 
@@ -151,9 +168,9 @@ export default function Home() {
             </Link>
             <Link 
               href="/dashboard" 
-              className="glass-btn-primary px-4 py-1.5 text-xs font-mono rounded-full tracking-wide"
+              className="glass-btn-primary px-4 py-1.5 text-xs font-mono rounded-full tracking-wide flex items-center gap-1"
             >
-              Dashboard ⚡
+              Dashboard <span>⚡</span>
             </Link>
           </div>
         </header>
@@ -161,28 +178,28 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-12 text-center relative z-10 flex flex-col items-center">
-        <div className="badge-punchy bg-cyan-950/40 text-cyan-300 border-cyan-500/30 mb-6 shadow-[0_0_20px_rgba(0,242,254,0.15)]">
+        <div className="badge-punchy bg-cyan-950/50 text-cyan-300 border-cyan-500/40 mb-6 shadow-[0_0_25px_rgba(0,242,254,0.2)]">
           <span className="w-2 h-2 rounded-full bg-cyan-400 radar-dot"></span>
-          NON-CUSTODIAL WEB3 DONATION ENGINE FOR STREAMERS
+          NON-CUSTODIAL WEB3 DONATION ENGINE // SUB-400MS OBS ALERTS
         </div>
 
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white max-w-4xl leading-tight font-sans">
-          Receive Crypto Donations <br />
-          <span className="text-gradient-cyan drop-shadow-[0_0_40px_rgba(0,242,254,0.3)]">
-            Straight to Your Wallet.
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white max-w-4xl leading-[1.08] font-sans">
+          Streamer Financial Freedom. <br />
+          <span className="text-gradient-cyan drop-shadow-[0_0_40px_rgba(0,242,254,0.35)]">
+            100% Direct to Your Wallet.
           </span>
         </h1>
 
         <p className="mt-6 text-sm sm:text-base md:text-lg text-slate-300 max-w-2xl leading-relaxed font-sans">
-          The sovereign streaming infrastructure connecting viewers to your <strong className="text-white">OBS Studio</strong>. Accept <strong className="text-cyan-300">Solana, SUI, Polygon, Base, Ethereum & Bitcoin Lightning</strong> in &lt; 400ms with animated overlays, sound chimes, and AI voice Text-to-Speech.
+          Zero chargebacks. Zero holding periods. Accept <strong className="text-cyan-300">Solana, SUI, Bitcoin Lightning, Polygon, Base, Arbitrum, TRON & TON</strong> directly into your self-custody wallet with sub-second OBS browser overlays, procedural sound chimes, and neural AI voice synthesis.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-4 relative z-10">
           <Link 
             href="/login" 
-            className="glass-btn-primary px-8 py-4 text-sm uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 font-mono font-bold"
+            className="glass-btn-primary px-8 py-4 text-sm uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 font-mono font-bold shadow-[0_0_35px_rgba(0,242,254,0.3)]"
           >
-            <span>Connect Wallet &amp; Launch</span>
+            <span>Launch Creator Dashboard</span>
             <span className="text-base">⚡</span>
           </Link>
           <a 
@@ -193,9 +210,29 @@ export default function Home() {
           </a>
         </div>
 
+        {/* Real-time Value Props KPI Grid */}
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-3xl">
+          <div className="p-3.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md">
+            <div className="text-xl sm:text-2xl font-black text-cyan-300 font-mono">100% P2P</div>
+            <div className="text-[11px] text-slate-400 font-mono mt-0.5">Non-Custodial Payouts</div>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md">
+            <div className="text-xl sm:text-2xl font-black text-purple-300 font-mono">&lt; 380ms</div>
+            <div className="text-[11px] text-slate-400 font-mono mt-0.5">OBS Alert Latency</div>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md">
+            <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">0%</div>
+            <div className="text-[11px] text-slate-400 font-mono mt-0.5">Chargeback Fraud Risk</div>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md">
+            <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono">12+ Chains</div>
+            <div className="text-[11px] text-slate-400 font-mono mt-0.5">Instant Multi-Token Rails</div>
+          </div>
+        </div>
+
         {/* Multi-Chain Badges */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-2.5 text-xs font-mono">
-          <span className="text-slate-500 font-bold uppercase tracking-wider">Supported Networks:</span>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-xs font-mono">
+          <span className="text-slate-500 font-bold uppercase tracking-wider text-[11px]">Supported Rails:</span>
           <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 font-bold">
             ⚡ Solana (SOL)
           </span>
@@ -217,7 +254,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Cinematic Hero Video Banner Showcase */}
+      {/* Cinematic Hero Video Showcase */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8 relative z-10">
         <div className="glass-panel p-3 sm:p-4 rounded-3xl border border-white/10 relative overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.9)]">
           {/* Top Header Bar */}
@@ -226,7 +263,7 @@ export default function Home() {
               <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
               <span className="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
               <span className="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
-              <span className="text-slate-400 ml-2 font-bold">LIVE CRYPTO HUD // STREAM PREVIEW</span>
+              <span className="text-slate-400 ml-2 font-bold">LIVE CRYPTO HUD // STREAM BROADCAST PREVIEW</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 radar-dot"></span>
@@ -248,7 +285,7 @@ export default function Home() {
             </video>
 
             {/* In-Video Live Overlay Mockup */}
-            <div className="absolute top-6 right-6 max-w-sm w-full p-4 rounded-2xl bg-black/80 backdrop-blur-xl border border-cyan-400/40 shadow-[0_10px_35px_rgba(0,242,254,0.25)] animate-float-gentle">
+            <div className="absolute top-6 right-6 max-w-sm w-full p-4 rounded-2xl bg-black/85 backdrop-blur-xl border border-cyan-400/40 shadow-[0_10px_35px_rgba(0,242,254,0.3)] animate-float-gentle">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-lg">
                   ⚡
@@ -266,7 +303,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                <span>🔊 Text-to-Speech: ACTIVE</span>
+                <span>🔊 AI Neural TTS: ACTIVE</span>
                 <span className="text-emerald-400 font-bold">SETTLED IN 380MS</span>
               </div>
             </div>
@@ -275,7 +312,7 @@ export default function Home() {
             <div className="absolute bottom-4 left-4 right-4 p-3 rounded-xl bg-black/85 backdrop-blur-md border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <div className="flex items-center gap-3">
                 <span className="text-slate-400">DONATION GOAL:</span>
-                <span className="text-white font-bold">Upgrade Stream Setup (78%)</span>
+                <span className="text-white font-bold">Upgrade Stream Studio Setup (78%)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-36 h-2 bg-zinc-800 rounded-full overflow-hidden border border-white/10">
@@ -326,27 +363,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Interactive OBS Alert Simulator */}
+      {/* Interactive OBS Alert Studio Simulator (Sound + AI Voice) */}
       <section id="demo" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 relative z-10">
         <div className="text-center mb-8">
           <div className="badge-punchy bg-purple-950/40 text-purple-300 border-purple-500/30 mb-3">
             INTERACTIVE OBS ALERT ENGINE
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-            Test the Real-Time Alert &amp; TTS Voice
+            Test the Real-Time Alert, Sound &amp; AI Voice
           </h2>
           <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto font-sans">
-            Experience how donation alerts appear in your OBS Studio broadcast with zero delay and speech synthesis.
+            Customize the theme, procedural synthesizer preset, and vocal profile. Click below to experience sub-second OBS alerts live in your browser.
           </p>
         </div>
 
         <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
           {/* Controls column */}
           <div className="lg:col-span-5 space-y-4">
-            <h3 className="text-lg font-bold text-white font-mono">Alert Configuration</h3>
+            <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
+              <span>🎛️</span> SIMULATOR CONTROLS
+            </h3>
             
+            {/* Theme Selector */}
             <div>
-              <label className="text-xs font-mono text-slate-400 block mb-1.5">Select Overlay Aesthetic Theme</label>
+              <label className="text-[11px] font-mono text-slate-400 block mb-1.5 uppercase">Overlay Aesthetic Theme:</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['cyberpunk', 'matrix', 'fire', 'minimal'] as const).map((t) => (
                   <button
@@ -364,34 +405,102 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-2 text-xs font-mono">
-              <div className="flex justify-between text-slate-400">
-                <span>Simulated Donor:</span>
-                <span className="text-white font-bold">Alex (alex.sol)</span>
+            {/* Sound Synthesizer Preset */}
+            <div>
+              <label className="text-[11px] font-mono text-slate-400 block mb-1.5 uppercase">Zero-Latency Sound Preset:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {SOUND_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      setDemoSound(preset.id);
+                      playSynthesizedSound(preset.id, 0.45);
+                    }}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between ${
+                      demoSound === preset.id
+                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-400/50'
+                        : 'bg-black/50 text-slate-400 border border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="truncate">{preset.name}</span>
+                    <span className="text-[10px] text-cyan-400">▶</span>
+                  </button>
+                ))}
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Simulated Token:</span>
-                <span className="text-cyan-300 font-bold">25.0 SOL (~$4,750 USD)</span>
+            </div>
+
+            {/* AI Voice Profile */}
+            <div>
+              <label className="text-[11px] font-mono text-slate-400 block mb-1.5 uppercase">AI Voice Profile (ElevenLabs / TTS):</label>
+              <div className="grid grid-cols-2 gap-2">
+                {VOICE_PROFILES.map((voice) => (
+                  <button
+                    key={voice.id}
+                    onClick={() => setDemoVoice(voice.id)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between ${
+                      demoVoice === voice.id
+                        ? 'bg-purple-950/60 text-purple-300 border border-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                        : 'bg-black/50 text-slate-400 border border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="truncate">{voice.name}</span>
+                    <span className="text-[9px] text-purple-400">{voice.tag}</span>
+                  </button>
+                ))}
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Message:</span>
-                <span className="text-slate-200 italic">&quot;Loving the stream, keep grinding!&quot;</span>
+            </div>
+
+            {/* Donor Inputs */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-mono text-slate-500 uppercase">Donor Name</label>
+                <input
+                  type="text"
+                  value={demoDonorName}
+                  onChange={(e) => setDemoDonorName(e.target.value)}
+                  className="glass-input w-full px-2.5 py-1.5 rounded-xl text-xs font-mono text-white mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-500 uppercase">Donation Amount</label>
+                <div className="flex gap-1 mt-1">
+                  <input
+                    type="text"
+                    value={demoAmount}
+                    onChange={(e) => setDemoAmount(e.target.value)}
+                    className="glass-input w-full px-2.5 py-1.5 rounded-xl text-xs font-mono text-white"
+                  />
+                  <select
+                    value={demoCurrency}
+                    onChange={(e) => setDemoCurrency(e.target.value)}
+                    className="glass-input px-2 py-1.5 rounded-xl text-xs font-mono text-white"
+                  >
+                    <option value="SOL">SOL</option>
+                    <option value="SUI">SUI</option>
+                    <option value="ETH">ETH</option>
+                    <option value="POL">POL</option>
+                    <option value="BTC">BTC</option>
+                    <option value="USDC">USDC</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <button
               onClick={triggerDemoAlert}
-              className="w-full glass-btn-primary py-3.5 rounded-xl text-sm font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+              className="w-full glass-btn-primary py-3.5 rounded-xl text-sm font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_25px_rgba(0,242,254,0.3)]"
             >
-              <span>🚀 Trigger Live OBS Alert + Audio TTS</span>
+              <span>🚀 Trigger Live OBS Alert + Sound &amp; TTS</span>
             </button>
           </div>
 
           {/* Screen simulator column */}
           <div className="lg:col-span-7">
-            <div className="aspect-video rounded-2xl bg-black border border-white/10 p-6 flex flex-col justify-between relative overflow-hidden shadow-inner">
+            <div className="aspect-video rounded-2xl bg-zinc-950 border border-white/10 p-6 flex flex-col justify-between relative overflow-hidden shadow-inner">
+              
+              {/* Screen Simulator Header */}
               <div className="flex items-center justify-between text-xs font-mono text-slate-500">
-                <span>OBS BROWSER SOURCE CANVAS (1920x1080)</span>
+                <span>OBS BROWSER CANVAS (1920x1080)</span>
                 <span className={demoAlertActive ? 'text-cyan-400 font-bold animate-pulse' : 'text-slate-600'}>
                   {demoAlertActive ? '🔴 ALERT BROADCASTING' : 'IDLE STANDBY'}
                 </span>
@@ -401,31 +510,35 @@ export default function Home() {
               <div className="flex items-center justify-center min-h-[140px]">
                 {demoAlertActive ? (
                   <div className={`w-full max-w-md p-5 rounded-2xl backdrop-blur-xl border animate-float-gentle ${
-                    demoTheme === 'cyberpunk' ? 'bg-black/90 border-cyan-400/60 shadow-[0_0_35px_rgba(0,242,254,0.3)]' :
-                    demoTheme === 'matrix' ? 'bg-black/90 border-emerald-500/60 shadow-[0_0_35px_rgba(16,185,129,0.3)] text-emerald-400' :
-                    demoTheme === 'fire' ? 'bg-black/90 border-orange-500/60 shadow-[0_0_35px_rgba(249,115,22,0.3)] text-orange-300' :
+                    demoTheme === 'cyberpunk' ? 'bg-black/90 border-cyan-400/60 shadow-[0_0_35px_rgba(0,242,254,0.35)]' :
+                    demoTheme === 'matrix' ? 'bg-black/90 border-emerald-500/60 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-emerald-400' :
+                    demoTheme === 'fire' ? 'bg-black/90 border-orange-500/60 shadow-[0_0_35px_rgba(249,115,22,0.35)] text-orange-300' :
                     'bg-black/90 border-white/30 text-white'
                   }`}>
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl">
+                      <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl flex-shrink-0">
                         ⚡
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-white font-mono">alex.sol</span>
+                          <span className="font-bold text-sm text-white font-mono truncate">{demoDonorName}</span>
                           <span className="text-xs font-mono font-bold text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-400/40">
-                            +25.0 SOL
+                            +{demoAmount} {demoCurrency}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-300 mt-1.5 font-sans">
-                          &quot;Loving the stream, keep grinding champion! 🚀&quot;
+                        <p className="text-xs text-slate-300 mt-1.5 font-sans line-clamp-2">
+                          &quot;{demoMessage}&quot;
                         </p>
                       </div>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span>Sound: {demoSound.toUpperCase()}</span>
+                      <span className="text-cyan-400">Voice: {demoVoice.toUpperCase()}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center text-slate-600 text-xs font-mono">
-                    Press &quot;Trigger Live OBS Alert&quot; to test the real-time visual &amp; audio simulation
+                    Press &quot;Trigger Live OBS Alert&quot; to test the real-time visual, Web Audio chime &amp; AI voice
                   </div>
                 )}
               </div>
@@ -448,56 +561,203 @@ export default function Home() {
             How the Live Crypto Engine Works
           </h2>
           <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto font-sans">
-            From donor wallet approval to OBS Studio overlay in under 400 milliseconds.
+            A resilient pipeline from on-chain block confirmation to OBS Studio visual rendering in sub-400 milliseconds.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Node selector tabs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {workflowNodes.map((node) => (
-            <div
+            <button
               key={node.id}
               onClick={() => setSelectedWorkflowNode(node.id)}
-              className={`glass-card p-5 rounded-2xl cursor-pointer transition-all ${
-                selectedWorkflowNode === node.id 
-                  ? 'border-cyan-400/70 shadow-[0_0_25px_rgba(0,242,254,0.18)] bg-zinc-950/80' 
-                  : 'hover:border-white/20'
+              className={`p-4 rounded-2xl border text-left transition-all ${
+                selectedWorkflowNode === node.id
+                  ? 'bg-cyan-950/40 border-cyan-400/60 shadow-[0_0_20px_rgba(0,242,254,0.15)]'
+                  : 'bg-black/50 border-white/10 hover:border-white/20'
               }`}
             >
-              <div className={`badge-punchy ${node.badgeColor} mb-3 text-[10px]`}>
+              <div className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border inline-block mb-2 ${node.badgeColor}`}>
                 {node.badge}
               </div>
-              <h4 className="text-base font-bold text-white mb-1.5 font-sans">{node.name}</h4>
-              <p className="text-xs text-slate-400 leading-relaxed font-sans">{node.description}</p>
-            </div>
+              <div className="text-xs font-bold text-white font-mono">{node.name}</div>
+              <div className="text-[11px] text-slate-400 mt-1 font-sans line-clamp-1">{node.type}</div>
+            </button>
           ))}
         </div>
 
-        {/* Selected Workflow Node Code Inspector */}
-        <div className="mt-6 glass-panel p-5 rounded-2xl border border-white/10">
-          <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2 border-b border-white/10 pb-2">
-            <span>CODE PAYLOAD // {workflowNodes.find(n => n.id === selectedWorkflowNode)?.name}</span>
-            <span className="text-cyan-400">STATUS: VERIFIED ON-CHAIN</span>
+        {/* Node detail inspector card */}
+        {(() => {
+          const activeNode = workflowNodes.find((n) => n.id === selectedWorkflowNode) || workflowNodes[0];
+          return (
+            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div className="lg:col-span-6 space-y-3">
+                <div className={`text-xs font-mono font-bold px-3 py-1 rounded-full border inline-block ${activeNode.badgeColor}`}>
+                  {activeNode.badge}
+                </div>
+                <h3 className="text-xl font-bold text-white font-sans">{activeNode.name}</h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans">{activeNode.description}</p>
+              </div>
+
+              <div className="lg:col-span-6">
+                <div className="rounded-2xl bg-zinc-950 border border-white/10 p-4 font-mono text-xs text-slate-300 overflow-x-auto shadow-inner">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-2 border-b border-white/10 pb-2">
+                    <span>LIVE PAYLOAD CONTRACT</span>
+                    <span className="text-cyan-400 font-bold">JSON SCHEMA</span>
+                  </div>
+                  <pre className="text-[11px] text-cyan-300 whitespace-pre-wrap">{activeNode.payloadSnippet}</pre>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </section>
+
+      {/* Comparison Matrix: Live Crypto vs Traditional */}
+      <section id="comparison" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 relative z-10">
+        <div className="text-center mb-10">
+          <div className="badge-punchy bg-emerald-950/40 text-emerald-300 border-emerald-500/30 mb-3">
+            PLATFORM COMPARISON
           </div>
-          <pre className="text-xs font-mono text-cyan-300 bg-black/70 p-4 rounded-xl overflow-x-auto">
-            <code>{workflowNodes.find(n => n.id === selectedWorkflowNode)?.payloadSnippet}</code>
-          </pre>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+            Why Creators Are Leaving Twitch Bits &amp; PayPal
+          </h2>
+          <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto font-sans">
+            Compare fee cuts, settlement speed, custody, and chargeback protection side by side.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-white/10 bg-black/60 text-slate-400 uppercase text-[11px]">
+                  <th className="p-4 sm:p-5">Feature / Metric</th>
+                  <th className="p-4 sm:p-5 text-cyan-300 bg-cyan-950/30 font-bold border-x border-cyan-400/20">
+                    ⚡ Live Crypto Gateway
+                  </th>
+                  <th className="p-4 sm:p-5">Twitch Bits</th>
+                  <th className="p-4 sm:p-5">PayPal / Streamlabs</th>
+                  <th className="p-4 sm:p-5">YouTube SuperChat</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                <tr className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 sm:p-5 text-white font-bold font-sans">Platform Fee Cut</td>
+                  <td className="p-4 sm:p-5 text-cyan-300 font-bold bg-cyan-950/20 border-x border-cyan-400/20">
+                    1% to 2% (98-99% You Keep)
+                  </td>
+                  <td className="p-4 sm:p-5 text-red-400">30% to 50% Take Rate</td>
+                  <td className="p-4 sm:p-5 text-amber-300">3.49% + $0.49 fee</td>
+                  <td className="p-4 sm:p-5 text-red-400">30% Take Rate</td>
+                </tr>
+                <tr className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 sm:p-5 text-white font-bold font-sans">Payout Settlement Speed</td>
+                  <td className="p-4 sm:p-5 text-emerald-400 font-bold bg-cyan-950/20 border-x border-cyan-400/20">
+                    Instant On-Chain (&lt; 400ms)
+                  </td>
+                  <td className="p-4 sm:p-5 text-slate-400">Net-15 to Net-45 Days</td>
+                  <td className="p-4 sm:p-5 text-slate-400">2 - 5 Business Days</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Monthly (Net-30)</td>
+                </tr>
+                <tr className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 sm:p-5 text-white font-bold font-sans">Custody of Funds</td>
+                  <td className="p-4 sm:p-5 text-cyan-300 font-bold bg-cyan-950/20 border-x border-cyan-400/20">
+                    100% Non-Custodial (Your Keys)
+                  </td>
+                  <td className="p-4 sm:p-5 text-slate-400">Custodial Escrow (Amazon)</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Subject to Account Freezes</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Custodial Escrow (Google)</td>
+                </tr>
+                <tr className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 sm:p-5 text-white font-bold font-sans">Chargeback Fraud Risk</td>
+                  <td className="p-4 sm:p-5 text-emerald-400 font-bold bg-cyan-950/20 border-x border-cyan-400/20">
+                    0% (Mathematically Impossible)
+                  </td>
+                  <td className="p-4 sm:p-5 text-slate-400">Covered by platform</td>
+                  <td className="p-4 sm:p-5 text-red-400 font-bold">Frequent ($15-20 penalty fee)</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Covered by platform</td>
+                </tr>
+                <tr className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 sm:p-5 text-white font-bold font-sans">Global Borderless Access</td>
+                  <td className="p-4 sm:p-5 text-cyan-300 font-bold bg-cyan-950/20 border-x border-cyan-400/20">
+                    Global / Uncensorable
+                  </td>
+                  <td className="p-4 sm:p-5 text-slate-400">Restricted by Bank Country</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Restricted Countries</td>
+                  <td className="p-4 sm:p-5 text-slate-400">Restricted by AdSense</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      {/* Visual Design Concepts Showcase */}
+      {/* Earnings & Fee Comparison Calculator */}
+      <section id="calculator" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 relative z-10">
+        <div className="glass-panel p-6 sm:p-10 rounded-3xl border border-white/10">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <div className="badge-punchy bg-emerald-950/40 text-emerald-300 border-emerald-500/30 mb-3">
+              CREATOR REVENUE CALCULATOR
+            </div>
+            <h2 className="text-3xl font-extrabold text-white font-sans">
+              Calculate Your Real Creator Take-Home Pay
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-2 font-sans">
+              Drag the slider to see how much extra income remains in your wallet each month by eliminating middleman cuts.
+            </p>
+          </div>
+
+          <div className="max-w-xl mx-auto space-y-6">
+            <div>
+              <div className="flex justify-between text-xs font-mono mb-2">
+                <span className="text-slate-400">Estimated Monthly Stream Donations:</span>
+                <span className="text-cyan-400 font-bold text-sm">${calculatorAmount.toLocaleString('en-US')} USD</span>
+              </div>
+              <input 
+                type="range" 
+                min="200" 
+                max="25000" 
+                step="100"
+                value={calculatorAmount}
+                onChange={(e) => setCalculatorAmount(Number(e.target.value))}
+                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-black/60 border border-white/5">
+                <div className="text-[11px] text-slate-400 font-mono">Legacy Platforms Payout:</div>
+                <div className="text-2xl font-black text-red-400 font-mono mt-1">${traditionalTake}</div>
+                <div className="text-[10px] text-slate-500 mt-1">Loses up to ${(calculatorAmount * 0.18).toFixed(2)} in fees</div>
+              </div>
+              <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-400/40 shadow-[0_0_20px_rgba(0,242,254,0.15)]">
+                <div className="text-[11px] text-cyan-300 font-mono">With Live Crypto:</div>
+                <div className="text-2xl font-black text-cyan-300 font-mono mt-1">${netPlatformTake}</div>
+                <div className="text-[10px] text-emerald-400 mt-1 font-bold">You keep +${moneySaved} extra every month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Concept Art & UI Showcase */}
       <section id="concepts" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 relative z-10">
         <div className="text-center mb-10">
-          <div className="badge-punchy bg-purple-950/40 text-purple-300 border-purple-500/30 mb-3">
-            IMMERSIVE STREAMING SUITE
+          <div className="badge-punchy bg-cyan-950/40 text-cyan-300 border-cyan-500/30 mb-3">
+            DESIGN SYSTEM SHOWCASE
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-            Designed for Modern Streamers &amp; Communities
+            Designed for Modern Esports &amp; Web3 Streams
           </h2>
+          <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto font-sans">
+            Crafted with deep OLED black, liquid glass refractions, and sub-second reactive graphics.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {designConcepts.map((concept, idx) => (
-            <div key={idx} className="glass-card rounded-2xl overflow-hidden border border-white/10 group">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {designConcepts.slice(0, 3).map((concept, idx) => (
+            <div key={idx} className="liquid-card rounded-2xl overflow-hidden border border-white/10 group">
               <div className="relative aspect-video overflow-hidden bg-zinc-950">
                 <Image
                   src={concept.image}
@@ -515,54 +775,6 @@ export default function Home() {
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Earnings & Fee Comparison Calculator */}
-      <section id="calculator" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 relative z-10">
-        <div className="glass-panel p-6 sm:p-10 rounded-3xl border border-white/10">
-          <div className="text-center max-w-2xl mx-auto mb-8">
-            <div className="badge-punchy bg-emerald-950/40 text-emerald-300 border-emerald-500/30 mb-3">
-              CREATOR REVENUE SOVEREIGNTY
-            </div>
-            <h2 className="text-3xl font-extrabold text-white font-sans">
-              Stop Giving Away 15% to 30% of Your Stream Income
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-2 font-sans">
-              Traditional donation platforms and credit card processors charge heavy transaction fees and subject creators to fraudulent chargebacks.
-            </p>
-          </div>
-
-          <div className="max-w-xl mx-auto space-y-6">
-            <div>
-              <div className="flex justify-between text-xs font-mono mb-2">
-                <span className="text-slate-400">Monthly Stream Donations:</span>
-                <span className="text-cyan-400 font-bold text-sm">${calculatorAmount.toLocaleString('en-US')} USD</span>
-              </div>
-              <input 
-                type="range" 
-                min="100" 
-                max="20000" 
-                step="100"
-                value={calculatorAmount}
-                onChange={(e) => setCalculatorAmount(Number(e.target.value))}
-                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-black/60 border border-white/5">
-                <div className="text-[11px] text-slate-400 font-mono">Traditional Platforms:</div>
-                <div className="text-xl font-bold text-red-400 font-mono mt-1">${traditionalTake}</div>
-                <div className="text-[10px] text-slate-500 mt-1">High cuts + chargeback exposure</div>
-              </div>
-              <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-400/30">
-                <div className="text-[11px] text-cyan-300 font-mono">With Live Crypto:</div>
-                <div className="text-xl font-bold text-cyan-300 font-mono mt-1">${netPlatformTake}</div>
-                <div className="text-[10px] text-emerald-400 mt-1 font-bold">You keep +${moneySaved} extra</div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -595,13 +807,13 @@ export default function Home() {
             },
             {
               q: "How does the Text-to-Speech (TTS) voice alert work?",
-              a: "When a donation occurs, the OBS Browser Source receives the event via sub-second WebSocket connection and invokes the browser speech synthesis engine to read the donor's message out loud in real time."
+              a: "When a donation occurs, the OBS Browser Source receives the event via sub-second WebSocket connection and invokes neural ElevenLabs streaming audio or procedural browser speech synthesis to read the donor's message out loud in real time."
             }
           ].map((item, idx) => (
-            <div key={idx} className="glass-card rounded-2xl border border-white/10 overflow-hidden">
+            <div key={idx} className="liquid-card rounded-2xl border border-white/10 overflow-hidden">
               <button
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full p-5 text-left flex items-center justify-between font-bold text-sm text-white font-sans"
+                className="w-full p-5 text-left flex items-center justify-between font-bold text-sm text-white font-sans cursor-pointer"
               >
                 <span>{item.q}</span>
                 <span className="text-cyan-400 text-base">{openFaq === idx ? '−' : '+'}</span>
@@ -617,9 +829,9 @@ export default function Home() {
       </section>
 
       {/* Final Call to Action Footer */}
-      <footer className="max-w-6xl mx-auto px-4 sm:px-6 py-12 text-center border-t border-white/10 relative z-10">
+      <footer className="max-w-6xl mx-auto px-4 sm:px-6 py-14 text-center border-t border-white/10 relative z-10">
         <div className="flex flex-col items-center">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,242,254,0.4)] border border-cyan-400/30 bg-zinc-950 flex items-center justify-center p-2 mb-4">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-[0_0_25px_rgba(0,242,254,0.45)] border border-cyan-400/30 bg-zinc-950 flex items-center justify-center p-2 mb-4">
             <Image 
               src="/brand/logo-png.png" 
               alt="Live Crypto" 
@@ -628,7 +840,7 @@ export default function Home() {
               className="object-contain"
             />
           </div>
-          <h3 className="text-2xl font-black text-white font-sans">
+          <h3 className="text-2xl sm:text-3xl font-black text-white font-sans">
             Ready to Revolutionize Your Stream Donations?
           </h3>
           <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-md font-sans">
@@ -638,14 +850,14 @@ export default function Home() {
           <div className="mt-6 flex gap-4">
             <Link 
               href="/login" 
-              className="glass-btn-primary px-8 py-3 rounded-full text-xs font-mono font-bold uppercase tracking-wider"
+              className="glass-btn-primary px-8 py-3.5 rounded-full text-xs font-mono font-bold uppercase tracking-wider shadow-[0_0_30px_rgba(0,242,254,0.35)]"
             >
               Get Started for Free ⚡
             </Link>
           </div>
 
           <div className="mt-12 text-[11px] font-mono text-slate-500">
-            © 2026 Live Crypto Protocol. 100% Non-Custodial Streaming Infrastructure. Universal English Edition.
+            © 2026 Live Crypto Protocol. 100% Non-Custodial Streaming Infrastructure. Universal Edition.
           </div>
         </div>
       </footer>
