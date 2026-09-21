@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { Web3Provider } from "@/components/Web3Provider";
 import { BackgroundLayer } from "@/components/BackgroundLayer";
 
 const outfit = Outfit({
@@ -21,7 +20,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Live Crypto — Non-Custodial Web3 Donation Gateway for Streamers",
-  description: "Accept crypto donations in real-time with sub-second OBS overlays, multi-chain support (Solana, SUI, Polygon, Base, Ethereum, Bitcoin Lightning), and zero middleman fees.",
+   description: "Apoio direto para quem cria ao vivo. Doações cripto, carteiras próprias e alertas no OBS. Conheça a prévia do Live Crypto.",
   keywords: ["Crypto Donations", "OBS Overlay", "Streamer Crypto", "Web3 Live Streaming", "Solana Pay", "SUI Donation", "Twitch Crypto", "YouTube Streamer"],
   icons: {
     icon: '/brand/logo-png.png',
@@ -41,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+       lang="pt-BR"
       className={`${outfit.variable} ${spaceGrotesk.variable} h-full antialiased dark`}
     >
       <body className="min-h-full bg-black text-slate-100 font-sans selection:bg-cyan-400 selection:text-black relative overflow-x-hidden">
@@ -50,9 +49,7 @@ export default function RootLayout({
 
         {/* Dynamic App Content */}
         <div className="relative z-10 min-h-full flex flex-col">
-          <Web3Provider>
-            {children}
-          </Web3Provider>
+          {children}
         </div>
       </body>
     </html>

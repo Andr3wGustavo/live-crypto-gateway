@@ -5,6 +5,7 @@ const { generateNonce, SiweMessage } = require('siwe');
 const db = require('../db');
 const { pubClient } = require('../redis');
 const logger = require('../utils/logger');
+const { verifySolanaSignature } = require('../services/solanaAuth');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
@@ -40,17 +41,16 @@ router.post('/verify', async (req, res) => {
         return res.status(400).json({ error: 'Solana public key / address required' });
       }
 
-      if (receivedNonce) {
-        const nonceExists = await pubClient.get(`nonce:${receivedNonce}`);
-        if (!nonceExists && process.env.NODE_ENV !== 'development') {
-          return res.status(401).json({ error: 'Invalid or expired authentication nonce' });
-        }
-        await pubClient.del(`nonce:${receivedNonce}`);
+      if (!verifySolanaSignature({ publicKey: solanaAddress, nonce: receivedNonce, message, signature }, process.env.FRONTEND_URL || 'http://localhost:3000')) {
+        return res.status(401).json({ error: 'Invalid Solana signature or sign-in message' });
+      }
+      if (!await pubClient.getDel(`nonce:${receivedNonce}`)) {
+        return res.status(401).json({ error: 'Invalid or expired authentication nonce' });
       }
 
       // Upsert Streamer with Solana address
       let streamerRes = await db.query(
-        'SELECT id, public_address, obs_token FROM Streamers WHERE LOWER(public_address) = LOWER($1)',
+        'SELECT id, public_address, obs_token FROM Streamers WHERE public_address = $1',
         [solanaAddress]
       );
 
@@ -92,12 +92,16 @@ router.post('/verify', async (req, res) => {
     
     // Verify nonce
     const nonceExists = await pubClient.get(`nonce:${siweMessage.nonce}`);
-    if (!nonceExists && process.env.NODE_ENV !== 'development') {
+    if (!nonceExists) {
       return res.status(401).json({ error: 'Invalid or expired nonce' });
     }
 
-    const fields = await siweMessage.verify({ signature });
-    await pubClient.del(`nonce:${siweMessage.nonce}`);
+    const origin = new URL(process.env.FRONTEND_URL || 'http://localhost:3000');
+    if (siweMessage.uri !== origin.origin) return res.status(401).json({ error: 'Invalid sign-in origin' });
+    const fields = await siweMessage.verify({ signature, domain: origin.host, nonce: siweMessage.nonce });
+    if (!fields.success || !await pubClient.getDel(`nonce:${siweMessage.nonce}`)) {
+      return res.status(401).json({ error: 'Invalid or already used nonce' });
+    }
 
     const publicAddress = fields.data.address.toLowerCase();
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { WagmiProvider, type Config } from 'wagmi';
-import { mainnet, polygon, base, arbitrum, optimism, bsc, avalanche } from 'viem/chains';
+import { mainnet, polygon, base, arbitrum, optimism, bsc, avalanche, polygonAmoy, baseSepolia } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana';
+import type { AppKitNetwork } from '@reown/appkit-common';
 
 // 1. Reown Cloud Project ID
 const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || 'b56e18d47c72ab683b10814fe9495694';
@@ -20,7 +21,7 @@ const metadata = {
 };
 
 // 3. Define supported EVM chains
-const networks = [mainnet, polygon, base, arbitrum, optimism, bsc, avalanche] as any;
+const networks: [AppKitNetwork, ...AppKitNetwork[]] = [polygonAmoy, baseSepolia, mainnet, polygon, base, arbitrum, optimism, bsc, avalanche];
 
 // 4. Create Wagmi adapter (EVM)
 const wagmiAdapter = new WagmiAdapter({
@@ -35,7 +36,7 @@ const solanaAdapter = new SolanaAdapter();
 createAppKit({
   adapters: [wagmiAdapter, solanaAdapter],
   networks,
-  defaultNetwork: polygon,
+  defaultNetwork: polygonAmoy,
   projectId,
   metadata,
   features: {

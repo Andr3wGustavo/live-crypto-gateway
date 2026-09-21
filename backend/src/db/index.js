@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
+const { randomUUID } = require('crypto');
 
 const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
@@ -63,26 +64,16 @@ const memoryStore = {
   ]
 };
 
-let useMemoryDb = false;
+const useMemoryDb = process.env.DEV_MEMORY_MODE === 'true' && process.env.NODE_ENV !== 'production';
 
 async function query(text, params = []) {
   if (!useMemoryDb) {
-    try {
-      return await pool.query(text, params);
-    } catch (err) {
-      if (err.code === 'ECONNREFUSED' || err.message.includes('timeout') || err.message.includes('Connection terminated')) {
-        if (!useMemoryDb) {
-          logger.warn('PostgreSQL database offline. Activated High-Performance In-Memory DB Engine.');
-          useMemoryDb = true;
-        }
-      } else {
-        throw err;
-      }
-    }
+    return pool.query(text, params);
   }
 
   // Handle in-memory queries gracefully
   const queryLower = text.toLowerCase();
+  if (queryLower.trim() === 'select 1') return { rows: [{ '?column?': 1 }] };
 
   // 1. SELECT from Streamers
   if (queryLower.includes('from streamers')) {
@@ -95,8 +86,11 @@ async function query(text, params = []) {
       return { rows: match };
     }
     if (queryLower.includes('where public_address = $1')) {
-      const match = memoryStore.streamers.filter(s => s.public_address.toLowerCase() === String(params[0]).toLowerCase());
+      const match = memoryStore.streamers.filter(s => s.public_address === String(params[0]));
       return { rows: match };
+    }
+    if (queryLower.includes('lower(public_address)')) {
+      return { rows: memoryStore.streamers.filter(s => s.public_address.toLowerCase() === String(params[0]).toLowerCase()) };
     }
     if (queryLower.includes('inner join wallets')) {
       const walletAddr = String(params[0]).toLowerCase();
@@ -114,8 +108,8 @@ async function query(text, params = []) {
     const newId = memoryStore.streamers.length + 1;
     const newStreamer = {
       id: newId,
-      public_address: String(params[0]).toLowerCase(),
-      obs_token: `obs-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+      public_address: String(params[0]),
+      obs_token: randomUUID()
     };
     memoryStore.streamers.push(newStreamer);
     return { rows: [newStreamer] };
@@ -128,7 +122,7 @@ async function query(text, params = []) {
     if (params.length > 1) {
       const chainSearch = String(params[1]).toLowerCase();
       const filtered = match.filter(w => w.chain_id.toLowerCase() === chainSearch || w.chain_id === String(params[2] || ''));
-      if (filtered.length > 0) match = filtered;
+      match = filtered;
     }
     return { rows: match };
   }
@@ -140,6 +134,7 @@ async function query(text, params = []) {
 
     const existingIdx = memoryStore.wallets.findIndex(w => w.streamer_id === streamerId && w.chain_id === chainId);
     if (existingIdx > -1) {
+      if (queryLower.includes('do nothing')) return { rows: [], rowCount: 0 };
       memoryStore.wallets[existingIdx].public_address = addr;
     } else {
       memoryStore.wallets.push({ streamer_id: streamerId, chain_id: chainId, public_address: addr });
@@ -241,5 +236,7 @@ async function query(text, params = []) {
 }
 
 module.exports = {
-  query
+  query,
+  isMemory: useMemoryDb,
+  close: () => pool.end()
 };

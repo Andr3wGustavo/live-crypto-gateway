@@ -7,6 +7,11 @@ import { SiweMessage } from 'siwe';
 import Image from 'next/image';
 import Link from 'next/link';
 
+type SolanaProvider = {
+  connect: () => Promise<{ publicKey: { toString: () => string } }>;
+  signMessage: (message: Uint8Array, encoding: 'utf8') => Promise<{ signature: Uint8Array }>;
+};
+
 export default function LoginPage() {
   const [authTab, setAuthTab] = useState<'EVM' | 'SOLANA'>('EVM');
   
@@ -33,7 +38,7 @@ export default function LoginPage() {
       setErrorMsg('');
 
       // 1. Get cryptographic nonce from backend
-      const nonceRes = await fetch('http://localhost:8080/api/auth/nonce');
+      const nonceRes = await fetch('/api/auth/nonce');
       if (!nonceRes.ok) throw new Error('Failed to obtain cryptographic nonce from server.');
       const nonce = await nonceRes.text();
 
@@ -58,7 +63,7 @@ export default function LoginPage() {
       setStatus('verifying');
 
       // 4. Verify signature on backend
-      const verifyRes = await fetch('http://localhost:8080/api/auth/verify', {
+      const verifyRes = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: preparedMessage, signature }),
@@ -66,22 +71,22 @@ export default function LoginPage() {
 
       if (!verifyRes.ok) throw new Error('Signature could not be verified by backend.');
 
-      const data = await verifyRes.json();
+      const data = await verifyRes.json() as { token: string };
       localStorage.setItem('jwt', data.token);
       setStatus('success');
       window.location.href = '/dashboard';
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setStatus('error');
-      setErrorMsg(err.message || 'An error occurred during Web3 authentication.');
+      setErrorMsg(err instanceof Error ? err.message : 'An error occurred during Web3 authentication.');
     }
   };
 
   // 2. Handle Native Solana (Phantom) Sign In
   const handleSolanaSignIn = async () => {
     try {
-      const win = window as any;
+      const win = window as typeof window & { phantom?: { solana?: SolanaProvider }; solana?: SolanaProvider };
       const solanaProvider = win.phantom?.solana || win.solana;
 
       if (!solanaProvider) {
@@ -97,13 +102,13 @@ export default function LoginPage() {
       const pubkey = connectResp.publicKey.toString();
       setSolanaAddress(pubkey);
 
-      const nonceRes = await fetch('http://localhost:8080/api/auth/nonce');
+      const nonceRes = await fetch('/api/auth/nonce');
       if (!nonceRes.ok) throw new Error('Failed to obtain nonce');
       const nonce = await nonceRes.text();
 
       setStatus('signing');
 
-      const statement = `Sign in to Live Crypto Creator Portal\nPublic Key: ${pubkey}\nNonce: ${nonce}`;
+      const statement = `Sign in to Live Crypto Creator Portal\nOrigin: ${window.location.origin}\nPublic Key: ${pubkey}\nNonce: ${nonce}`;
       const encoded = new TextEncoder().encode(statement);
       const signedMessage = await solanaProvider.signMessage(encoded, 'utf8');
 
@@ -113,7 +118,7 @@ export default function LoginPage() {
         .map((b: number) => b.toString(16).padStart(2, '0'))
         .join('');
 
-      const verifyRes = await fetch('http://localhost:8080/api/auth/verify', {
+      const verifyRes = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,15 +132,15 @@ export default function LoginPage() {
 
       if (!verifyRes.ok) throw new Error('Failed to verify Solana cryptographic signature');
 
-      const data = await verifyRes.json();
+      const data = await verifyRes.json() as { token: string };
       localStorage.setItem('jwt', data.token);
       setStatus('success');
       window.location.href = '/dashboard';
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setStatus('error');
-      setErrorMsg(err.message || 'An error occurred during Solana login.');
+      setErrorMsg(err instanceof Error ? err.message : 'An error occurred during Solana login.');
     }
   };
 

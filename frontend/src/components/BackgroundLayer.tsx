@@ -17,28 +17,13 @@ export function BackgroundLayer() {
     }
   }, [isOverlay]);
 
-  if (isOverlay) {
+  if (isOverlay || pathname === '/') {
     return null;
   }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-black">
-      {/* Background Video Layer with Deep Contrast Blend */}
-      <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-20 mix-blend-screen filter contrast-125 brightness-90"
-        >
-          <source src="/brand/consegue_fazer_um_video_de_um.mp4" type="video/mp4" />
-          <source src="/brand/animation.mp4" type="video/mp4" />
-        </video>
-        
-        {/* Solid Black Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/75 to-black/95"></div>
-      </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/20 to-black" />
 
       {/* Cyber Grid & Ambient Dots */}
       <div className="absolute inset-0 bg-cyber-grid opacity-15"></div>

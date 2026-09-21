@@ -2,6 +2,8 @@
 
 Non-Custodial Web3 Donation Infrastructure & Real-Time OBS Streaming Overlay Engine.
 
+> **Pre-release status:** the landing page and local preview are ready for product validation. Real payments are deliberately disabled by default and only testnet rails that pass the controls in [`OPERATIONS_AND_LAUNCH.md`](OPERATIONS_AND_LAUNCH.md) may be enabled. Do not use this repository to receive production funds yet.
+
 ---
 
 ## Executive Summary & Value Proposition
@@ -203,11 +205,20 @@ Viewer donation messages are stripped of all HTML tags, script injections, and n
 
 ### Option A: 1-Click Launcher (Recommended for Windows)
 
-Double-click `start-dev.bat` in the repository root. This initiates `dev-runner.js`, starting both the backend API (:8080) and frontend (:3000) concurrently in a single terminal with automated browser launching.
+Double-click `start-dev.bat` in the repository root. It launches safe preview mode: temporary in-memory data and real donations disabled. This initiates `dev-runner.js`, which waits for the backend API (:8080) and frontend (:3000) before opening the browser.
 
 ```bash
 .\start-dev.bat
 ```
+
+For the full local PostgreSQL + Redis stack, start Docker Desktop and run:
+
+```bash
+docker compose up -d
+.\start-dev.bat --full
+```
+
+Read [`OPERATIONS_AND_LAUNCH.md`](OPERATIONS_AND_LAUNCH.md) before enabling any payment rail.
 
 ### Option B: Manual Execution
 
@@ -256,6 +267,7 @@ cd contracts
 npm install
 npx hardhat compile
 npx hardhat test
+npm run sync:abi
 ```
 
 To deploy to Polygon Amoy Testnet:
@@ -263,6 +275,8 @@ To deploy to Polygon Amoy Testnet:
 ```bash
 npx hardhat run scripts/deploy.js --network amoy
 ```
+
+The deployment now requires `PRIVATE_KEY`, `PLATFORM_TREASURY` and `PLATFORM_FEE_BPS` in the environment. It intentionally has no default deployer or treasury address.
 
 ---
 

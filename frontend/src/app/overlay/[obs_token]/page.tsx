@@ -64,11 +64,8 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
   const [soundPreset, setSoundPreset] = useState<SoundPresetId>('arcade_coin');
   const [voiceProfile, setVoiceProfile] = useState<VoiceProfileId>('cyber_announcer');
   const [showLeaderboard, setShowLeaderboard] = useState(true);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([
-    { sender: 'alex.sol', totalFiat: 4750.00, lastCurrency: 'SOL' },
-    { sender: 'satoshi.eth', totalFiat: 480.00, lastCurrency: 'ETH' },
-    { sender: 'slush_whale', totalFiat: 420.00, lastCurrency: 'SUI' }
-  ]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const seenTransactions = useRef(new Set<string>());
 
   const [goalAmount, setGoalAmount] = useState(100.00);
   const [currentAmount, setCurrentAmount] = useState(0.00);
@@ -96,10 +93,14 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
     document.documentElement.classList.add('obs-transparent-mode');
 
     // Connect to WebSocket Server
-    const wsUrl = `ws://localhost:8080/?obs_token=${obs_token}`;
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL || `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8080`;
+    const wsUrl = `${wsBase}/?obs_token=${encodeURIComponent(obs_token)}`;
     let ws: WebSocket;
+    let disposed = false;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
 
     const connectWS = () => {
+      if (disposed) return;
       try {
         ws = new WebSocket(wsUrl);
 
@@ -152,8 +153,14 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
             }
 
             if (data.event === 'DONATION') {
+              if (data.tx_hash) {
+                if (seenTransactions.current.has(data.tx_hash)) return;
+                seenTransactions.current.add(data.tx_hash);
+                if (seenTransactions.current.size > 2000) seenTransactions.current.delete(seenTransactions.current.values().next().value!);
+              }
               const donationAmount = parseFloat(data.amount);
-              const fiatValue = data.fiatValue ? parseFloat(data.fiatValue) : donationAmount * 10;
+              if (!Number.isFinite(donationAmount) || donationAmount <= 0) return;
+              const fiatValue = !data.is_test && Number.isFinite(Number(data.fiatValue)) ? Number(data.fiatValue) : 0;
               const donationData = {
                 amount: donationAmount,
                 currency: data.currency,
@@ -169,7 +176,7 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
               setCurrentAmount(prev => prev + fiatValue);
 
               // Update live on-chain leaderboard
-              setLeaderboard(prev => {
+              if (fiatValue > 0) setLeaderboard(prev => {
                 const existing = prev.find(item => item.sender.toLowerCase() === donationData.sender.toLowerCase());
                 let updated: LeaderboardItem[];
                 if (existing) {
@@ -216,7 +223,7 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
         };
 
         ws.onclose = () => {
-          setTimeout(connectWS, 3000);
+          if (!disposed) reconnectTimer = setTimeout(connectWS, 3000);
         };
       } catch (err) {
         console.warn("WS connection error:", err);
@@ -226,6 +233,8 @@ export default function OverlayPage({ params }: { params: Promise<{ obs_token: s
     connectWS();
 
     return () => {
+      disposed = true;
+      clearTimeout(reconnectTimer);
       if (ws) ws.close();
       if (activeTimerRef.current) clearTimeout(activeTimerRef.current);
       document.body.classList.remove('obs-transparent-mode');

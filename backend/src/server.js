@@ -1,4 +1,11 @@
 require('dotenv').config();
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET === 'super-secret-jwt-key') {
+    throw new Error('Production requires a unique JWT_SECRET of at least 32 characters');
+  }
+  if (!process.env.FRONTEND_URL?.startsWith('https://')) throw new Error('Production requires HTTPS FRONTEND_URL');
+  if (process.env.DEV_MEMORY_MODE === 'true') throw new Error('Memory preview mode is forbidden in production');
+}
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -6,7 +13,7 @@ const rateLimit = require('express-rate-limit');
 
 const { connectRedis } = require('./redis');
 const { initWebSocket } = require('./ws');
-const { startPollingService } = require('./services/polling');
+const { startOutboxWorker } = require('./services/settlement');
 
 const logger = require('./utils/logger');
 const db = require('./db');
@@ -64,7 +71,7 @@ app.use(globalLimiter);
 // Health Check & Diagnostic Endpoint (Database, Redis, Memory, Uptime)
 app.get('/api/health', async (req, res) => {
   const health = {
-    status: 'ok',
+    status: db.isMemory ? 'preview' : 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
@@ -78,7 +85,7 @@ app.get('/api/health', async (req, res) => {
     // Check PostgreSQL
     const dbStart = Date.now();
     await db.query('SELECT 1');
-    health.services.database = `connected (${Date.now() - dbStart}ms)`;
+    health.services.database = db.isMemory ? 'memory-preview' : `connected (${Date.now() - dbStart}ms)`;
   } catch (err) {
     health.status = 'degraded';
     health.services.database = `disconnected: ${err.message}`;
@@ -88,13 +95,13 @@ app.get('/api/health', async (req, res) => {
     // Check Redis
     const redisStart = Date.now();
     await pubClient.ping();
-    health.services.redis = `connected (${Date.now() - redisStart}ms)`;
+    health.services.redis = require('./redis').isMemory ? 'memory-preview' : `connected (${Date.now() - redisStart}ms)`;
   } catch (err) {
     health.status = 'degraded';
     health.services.redis = `disconnected: ${err.message}`;
   }
 
-  const statusCode = health.status === 'ok' ? 200 : 503;
+  const statusCode = health.status === 'degraded' ? 503 : 200;
   res.status(statusCode).json(health);
 });
 
@@ -137,15 +144,23 @@ const PORT = process.env.PORT || 8080;
 
 async function startServer() {
   try {
+    await db.query('SELECT 1');
     await connectRedis();
   } catch (err) {
-    logger.warn('Could not establish external Redis connection, running with in-memory PubSub fallback.');
+    console.error('Startup failed: PostgreSQL and Redis are required. Start Docker services, or use --demo for a non-payment preview.', err.message);
+    process.exit(1);
   }
 
   try {
-    startPollingService();
+    // Pending reconciliation is disabled until payment intents persist the exact network.
+    // The checkout retries the same hash; it never sends a second transaction automatically.
+    if (!db.isMemory) {
+      await db.query('SELECT tx_hash FROM Donation_Outbox LIMIT 0');
+      startOutboxWorker();
+    }
   } catch (err) {
-    logger.warn('Polling service initialized in standby mode.');
+    console.error('Apply db/migrations/001_donation_outbox.sql before starting:', err.message);
+    process.exit(1);
   }
 
   server.listen(PORT, () => {
@@ -154,5 +169,6 @@ async function startServer() {
   });
 }
 
-startServer();
+if (require.main === module) startServer();
+module.exports = { app, server, startServer };
 

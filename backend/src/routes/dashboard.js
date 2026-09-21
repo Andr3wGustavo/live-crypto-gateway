@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { pubClient } = require('../redis');
+const { paymentConfig } = require('../services/paymentConfig');
 
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
@@ -40,6 +41,11 @@ router.get('/', async (req, res) => {
 router.post('/wallet', async (req, res) => {
   const streamerId = req.user.id;
   const { chain_id, public_address } = req.body;
+  const config = paymentConfig();
+  const configuredNetworks = [config.evm.chainId, config.solana.chainId];
+  if (!configuredNetworks.includes(chain_id) || typeof public_address !== 'string' || public_address.length < 20 || public_address.length > 255) {
+    return res.status(422).json({ error: 'Unsupported network or invalid payout address' });
+  }
   
   try {
     await db.query(

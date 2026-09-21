@@ -30,8 +30,18 @@ CREATE TABLE Transactions (
     tx_hash VARCHAR(255) PRIMARY KEY,
     streamer_id INT NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
     sender_address VARCHAR(255) NOT NULL,
-    amount DECIMAL(18,8) NOT NULL,
+    amount NUMERIC(78,18) NOT NULL,
     currency VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE Donation_Outbox (
+    tx_hash VARCHAR(255) PRIMARY KEY REFERENCES Transactions(tx_hash),
+    streamer_id INT NOT NULL REFERENCES Streamers(id) ON DELETE CASCADE,
+    payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    locked_until TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ
+);
+CREATE INDEX donation_outbox_pending ON Donation_Outbox(created_at) WHERE delivered_at IS NULL;

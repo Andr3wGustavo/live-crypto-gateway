@@ -1,68 +1,85 @@
-const { spawn, exec } = require('child_process');
-const path = require('path');
+const { spawn } = require('node:child_process');
+const path = require('node:path');
+const fs = require('node:fs');
+const net = require('node:net');
 
-const rootDir = __dirname;
-const backendDir = path.join(rootDir, 'backend');
-const frontendDir = path.join(rootDir, 'frontend');
-const nextBin = path.join(frontendDir, 'node_modules', 'next', 'dist', 'bin', 'next');
+const root = __dirname;
+const demo = process.argv.includes('--demo');
+const noBrowser = process.argv.includes('--no-browser');
+const children = [];
+let stopping = false;
 
-console.log('\x1b[36m%s\x1b[0m', '====================================================================');
-console.log('\x1b[36m%s\x1b[0m', '  ⚡ LIVE CRYPTO GATEWAY — UNIFIED DEV ENGINE (SINGLE TERMINAL)    ');
-console.log('\x1b[36m%s\x1b[0m', '====================================================================\n');
+async function shutdown(code = 0) {
+  if (stopping) return;
+  stopping = true;
+  await Promise.all(children.filter(child => child.pid).map(child => new Promise(resolve => {
+    if (process.platform === 'win32') {
+      const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      killer.on('exit', resolve);
+      killer.on('error', resolve);
+    } else { child.kill('SIGTERM'); resolve(); }
+  })));
+  process.exit(code);
+}
 
-// Prefix formatting helper
-function pipeLogs(child, prefix, colorCode) {
-  child.stdout.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach(line => {
-      if (line.trim()) {
-        console.log(`${colorCode}${prefix}\x1b[0m ${line}`);
-      }
-    });
+function launch(label, cwd, args) {
+  const child = spawn(process.execPath, args, {
+    cwd, env: { ...process.env, NODE_ENV: 'development', ...(demo ? { DEV_MEMORY_MODE: 'true', DONATIONS_ENABLED: 'false' } : {}) },
+    stdio: ['ignore', 'pipe', 'pipe']
   });
-
-  child.stderr.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.includes('Fast Refresh') && !trimmed.includes('compiled in')) {
-        console.error(`\x1b[31m${prefix}[ERR]\x1b[0m ${trimmed}`);
-      }
-    });
+  children.push(child);
+  for (const stream of [child.stdout, child.stderr]) stream.on('data', data => {
+    for (const line of data.toString().split(/\r?\n/)) if (line) console.log(`[${label}] ${line}`);
+  });
+  child.on('error', error => { console.error(`[${label}] ${error.message}`); void shutdown(1); });
+  child.on('exit', code => {
+    if (!stopping) { console.error(`[${label}] exited (${code}). See the error above.`); void shutdown(code || 1); }
   });
 }
 
-// 1. Launch Backend Server (:8080) directly via Node executable
-console.log('\x1b[33m%s\x1b[0m', '[1/2] Starting Backend API & WebSockets (:8080)...');
-const backend = spawn(process.execPath, [path.join('src', 'server.js')], {
-  cwd: backendDir,
-  env: { ...process.env, PORT: '8080', NODE_ENV: 'development' }
-});
-pipeLogs(backend, '[BACKEND]', '\x1b[36m');
-
-// 2. Launch Frontend Server (:3000) directly via Node executable
-console.log('\x1b[33m%s\x1b[0m', '[2/2] Starting Frontend Next.js Web App (:3000)...');
-const frontend = spawn(process.execPath, [nextBin, 'dev'], {
-  cwd: frontendDir,
-  env: { ...process.env, PORT: '3000' }
-});
-pipeLogs(frontend, '[FRONTEND]', '\x1b[32m');
-
-// 3. Open Browser automatically after 4 seconds
-setTimeout(() => {
-  console.log('\n\x1b[35m%s\x1b[0m', '🚀 Opening browser at http://localhost:3000...\n');
-  const openCmd = process.platform === 'win32' ? 'start http://localhost:3000' :
-                  process.platform === 'darwin' ? 'open http://localhost:3000' : 'xdg-open http://localhost:3000';
-  exec(openCmd);
-}, 4000);
-
-// Handle clean exit on Ctrl+C
-function cleanup() {
-  console.log('\n\x1b[33m%s\x1b[0m', 'Gracefully shutting down Live Crypto servers...');
-  backend.kill();
-  frontend.kill();
-  process.exit(0);
+function checkPort(port) {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', () => reject(new Error(`Port ${port} is occupied. Close the earlier Live Crypto terminal and retry.`)));
+    probe.listen(port, () => probe.close(resolve));
+  });
 }
 
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
+async function waitFor(url, timeout = 240000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline && !stopping) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      await response.arrayBuffer();
+      if (response.ok) return;
+      if (response.status >= 500 && url.includes('/health')) throw new Error('Backend dependencies are unhealthy');
+    } catch { /* Keep waiting while first compilation completes. */ }
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+  throw new Error(`Startup timed out: ${url}. Review the server logs above.`);
+}
+
+async function main() {
+  console.log(`\nLIVE CRYPTO / ${demo ? 'PREVIEW — no real payments, temporary data' : 'FULL — PostgreSQL + Redis required'}\n`);
+  if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('Install Node.js 22 or 24 LTS first.');
+  const next = path.join(root, 'frontend/node_modules/next/dist/bin/next');
+  if (!fs.existsSync(next) || !fs.existsSync(path.join(root, 'backend/node_modules/express'))) {
+    throw new Error('Dependencies missing. Run npm ci in frontend and backend, then retry.');
+  }
+  await Promise.all([checkPort(3000), checkPort(8080)]);
+  launch('API', path.join(root, 'backend'), ['src/server.js']);
+  // Turbopack can stall on Dropbox/OneDrive virtual filesystems. Webpack is
+  // slower to boot but stable for the Windows folder this project uses.
+  launch('WEB', path.join(root, 'frontend'), [next, 'dev', '--webpack', '--port', '3000']);
+  console.log('Waiting for API health and first page compilation (this can take a few minutes)...');
+  await Promise.all([waitFor('http://localhost:8080/api/health'), waitFor('http://localhost:3000')]);
+  console.log('\nREADY: http://localhost:3000 | API: http://localhost:8080/api/health\nCtrl+C closes both servers.');
+  if (!noBrowser) {
+    const command = process.platform === 'win32' ? ['cmd.exe', ['/d', '/c', 'start', '', 'http://localhost:3000']] : process.platform === 'darwin' ? ['open', ['http://localhost:3000']] : ['xdg-open', ['http://localhost:3000']];
+    const browser = spawn(command[0], command[1], { stdio: 'ignore' });
+    browser.on('error', () => console.log('Open http://localhost:3000 in your browser.'));
+  }
+}
+process.on('SIGINT', () => void shutdown());
+process.on('SIGTERM', () => void shutdown());
+main().catch(error => { console.error(error.message); void shutdown(1); });

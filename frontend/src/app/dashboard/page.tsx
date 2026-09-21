@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { fetchLiveCryptoPrices } from '@/services/coingecko';
 import { playSynthesizedSound, SOUND_PRESETS, SoundPresetId } from '@/services/soundEffects';
-import { speakWithProfile, speakWithNeuralOrFallback, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
+import { speakWithNeuralOrFallback, VOICE_PROFILES, VoiceProfileId } from '@/services/voiceSynthesis';
 
 interface StreamerData {
   id?: number;
@@ -75,23 +75,7 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('jwt');
     if (!token) {
-      // Local dev demo mode
-      setStreamer({ id: 1, public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', obs_token: '789a-bcde-1234-fghi' });
-      setWallets([
-        { chain_id: 'solana', public_address: '8x3sK2vPz1Lm9NxQa7Rt5Wb4Ey2Cg1Vj6F3aQ' },
-        { chain_id: 'sui', public_address: '0x8f3c7e9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c6e8a0b1d3f5e7c9a1b2d4f5c' },
-        { chain_id: '137', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
-        { chain_id: '8453', public_address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
-        { chain_id: 'btc', public_address: 'lnurl1dp68gurn8ghj7ampd3kx2ar0veekzar0wd5xjtnrdakj7tnhv4kxctttdehhwm30d3h82unvwqhksetjv35kuee5' }
-      ]);
-      setTransactions([
-        { tx_hash: '0x8f2d...4a1c', sender_address: 'alex.sol', amount: '25.0', currency: 'SOL', status: 'CONFIRMED', timestamp: '2 minutes ago' },
-        { tx_hash: '0x3e1b...99f0', sender_address: 'satoshi.eth', amount: '0.15', currency: 'ETH', status: 'CONFIRMED', timestamp: '15 minutes ago' },
-        { tx_hash: '0x7c4a...11bb', sender_address: 'streamfan', amount: '50.0', currency: 'USDC', status: 'CONFIRMED', timestamp: '1 hour ago' },
-        { tx_hash: 'sui_0x992', sender_address: 'slush_whale', amount: '120.0', currency: 'SUI', status: 'CONFIRMED', timestamp: '3 hours ago' }
-      ]);
-      setAnalytics({ totalTransactions: 4, estimatedTotalUSD: '5680.00', tokenBreakdown: { SOL: 25.0, ETH: 0.15, USDC: 50.0, SUI: 120.0 } });
-      setLoading(false);
+      window.location.replace('/login');
       return;
     }
 
@@ -99,7 +83,8 @@ export default function Dashboard() {
       setLoading(true);
       const headers = { 'Authorization': `Bearer ${token}` };
       
-      const dashboardRes = await fetch('http://localhost:8080/api/dashboard', { headers });
+      const dashboardRes = await fetch('/api/dashboard', { headers });
+      if (dashboardRes.status === 401) { localStorage.removeItem('jwt'); window.location.replace('/login'); return; }
       if (!dashboardRes.ok) throw new Error("Failed to load dashboard data");
       const data = await dashboardRes.json();
 
@@ -120,13 +105,13 @@ export default function Dashboard() {
         if (data.alertConfig.show_leaderboard !== undefined) setShowLeaderboard(data.alertConfig.show_leaderboard);
       }
 
-      const txRes = await fetch('http://localhost:8080/api/dashboard/transactions', { headers });
+      const txRes = await fetch('/api/dashboard/transactions', { headers });
       if (txRes.ok) {
         const txData = await txRes.json();
         setTransactions(txData);
       }
 
-      const analyticsRes = await fetch('http://localhost:8080/api/dashboard/analytics', { headers });
+      const analyticsRes = await fetch('/api/dashboard/analytics', { headers });
       if (analyticsRes.ok) {
         const analyticsData = await analyticsRes.json();
         setAnalytics(analyticsData);
@@ -134,14 +119,16 @@ export default function Dashboard() {
 
       setLoading(false);
     } catch (err) {
-      console.warn("Using fallback demo dashboard session:", err);
+      console.error('Dashboard unavailable:', err);
+      setEmergencyStatus('Não foi possível carregar o painel. Recarregue para tentar novamente.');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    const loadTimer = window.setTimeout(() => { void fetchDashboardData(); }, 0);
     fetchLiveCryptoPrices().then(prices => setCryptoPrices(prices));
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   // Save Alert/Theme/Goal/Sound/Position/Voice configuration
@@ -156,7 +143,7 @@ export default function Dashboard() {
 
     try {
       setConfigSaveStatus('saving');
-      const res = await fetch('http://localhost:8080/api/dashboard/config', {
+      const res = await fetch('/api/dashboard/config', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -210,7 +197,7 @@ export default function Dashboard() {
 
     try {
       setWalletSaveStatus('saving');
-      const res = await fetch('http://localhost:8080/api/dashboard/wallet', {
+      const res = await fetch('/api/dashboard/wallet', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -254,7 +241,7 @@ export default function Dashboard() {
       formData.append('file', file);
       formData.append('type', uploadType);
 
-      const res = await fetch('http://localhost:8080/api/dashboard/upload', {
+      const res = await fetch('/api/dashboard/upload', {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
@@ -299,7 +286,7 @@ export default function Dashboard() {
       playSynthesizedSound(soundPreset, 0.5);
 
       const token = localStorage.getItem('jwt');
-      await fetch('http://localhost:8080/api/dashboard/test-alert', {
+      const response = await fetch('/api/dashboard/test-alert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -314,10 +301,11 @@ export default function Dashboard() {
         })
       });
 
+      if (!response.ok) throw new Error('Alert preview was not accepted');
       setTestAlertStatus('success');
       setTimeout(() => setTestAlertStatus(''), 3000);
     } catch {
-      setTestAlertStatus('success');
+      setTestAlertStatus('error');
       setTimeout(() => setTestAlertStatus(''), 3000);
     }
   };
@@ -326,14 +314,15 @@ export default function Dashboard() {
   const handleEmergencySkip = async () => {
     const token = localStorage.getItem('jwt');
     try {
-      await fetch('http://localhost:8080/api/dashboard/skip-alert', {
+      const response = await fetch('/api/dashboard/skip-alert', {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
+      if (!response.ok) throw new Error('Alert skip was not accepted');
       setEmergencyStatus('Alert skipped on stream!');
       setTimeout(() => setEmergencyStatus(null), 2500);
     } catch {
-      setEmergencyStatus('Alert skip signal dispatched');
+      setEmergencyStatus('Não foi possível enviar o comando de pular alerta.');
       setTimeout(() => setEmergencyStatus(null), 2500);
     }
   };
@@ -341,16 +330,16 @@ export default function Dashboard() {
   const handleToggleTts = async () => {
     const token = localStorage.getItem('jwt');
     try {
-      await fetch('http://localhost:8080/api/dashboard/mute-tts', {
+      const response = await fetch('/api/dashboard/mute-tts', {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
+      if (!response.ok) throw new Error('TTS command was not accepted');
       setIsTtsMuted(prev => !prev);
       setEmergencyStatus(isTtsMuted ? 'TTS unmuted' : 'TTS muted on stream');
       setTimeout(() => setEmergencyStatus(null), 2500);
     } catch {
-      setIsTtsMuted(prev => !prev);
-      setEmergencyStatus(isTtsMuted ? 'TTS unmuted' : 'TTS muted on stream');
+      setEmergencyStatus('Não foi possível alterar o TTS no OBS.');
       setTimeout(() => setEmergencyStatus(null), 2500);
     }
   };
@@ -769,17 +758,17 @@ export default function Dashboard() {
             <div>
               <label className="text-xs font-mono text-slate-400 block mb-2 uppercase">Screen Alert Position:</label>
               <div className="grid grid-cols-5 gap-2">
-                {[
+                {([
                   { id: 'top-left', label: 'Top Left' },
                   { id: 'top-right', label: 'Top Right' },
                   { id: 'center', label: 'Center' },
                   { id: 'bottom-center', label: 'Bottom Center' },
                   { id: 'bottom-right', label: 'Bottom Right' },
-                ].map((pos) => (
+                ] as const).map((pos) => (
                   <button
                     key={pos.id}
                     type="button"
-                    onClick={() => setAlertPosition(pos.id as any)}
+                    onClick={() => setAlertPosition(pos.id)}
                     className={`py-2 px-1 rounded-xl text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
                       alertPosition === pos.id 
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,242,254,0.25)]' 
@@ -908,7 +897,10 @@ export default function Dashboard() {
                   <label className="text-xs font-mono text-slate-400 block mb-1.5 uppercase">Overlay Aesthetic Theme</label>
                   <select
                     value={activeTheme}
-                    onChange={(e) => setActiveTheme(e.target.value as any)}
+                    onChange={(e) => {
+                      const nextTheme = e.target.value;
+                      if (nextTheme === 'cyberpunk' || nextTheme === 'matrix' || nextTheme === 'fire' || nextTheme === 'minimal') setActiveTheme(nextTheme);
+                    }}
                     className="glass-input w-full px-3 py-2.5 rounded-xl text-xs font-mono text-white"
                   >
                     <option value="cyberpunk">Cyberpunk Neon Glass</option>

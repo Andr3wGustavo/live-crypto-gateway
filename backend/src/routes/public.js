@@ -51,6 +51,14 @@ router.get('/streamer/:id', async (req, res) => {
       wallets: walletsRes.rows,
       alertConfig: alertConfig
     });
+  } catch (error) {
+    res.status(503).json({ error: 'Unable to load creator profile' });
+  }
+});
+
+router.get('/payment-config', (req, res) => {
+  res.json(require('../services/paymentConfig').publicConfig());
+});
 
 // POST /api/public/tts-synthesize - High-fidelity AI speech synthesis using ElevenLabs API (with fallback)
 router.post('/tts-synthesize', async (req, res) => {
@@ -61,7 +69,8 @@ router.post('/tts-synthesize', async (req, res) => {
   }
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
+  // Paid synthesis needs authenticated quotas before public access is enabled.
+  if (!apiKey || process.env.PUBLIC_TTS_ENABLED !== 'true') {
     return res.json({ 
       success: false, 
       mode: 'web_speech_fallback', 
@@ -107,4 +116,3 @@ router.post('/tts-synthesize', async (req, res) => {
 });
 
 module.exports = router;
-
