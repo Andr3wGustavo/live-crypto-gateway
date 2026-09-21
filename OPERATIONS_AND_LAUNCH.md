@@ -32,9 +32,9 @@ Do not market an unsupported rail as available. QR codes and synthetic hashes ar
 
 ### Preview
 
-Double-click `start-dev.bat`, or run:
+Double-click the root `start-dev.bat` in `live-crypto-gateway`, or run:
 
-```powershell
+```bat
 .\start-dev.bat
 ```
 
@@ -44,13 +44,11 @@ This starts with `--demo`: in-memory temporary data, local alerts and `DONATIONS
 
 Start Docker Desktop, then run:
 
-```powershell
-docker compose up -d
-Copy-Item backend\.env.example backend\.env
+```bat
 .\start-dev.bat --full
 ```
 
-The launcher waits for `GET /api/health` and the first Next.js response before opening the browser. Full mode fails closed when PostgreSQL or Redis is unavailable. `GET /api/health` returns `preview` for memory mode; it must report `ok` with connected database and Redis before any payment test.
+The launcher installs missing application dependencies, starts Docker Compose and waits for service health in full mode, then waits for `GET /api/health` and the first Next.js response before opening the browser. Full mode fails closed when Docker, PostgreSQL or Redis is unavailable. Copy `backend/.env.example` to `backend/.env` before configuring testnet values. `GET /api/health` returns `preview` for memory mode; it must report `ok` with connected database and Redis before any payment test.
 
 Apply the migration once for an existing database:
 

@@ -7,6 +7,23 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+if "%~1"=="--help" (
+  echo.
+  echo Usage:
+  echo   start-dev.bat          Safe preview with temporary data and payments disabled.
+  echo   start-dev.bat --full   Starts Docker PostgreSQL/Redis and the application.
+  echo.
+  pause
+  exit /b 0
+)
+
+if not "%~1"=="" if not "%~1"=="--full" (
+  echo Unknown option: %~1
+  echo Run start-dev.bat --help for supported options.
+  pause
+  exit /b 1
+)
+
 if "%~1"=="--full" (
   node dev-runner.js
 ) else (

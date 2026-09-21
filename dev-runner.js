@@ -1,4 +1,4 @@
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 const net = require('node:net');
@@ -45,6 +45,28 @@ function checkPort(port) {
   });
 }
 
+function run(command, args, cwd, message) {
+  console.log(message);
+  const executable = process.platform === 'win32' && command === 'npm' ? 'npm.cmd' : command;
+  const result = spawnSync(executable, args, { cwd, stdio: 'inherit' });
+  if (result.error) throw new Error(`${command} could not start: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed.`);
+}
+
+function bootstrap() {
+  const packages = [
+    { directory: 'frontend', marker: 'next/dist/bin/next' },
+    { directory: 'backend', marker: 'express' }
+  ];
+  for (const pkg of packages) {
+    const cwd = path.join(root, pkg.directory);
+    if (!fs.existsSync(path.join(cwd, 'node_modules', pkg.marker))) {
+      run('npm', ['ci'], cwd, `Installing ${pkg.directory} dependencies...`);
+    }
+  }
+  if (!demo) run('docker', ['compose', 'up', '-d', '--wait'], root, 'Starting PostgreSQL and Redis with Docker Compose...');
+}
+
 async function waitFor(url, timeout = 240000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline && !stopping) {
@@ -62,6 +84,7 @@ async function waitFor(url, timeout = 240000) {
 async function main() {
   console.log(`\nLIVE CRYPTO / ${demo ? 'PREVIEW — no real payments, temporary data' : 'FULL — PostgreSQL + Redis required'}\n`);
   if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('Install Node.js 22 or 24 LTS first.');
+  bootstrap();
   const next = path.join(root, 'frontend/node_modules/next/dist/bin/next');
   if (!fs.existsSync(next) || !fs.existsSync(path.join(root, 'backend/node_modules/express'))) {
     throw new Error('Dependencies missing. Run npm ci in frontend and backend, then retry.');

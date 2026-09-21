@@ -23,8 +23,8 @@ Traditional streaming monetization platforms impose severe constraints:
 - 100% Non-Custodial: Funds route directly peer-to-peer into the streamer's personal wallets. The platform never holds private keys or user balances.
 - Zero Chargeback Risk: Blockchain settlement guarantees irreversible transactions.
 - Sub-400ms Latency: High-performance WebSocket architecture dispatches visual alerts, sound chimes, and Text-to-Speech to OBS Studio in under 400 milliseconds.
-- Universal Multi-Chain Coverage: Native support for Solana, Sui, Polygon, Base, Arbitrum, Ethereum, Bitcoin Lightning, BNB Chain, TRON, TON, Avalanche, and Dogecoin.
-- Dual Checkout Experience: 1-Click Web3 wallet signing or dynamic mobile QR codes compatible with Binance, Coinbase, Phantom, Slush, and TrustWallet.
+- Configured-Rail Checkout: EVM native donations on Polygon Amoy or Base Sepolia, plus SOL on Solana Devnet, only after server-side configuration and verification.
+- Honest Product Boundary: additional networks, tokens, Lightning, Pix, cards and CEX QR settlement remain unavailable until their independent verification flows are implemented.
 
 ---
 
@@ -42,8 +42,8 @@ Traditional streaming monetization platforms impose severe constraints:
                  └─────────────┬─────────────┘
                                │
                                ▼
-                   [ Blockchain Settlement ]
-            (Solana, Sui, EVM, Bitcoin Lightning)
+                    [ Blockchain Settlement ]
+             (Configured EVM native or SOL rail)
                                │
                                ▼ (On-Chain Event / RPC Indexer)
                  ┌───────────────────────────┐
@@ -73,20 +73,13 @@ Traditional streaming monetization platforms impose severe constraints:
 
 ## Supported Blockchain Ecosystems
 
-| Network | Native Currency | Supported Assets | Confirmation Speed | Settlement Type |
-|---|---|---|---|---|
-| Solana | SOL | SOL, USDC-SPL, USDT-SPL | < 400 ms | Native P2P / Anchor Router |
-| Sui Network | SUI | SUI, USDC-SUI | < 500 ms | Native Coin Transfer |
-| Polygon | POL | POL, USDT, USDC, DAI | 2 - 3 sec | LiveCryptoRouter (ERC-20 & Native) |
-| Base | ETH | ETH, USDC, USDT | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
-| Arbitrum One | ETH | ETH, USDT, USDC | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
-| Ethereum Mainnet | ETH | ETH, USDT, USDC, DAI | 12 - 15 sec | LiveCryptoRouter (ERC-20 & Native) |
-| Bitcoin Lightning | BTC | Satoshis (LN-URL) | < 1 sec | BOLT11 Invoice Settlement |
-| BNB Chain | BNB | BNB, USDT-BEP20 | 3 sec | LiveCryptoRouter (BEP-20 & Native) |
-| Avalanche C-Chain | AVAX | AVAX, USDC | 1 - 2 sec | LiveCryptoRouter (ERC-20 & Native) |
-| TRON | TRX | TRX, USDT-TRC20 | 3 sec | TRC-20 Trigger Contract |
-| TON | TON | TON, Jettons (USDT) | 2 - 4 sec | TON In-Message Transfer |
-| Dogecoin | DOGE | DOGE | 1 min | UTXO On-Chain Verification |
+| Network | Native Currency | Current Availability | Settlement Type |
+|---|---|---|---|
+| Polygon Amoy | POL | Testnet only when configured | EVM native via LiveCryptoRouter |
+| Base Sepolia | ETH | Testnet only when configured | EVM native via LiveCryptoRouter |
+| Solana Devnet | SOL | Testnet only when configured | Finalized native SOL split |
+| ERC-20 / SPL | - | Not enabled | Requires token allowlist and verification |
+| Other rails | - | Not enabled | Requires native signing and verifier |
 
 ---
 
@@ -205,22 +198,23 @@ Viewer donation messages are stripped of all HTML tags, script injections, and n
 
 ### Option A: 1-Click Launcher (Recommended for Windows)
 
-Double-click `start-dev.bat` in the repository root. It launches safe preview mode: temporary in-memory data and real donations disabled. This initiates `dev-runner.js`, which waits for the backend API (:8080) and frontend (:3000) before opening the browser.
+Double-click `start-dev.bat` in the repository root. It is the official entry point and launches safe preview mode: temporary in-memory data and real donations disabled. This initiates `dev-runner.js`, which installs missing dependencies, waits for the backend API (:8080) and frontend (:3000), then opens the browser.
 
 ```bash
 .\start-dev.bat
 ```
 
-For the full local PostgreSQL + Redis stack, start Docker Desktop and run:
+For the full local PostgreSQL + Redis stack, start Docker Desktop and run the same root launcher. It runs Docker Compose automatically:
 
-```bash
-docker compose up -d
+```bat
 .\start-dev.bat --full
 ```
 
 Read [`OPERATIONS_AND_LAUNCH.md`](OPERATIONS_AND_LAUNCH.md) before enabling any payment rail.
 
-### Option B: Manual Execution
+### Option B: Manual Execution (Maintenance Only)
+
+Normal development and validation must use the root `start-dev.bat`. The commands below are only for diagnosing a single service.
 
 #### 1. Backend Server
 

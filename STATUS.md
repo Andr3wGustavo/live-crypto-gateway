@@ -1,59 +1,73 @@
-# 📍 Status do Projeto — Live Crypto Gateway
+# Live Crypto Gateway Status
 
-> **Última atualização:** 07/09/2026  
-> **Status Atual:** Fase 2 & Fase 4 (Parcial) Concluídas (Backend Multi-Chain, Liquid Glassmorphism, 1-Click Multi-Wallet, Studio Customizer de OBS, Síntese Procedural Web Audio e Dual-Auth SIWE + Phantom)
+> Last reviewed: 2026-09-21
+> Operational state: preview ready; real payments are disabled by default; production is not approved.
 
----
+## Start Here
 
-## ✅ Sprints & Fases Concluídas
+Always start the project from the root launcher in `live-crypto-gateway`:
 
-### Sprint 1-3 — Core Architecture & Segurança
-| Item | Status |
+```bat
+.\start-dev.bat
+```
+
+This is the safe preview mode. It installs missing frontend/backend dependencies, starts the API and web application, opens `http://localhost:3000`, keeps all data in memory, and forces `DONATIONS_ENABLED=false`.
+
+For the local persistent stack, open Docker Desktop first and run:
+
+```bat
+.\start-dev.bat --full
+```
+
+Full mode starts PostgreSQL and Redis with Docker Compose before starting the application. It fails if Docker is not running or the required services are unhealthy. Do not start the API and frontend in separate terminals for normal development.
+
+## What Works
+
+| Area | State |
 |---|---|
-| `docker-compose.yml` (PostgreSQL 15 + Redis 7) | ✅ Feito |
-| `db/init.sql` (Streamers, Wallets, Alert_Configs, Transactions) | ✅ Feito |
-| Backend API + WebSocket + Polling Service | ✅ Feito |
-| Hardhat config v3 fix (Redes Base/Amoy) | ✅ Feito |
-| Rate Limits (Auth/Webhooks) + HMAC Validation com `rawBody` | ✅ Feito |
+| Product landing, creator demo and fee calculator | Ready for product validation |
+| Creator login | EVM SIWE and Solana Ed25519 signature validation |
+| Dashboard and OBS overlay | Available in preview; alerts use local temporary data |
+| Checkout | Only server-configured EVM native and SOL rails are shown |
+| EVM settlement | Verifies network, router event, recipient, fee and confirmations |
+| SOL settlement | Verifies finalized transfer split and registered recipient |
+| Duplicate settlement prevention | Database transaction plus outbox record |
+| Smart contract | Native and ERC-20 router tests passing; no audited deployment |
 
-### Sprint 4 — Universal AppKit, Solana & Multi-Chain Backend
-| Item | Status |
+## Deliberately Not Available
+
+- Production payments, mainnet wallets and custody.
+- ERC-20 and SPL donations in the public checkout.
+- Sui, Bitcoin, Lightning, TRON, TON, Dogecoin, Pix, cards and CEX QR settlement.
+- Automatic background reconciliation of missed donor-browser verification requests.
+- Production cookie sessions, CSRF protection, audit approval and legal/compliance controls.
+
+## Verification Snapshot
+
+| Check | Result |
 |---|---|
-| Migração para **Reown AppKit** (EVM + Solana) | ✅ Feito |
-| Universal Multi-Chain Verifier (`chainVerifier.js` para 7+ ecossistemas) | ✅ Feito |
-| Dual-Wallet Authentication (SIWE para EVM + Phantom/Solana Nativo) | ✅ Feito |
-| Proteção Anti-Replay e Deduplicação de Transações no Webhook | ✅ Feito |
-| Testes Automatizados de Segurança e Integridade Criptográfica (6/6 Passando) | ✅ Feito |
+| Backend tests | 21 passed; 1 PostgreSQL integration test skipped without `TEST_DATABASE_URL` |
+| Contract tests | 8 passed |
+| Frontend production build | Passed |
+| Root preview launcher | Verified: API health and landing returned HTTP 200 |
+| Full Docker stack | Not verified in this workspace because Docker Desktop was not running |
 
-### Sprint 5 — Liquid Glassmorphism Design System & 1-Click Multi-Wallet
-| Item | Status |
-|---|---|
-| **Design System Solid Black OLED & Liquid Glass:** Refração, bordas iluminadas e botões líquidos | ✅ Feito |
-| **Vídeo Background Cinematográfico Web3:** Com isolamento automático de transparência para OBS | ✅ Feito |
-| **Checkout 1-Click Multi-Wallet:** Solana (Phantom), Sui (Slush), EVM (AppKit), Bitcoin (WebLN) e QR CEX | ✅ Feito |
-| **Fast Fiat Presets:** Conversão instantânea de $5, $10, $25, $50, $100 em tokens | ✅ Feito |
-| **Simulador de Alerta On-Stream no Checkout:** Preview antes de enviar para o streamer | ✅ Feito |
-| **Creator Command Center:** Upload IPFS Pinata, KPIs de telemetria, gerenciador multi-carteiras e teste OBS | ✅ Feito |
+The frontend build emits a non-blocking `bigint` native binding warning and uses its JavaScript fallback.
 
-### Sprint 6 — OBS Studio Live Customizer & Síntese Sonora Procedural
-| Item | Status |
-|---|---|
-| **OBS Live Customizer no Dashboard:** Posições `top-left`, `top-right`, `center`, `bottom-center`, `bottom-right` | ✅ Feito |
-| **Síntese Web Audio API (`soundEffects.ts`):** 4 presets sonoros sem dependência de download externo | ✅ Feito |
-| **Renderização de Mídia IPFS Dinâmica no Overlay:** Exibição de GIFs, imagens e vídeos MP4/WebM | ✅ Feito |
-| **Barra de Controle de Emergência:** Disparo de teste, botão de Skip de alerta ativo e Mute/Unmute de TTS | ✅ Feito |
-| **Dual-Auth Portal:** Abas dedicadas para EVM (SIWE) e Solana (Phantom 1-Click) | ✅ Feito |
+## Before Testnet Payments
 
----
+1. Start Docker Desktop and run the root launcher with `--full`.
+2. Run the PostgreSQL integration test with `TEST_DATABASE_URL`.
+3. Deploy and independently review `LiveCryptoRouter` on Polygon Amoy or Base Sepolia.
+4. Configure dedicated RPC endpoints, router address, treasury, JWT secret and permitted frontend URL in `backend/.env`.
+5. Test exact fee split, recipient, confirmations, duplicate hash and OBS delivery on testnet.
+6. Add a persistent reconciliation worker before allowing external donors to rely on alerts.
 
-## 🏗️ Próximas Entregas (Fase 3 & Fase 5)
+## Before Production
 
-1. **Deploy dos Smart Contracts nas Testnets:**
-   - Deploy do `LiveCryptoRouter.sol` na Polygon Amoy e Base Sepolia.
-   - Build e deploy do programa Anchor na Solana Devnet.
-2. **OBS Overlay Premium (Expansão):**
-   - Integração opcional de vozes de IA com ElevenLabs.
-   - Leaderboard de Top 3 Doadores em tempo real.
-3. **Produção em Nuvem:**
-   - Deploy do frontend na Vercel e backend no Railway/Render.
-   - Configuração de webhooks reais da Alchemy e Helius em produção.
+- Complete an independent contract/security audit and remediation review.
+- Replace browser-held JWTs with secure HttpOnly cookies and CSRF protection.
+- Add observability, backup/restore drills, dead-letter handling and incident response.
+- Complete legal, tax, sanctions/AML and consumer disclosure review for each launch jurisdiction.
+
+Detailed payment and operational gates are in [OPERATIONS_AND_LAUNCH.md](OPERATIONS_AND_LAUNCH.md).
