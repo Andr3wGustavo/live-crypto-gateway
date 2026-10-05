@@ -1,67 +1,50 @@
 "use client";
 
-import { WagmiProvider, type Config } from 'wagmi';
-import { mainnet, polygon, base, arbitrum, optimism, bsc, avalanche, polygonAmoy, baseSepolia } from 'viem/chains';
+import { createContext, useContext, useRef, useState, useEffect, type ReactNode } from 'react';
+import { WagmiProvider, createConfig, http, injected, useConnect } from 'wagmi';
+import { polygon, base, polygonAmoy, baseSepolia } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactNode } from 'react';
-import { createAppKit } from '@reown/appkit/react';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { SolanaAdapter } from '@reown/appkit-adapter-solana';
-import type { AppKitNetwork } from '@reown/appkit-common';
+import { useI18n } from '@/i18n/Provider';
 
-// 1. Reown Cloud Project ID
-const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || 'b56e18d47c72ab683b10814fe9495694';
-
-// 2. Define App Metadata
-const metadata = {
-  name: 'Live Crypto',
-  description: 'Live Crypto — Non-Custodial Web3 Donation Gateway for Streamers',
-  url: typeof window !== 'undefined' ? window.location.origin : 'https://livecrypto.io',
-  icons: ['/brand/logo-png.png'],
-};
-
-// 3. Define supported EVM chains
-const networks: [AppKitNetwork, ...AppKitNetwork[]] = [polygonAmoy, baseSepolia, mainnet, polygon, base, arbitrum, optimism, bsc, avalanche];
-
-// 4. Create Wagmi adapter (EVM)
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks,
+const config = createConfig({
+  chains: [polygonAmoy, baseSepolia, polygon, base],
+  connectors: [injected()], multiInjectedProviderDiscovery: true, ssr: true,
+  transports: { [polygonAmoy.id]: http(), [baseSepolia.id]: http(), [polygon.id]: http(), [base.id]: http() },
 });
-
-// 5. Create Solana adapter
-const solanaAdapter = new SolanaAdapter();
-
-// 6. Create the AppKit modal (unified EVM + Solana)
-createAppKit({
-  adapters: [wagmiAdapter, solanaAdapter],
-  networks,
-  defaultNetwork: polygonAmoy,
-  projectId,
-  metadata,
-  features: {
-    analytics: true,
-    email: false,
-    socials: false,
-  },
-  themeMode: 'dark',
-  themeVariables: {
-    '--w3m-color-mix': '#00f2fe',
-    '--w3m-color-mix-strength': 20,
-    '--w3m-accent': '#00f2fe',
-    '--w3m-border-radius-master': '16px',
-  },
-});
-
-// 7. Create QueryClient
-const queryClient = new QueryClient();
-
+const Picker = createContext<{ open: () => Promise<void> } | null>(null);
+export function useWalletPicker() {
+  const value = useContext(Picker);
+  if (!value) throw new Error('Web3Provider is required');
+  return value;
+}
+function WalletPicker({ children }: { children: ReactNode }) {
+  const { messages: { login: l, common: c } } = useI18n();
+  const { connectors, connectAsync, isPending } = useConnect();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [error, setError] = useState('');
+  const [available, setAvailable] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    void Promise.all(connectors.map(async connector => ({ id: connector.uid, provider: await connector.getProvider().catch(() => undefined) })))
+      .then(values => { if (active) setAvailable(values.filter(value => value.provider).map(value => value.id)); });
+    return () => { active = false; };
+  }, [connectors]);
+  return <Picker.Provider value={{ open: async () => { setError(''); dialog.current?.showModal(); } }}>
+    {children}
+    <dialog ref={dialog} className="wallet-dialog product-panel" aria-labelledby="wallet-dialog-title">
+      <h2 id="wallet-dialog-title">{l.connect}</h2>
+      <p className="field-hint">{l.extensionHint}</p>
+      <div className="wallet-options">{connectors.filter(connector => available.includes(connector.uid)).map(connector => <button key={connector.uid} className="brand-button secondary full-width" disabled={isPending} onClick={async () => {
+        try { await connectAsync({ connector }); dialog.current?.close(); }
+        catch { setError(l.failure); }
+      }}>{connector.name}</button>)}</div>
+      {!available.length && <p className="notice">{l.noEvmWallet}</p>}
+      {error && <p role="alert" className="error-notice">{error}</p>}
+      <button className="brand-button secondary full-width" onClick={() => dialog.current?.close()}>{c.close}</button>
+    </dialog>
+  </Picker.Provider>;
+}
 export function Web3Provider({ children }: { children: ReactNode }) {
-  return (
-    <WagmiProvider config={wagmiAdapter.wagmiConfig as Config}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
+  const [queryClient] = useState(() => new QueryClient());
+  return <WagmiProvider config={config}><QueryClientProvider client={queryClient}><WalletPicker>{children}</WalletPicker></QueryClientProvider></WagmiProvider>;
 }

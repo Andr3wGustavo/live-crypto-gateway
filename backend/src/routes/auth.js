@@ -1,14 +1,15 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const { generateNonce, SiweMessage } = require('siwe');
 const db = require('../db');
 const { pubClient } = require('../redis');
 const logger = require('../utils/logger');
 const { verifySolanaSignature } = require('../services/solanaAuth');
+const { paymentConfig } = require('../services/paymentConfig');
+const { createSession, revokeSession } = require('../services/sessions');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
+router.get('/session', require('../middleware/auth'), (req,res) => res.json({ user: { id:req.user.id,public_address:req.user.public_address } }));
+router.post('/logout', revokeSession);
 
 // GET /api/auth/nonce - Generate a cryptographically secure nonce
 router.get('/nonce', async (req, res) => {
@@ -62,23 +63,19 @@ router.post('/verify', async (req, res) => {
         );
         streamer = streamerRes.rows[0];
 
-        // Also add to Wallets table
-        await db.query(
-          'INSERT INTO Wallets (streamer_id, chain_id, public_address) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-          [streamer.id, 'solana', solanaAddress]
-        );
       } else {
         streamer = streamerRes.rows[0];
       }
 
-      const token = jwt.sign(
-        { id: streamer.id, public_address: streamer.public_address, chain: 'solana' },
-        JWT_SECRET,
-        { expiresIn: '7d' }
+      // Returning accounts may predate the configured cluster. Preserve any
+      // deliberately selected payout rather than overwriting it on login.
+      await db.query(
+        'INSERT INTO Wallets (streamer_id, chain_id, public_address) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [streamer.id, paymentConfig().solana.chainId, solanaAddress]
       );
 
       logger.info(`Streamer authenticated via Solana wallet: ${solanaAddress} (ID: ${streamer.id})`);
-      return res.json({ user: streamer, token });
+      return await createSession(res, streamer, 'solana');
     }
 
     // ──────────────────────────────────────────────
@@ -119,23 +116,17 @@ router.post('/verify', async (req, res) => {
       );
       streamer = streamerRes.rows[0];
 
-      // Also register default EVM polygon/base wallet
-      await db.query(
-        'INSERT INTO Wallets (streamer_id, chain_id, public_address) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-        [streamer.id, '137', publicAddress]
-      );
     } else {
       streamer = streamerRes.rows[0];
     }
 
-    const token = jwt.sign(
-      { id: streamer.id, public_address: streamer.public_address, chain: 'evm' },
-      JWT_SECRET,
-      { expiresIn: '7d' }
+    await db.query(
+      'INSERT INTO Wallets (streamer_id, chain_id, public_address) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+      [streamer.id, paymentConfig().evm.chainId, publicAddress]
     );
 
     logger.info(`Streamer authenticated via EVM wallet: ${publicAddress} (ID: ${streamer.id})`);
-    res.json({ user: streamer, token });
+    return await createSession(res, streamer, 'evm');
 
   } catch (error) {
     logger.error('Authentication verification error:', error);

@@ -12,6 +12,7 @@ function paymentConfig() {
   const network = NETWORKS[chainId];
   if (!network) throw new Error('Unsupported EVM_CHAIN_ID');
   const router = process.env.EVM_ROUTER_ADDRESS || '';
+  const evmTreasury = process.env.EVM_TREASURY_ADDRESS || '';
   const treasury = process.env.SOLANA_TREASURY_ADDRESS || '';
   const solanaChain = process.env.SOLANA_CLUSTER === 'mainnet-beta' ? 'solana' : 'solana-devnet';
   const feeBps = Number(process.env.PLATFORM_FEE_BPS || 200);
@@ -21,8 +22,9 @@ function paymentConfig() {
   const enabled = process.env.DONATIONS_ENABLED === 'true' && process.env.DEV_MEMORY_MODE !== 'true';
   return {
     enabled, feeBps, confirmations,
-    evm: { ...network, chainId, router, rpc: process.env.EVM_RPC_URL || network.rpc, enabled: enabled && isAddress(router) && router !== ZeroAddress },
+    evm: { ...network, chainId, router, treasury: evmTreasury, rpc: process.env.EVM_RPC_URL || network.rpc, enabled: enabled && isAddress(router) && router !== ZeroAddress && isAddress(evmTreasury) && evmTreasury !== ZeroAddress },
     solana: { chainId: solanaChain, name: solanaChain === 'solana' ? 'Solana' : 'Solana Devnet', currency: 'SOL', treasury,
+      genesisHash: solanaChain === 'solana' ? '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d' : 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG',
       rpc: process.env.SOLANA_RPC_URL || `https://api.${solanaChain === 'solana' ? 'mainnet-beta' : 'devnet'}.solana.com`,
       testnet: solanaChain !== 'solana', enabled: enabled && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(treasury),
       explorer: 'https://explorer.solana.com/tx/' }

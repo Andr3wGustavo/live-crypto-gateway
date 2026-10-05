@@ -57,7 +57,8 @@ export const VOICE_PROFILES: VoiceProfileInfo[] = [
 export function speakWithProfile(
   text: string, 
   profileId: VoiceProfileId = 'cyber_announcer', 
-  volume: number = 1.0
+  volume: number = 1.0,
+  locale: string = 'en'
 ): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
@@ -70,16 +71,18 @@ export function speakWithProfile(
   utterance.pitch = profile.pitch;
   utterance.rate = profile.rate;
   utterance.volume = Math.min(1.0, Math.max(0, volume));
-  utterance.lang = 'en-US';
+  utterance.lang = locale;
 
   // Try picking a matching system voice if available
   const voices = window.speechSynthesis.getVoices();
-  if (voices && voices.length > 0) {
+  const matchingVoices = voices.filter(voice => voice.lang.toLowerCase().startsWith(locale.split('-')[0].toLowerCase()));
+  if (matchingVoices.length > 0) {
+    utterance.voice = matchingVoices.find(voice => voice.lang.toLowerCase() === locale.toLowerCase()) || matchingVoices[0];
     if (profileId === 'cyber_announcer' || profileId === 'scifi_robot') {
-      const deepVoice = voices.find(v => v.lang.startsWith('en') && (v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('male')));
+      const deepVoice = matchingVoices.find(v => v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('male'));
       if (deepVoice) utterance.voice = deepVoice;
     } else if (profileId === 'anime_kawaii') {
-      const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('female')));
+      const femaleVoice = matchingVoices.find(v => v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('female'));
       if (femaleVoice) utterance.voice = femaleVoice;
     }
   }
@@ -94,13 +97,14 @@ export function speakWithProfile(
 export async function speakWithNeuralOrFallback(
   text: string, 
   profileId: VoiceProfileId = 'cyber_announcer', 
-  volume: number = 1.0
+  volume: number = 1.0,
+  locale: string = 'en'
 ): Promise<void> {
   const profile = VOICE_PROFILES.find(p => p.id === profileId) || VOICE_PROFILES[0];
   const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 250);
 
   try {
-    const res = await fetch('http://localhost:8080/api/public/tts-synthesize', {
+    const res = await fetch('/api/public/tts-synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -114,6 +118,8 @@ export async function speakWithNeuralOrFallback(
       const audioBlob = await res.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      audio.addEventListener('ended', () => URL.revokeObjectURL(audioUrl), { once: true });
+      audio.addEventListener('error', () => URL.revokeObjectURL(audioUrl), { once: true });
       audio.volume = Math.min(1.0, Math.max(0, volume));
       await audio.play();
       return;
@@ -123,5 +129,5 @@ export async function speakWithNeuralOrFallback(
   }
 
   // Fallback to procedural synthesis
-  speakWithProfile(sanitized, profileId, volume);
+  speakWithProfile(sanitized, profileId, volume, locale);
 }

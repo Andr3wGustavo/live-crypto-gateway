@@ -2,9 +2,10 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { stripLocale } from '@/i18n/locale';
 
 export function BackgroundLayer() {
-  const pathname = usePathname();
+  const pathname = stripLocale(usePathname());
   const isOverlay = pathname?.startsWith('/overlay');
 
   useEffect(() => {

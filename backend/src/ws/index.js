@@ -1,116 +1,83 @@
 const WebSocket = require('ws');
+const { randomUUID } = require('node:crypto');
 const db = require('../db');
 const { subClient } = require('../redis');
 
-// Streamer connection pool: Map<streamerId, Set<WebSocket>>
-const streamerConnections = new Map();
-
 function initWebSocket(server) {
-  const wss = new WebSocket.Server({ server });
-
+  const wss = new WebSocket.Server({ server, maxPayload: 4096 });
+  const groups = new Map();
   wss.on('connection', async (ws, req) => {
-    // Extract obs_token from the URL, e.g., ws://localhost:8080/?obs_token=UUID
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const obsToken = url.searchParams.get('obs_token');
-
-    if (!obsToken) {
-      ws.close(1008, 'obs_token missing');
-      return;
+    const token = new URL(req.url, 'http://localhost').searchParams.get('obs_token');
+    if (!token || token.length > 100) { ws.close(1008, 'Invalid OBS token'); return; }
+    const owner = randomUUID();
+    let streamerId, channel, inflight = null, pumping = false, messages = 0;
+    ws.alive = true;
+    ws.on('pong', () => { ws.alive = true; });
+    const send = payload => { if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < 1024 * 1024) ws.send(JSON.stringify(payload)); };
+    async function pump() {
+      if (db.isMemory || !streamerId || pumping || ws.readyState !== WebSocket.OPEN) return;
+      pumping = true;
+      try {
+        const valid = await db.query('SELECT id FROM Streamers WHERE id=$1 AND obs_token=$2', [streamerId, token]);
+        if (!valid.rows.length) { ws.close(1008, 'OBS token revoked'); return; }
+        const lease = await db.query(`INSERT INTO Alert_Consumers(streamer_id,owner,expires_at) VALUES($1,$2,NOW()+INTERVAL '20 seconds')
+          ON CONFLICT(streamer_id) DO UPDATE SET owner=EXCLUDED.owner,expires_at=EXCLUDED.expires_at
+          WHERE Alert_Consumers.expires_at<NOW() OR Alert_Consumers.owner=$2 RETURNING owner`, [streamerId, owner]);
+        if (!lease.rows.length || inflight) return;
+        const { rows } = await db.query(`SELECT o.event_id,o.payload,c.media_url,c.audio_url FROM Donation_Outbox o
+          LEFT JOIN Alert_Configs c ON c.streamer_id=o.streamer_id
+          WHERE o.streamer_id=$1 AND o.acknowledged_at IS NULL ORDER BY o.event_id LIMIT 1`, [streamerId]);
+        if (rows.length) {
+          const row = rows[0]; inflight = String(row.event_id);
+          send({ ...row.payload, event_id: inflight, media_url: row.media_url, audio_url: row.audio_url });
+        }
+      } catch (error) { console.error('[OBS replay]', error.message); }
+      finally { pumping = false; }
     }
-
-    try {
-      // Validate token against db
-      const { rows } = await db.query('SELECT id, public_address FROM Streamers WHERE obs_token = $1', [obsToken]);
-      if (rows.length === 0) {
-        ws.close(1008, 'Invalid obs_token');
-        return;
+    ws.on('message', async raw => {
+      if (++messages > 30) { ws.close(1008, 'Message limit'); return; }
+      try {
+        const message = JSON.parse(raw.toString());
+        if (message.event !== 'ACK' || !inflight || String(message.event_id) !== inflight) return;
+        await db.query('UPDATE Donation_Outbox SET acknowledged_at=NOW() WHERE streamer_id=$1 AND event_id=$2 AND acknowledged_at IS NULL', [streamerId, inflight]);
+        inflight = null; await pump();
+      } catch { ws.close(1008, 'Invalid acknowledgement'); }
+    });
+    const interval = setInterval(() => { messages = 0; if (!ws.alive) { ws.terminate(); return; } ws.alive = false; ws.ping(); void pump(); }, 10000);
+    interval.unref();
+    ws.on('close', async () => {
+      clearInterval(interval);
+      const group = groups.get(streamerId);
+      if (group) {
+        group.delete(ws);
+        if (!group.size) { groups.delete(streamerId); await subClient.unsubscribe(channel).catch(() => {}); }
       }
-
-      const streamerId = rows[0].id;
-      const channel = `streamer:${streamerId}:events`;
-
-      console.log(`WebSocket connected for streamer: ${rows[0].public_address} (ID: ${streamerId})`);
-
-      // Add ws to streamer's connection pool
-      if (!streamerConnections.has(streamerId)) {
-        streamerConnections.set(streamerId, new Set());
-
-        // First connection for this streamer: Subscribe to Redis channel
-        await subClient.subscribe(channel, (message) => {
-          const clientSet = streamerConnections.get(streamerId);
-          if (clientSet) {
-            for (const client of clientSet) {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(message);
-              }
-            }
+      if (!db.isMemory && streamerId) await db.query('DELETE FROM Alert_Consumers WHERE streamer_id=$1 AND owner=$2', [streamerId, owner]).catch(() => {});
+    });
+    try {
+      const { rows } = await db.query('SELECT id, public_address FROM Streamers WHERE obs_token = $1', [token]);
+      if (!rows.length || ws.readyState !== WebSocket.OPEN) { ws.close(1008, 'Invalid OBS token'); return; }
+      streamerId = rows[0].id;
+      channel = `streamer:${streamerId}:events`;
+      if (!groups.has(streamerId)) {
+        const group = new Map(); groups.set(streamerId, group);
+        await subClient.subscribe(channel, raw => {
+          let event;
+          try { event = JSON.parse(raw); } catch { return; }
+          for (const [socket, subscriber] of group) {
+            if (event.event === 'TOKEN_ROTATED') { socket.close(1008, 'OBS token revoked'); continue; }
+            if (event.event === 'DONATION' && !event.is_test && !db.isMemory) void subscriber.pump();
+            else subscriber.send(event);
           }
         });
-        console.log(`Subscribed to Redis channel: ${channel}`);
       }
-
-      streamerConnections.get(streamerId).add(ws);
-
-      // Handle disconnection safely
-      ws.on('close', async () => {
-        const clientSet = streamerConnections.get(streamerId);
-        if (clientSet) {
-          clientSet.delete(ws);
-          console.log(`WebSocket disconnected for streamer ID: ${streamerId} (${clientSet.size} client(s) remaining)`);
-
-          // Only unsubscribe if all clients for this streamer disconnected
-          if (clientSet.size === 0) {
-            streamerConnections.delete(streamerId);
-            try {
-              await subClient.unsubscribe(channel);
-              console.log(`Unsubscribed from Redis channel: ${channel}`);
-            } catch (err) {
-              console.error(`Error unsubscribing channel ${channel}:`, err);
-            }
-          }
-        }
-      });
-
-      // Fetch initial configurations
-      const configRes = await db.query(
-        `SELECT min_amount, media_url, audio_url, active_theme, goal_amount, goal_current, goal_title 
-         FROM Alert_Configs WHERE streamer_id = $1`,
-        [streamerId]
-      );
-      
-      const initialConfig = configRes.rows[0] || {
-        active_theme: 'cyberpunk',
-        goal_amount: 0,
-        goal_current: 0,
-        goal_title: 'Donation Goal',
-        media_url: null,
-        audio_url: null
-      };
-      
-      // Send welcome event and initial configuration
-      ws.send(JSON.stringify({ 
-        event: "CONNECTED", 
-        message: "Successfully connected to Live Crypto WS",
-        config: {
-          theme: initialConfig.active_theme,
-          goal_amount: parseFloat(initialConfig.goal_amount || 0),
-          goal_current: parseFloat(initialConfig.goal_current || 0),
-          goal_title: initialConfig.goal_title,
-          media_url: initialConfig.media_url,
-          audio_url: initialConfig.audio_url
-        }
-      }));
-
-    } catch (err) {
-      console.error('WS Connection Error:', err);
-      ws.close(1011, 'Internal Server Error');
-    }
+      groups.get(streamerId).set(ws, { pump, send });
+      const { rows: configs } = await db.query('SELECT * FROM Alert_Configs WHERE streamer_id=$1', [streamerId]);
+      const config = configs[0] || {};
+      send({ event: 'CONNECTED', config: { ...config, theme: config.active_theme || 'cyberpunk', goal_amount: Number(config.goal_amount || 0), goal_current: Number(config.goal_current || 0) } });
+      await pump();
+    } catch (error) { console.error('[OBS connect]', error.message); ws.close(1011, 'Connection unavailable'); }
   });
-
   return wss;
 }
-
-module.exports = {
-  initWebSocket
-};
-
+module.exports = { initWebSocket };

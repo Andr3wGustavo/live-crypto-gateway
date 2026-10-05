@@ -1,20 +1,5 @@
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
-
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, public_address }
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+const { authenticate } = require('../services/sessions');
+module.exports = async (req,res,next) => {
+  try { req.user = await authenticate(req); res.set('Cache-Control','no-store'); next(); }
+  catch { res.status(401).json({ error:'Session expired or invalid' }); }
 };
-
-module.exports = authMiddleware;

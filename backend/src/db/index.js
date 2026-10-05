@@ -176,6 +176,10 @@ async function query(text, params = []) {
     if (params[5]) cfg.goal_title = params[5];
     if (params[6] !== undefined) cfg.media_url = params[6];
     if (params[7] !== undefined) cfg.audio_url = params[7];
+    if (params[8] !== undefined) cfg.position = params[8];
+    if (params[9] !== undefined) cfg.sound_preset = params[9];
+    if (params[10] !== undefined) cfg.voice_profile = params[10];
+    if (params[11] !== undefined) cfg.show_leaderboard = params[11];
     return { rows: [cfg] };
   }
 

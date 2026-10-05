@@ -127,6 +127,14 @@ test('unknown chains never default to Polygon and invalid hashes never reach RPC
   assert.equal((await engine.verifyTransaction({ tx_hash: 'simulated', chain: '80002', expected_recipient: recipient })).status, 'INVALID');
 });
 
+test('verified EVM transfers still require exact intent memo, sender and gross amount', async () => {
+  const expected = { tx_hash:hash,chain:'80002',expected_recipient:recipient,expected_memo:'',expected_sender:sender,expected_amount:'1.000000000000000000' };
+  assert.equal((await fixture().verifyTransaction(expected)).verified,true);
+  for (const changed of [{expected_memo:'lc:another-intent'},{expected_sender:recipient},{expected_amount:'2'}]) {
+    assert.equal((await fixture().verifyTransaction({...expected,...changed})).status,'MISMATCH');
+  }
+});
+
 const solRecipient = 'So11111111111111111111111111111111111111112';
 const solSender = 'Vote111111111111111111111111111111111111111';
 const transfer = (destination, lamports) => ({ programId: '11111111111111111111111111111111', parsed: { type: 'transfer', info: { source: solSender, destination, lamports } } });
@@ -145,4 +153,37 @@ test('Solana rejects missing transfer, missing fee and failed execution', async 
   assert.equal((await verifySol(solFixture([]))).verified, false);
   assert.equal((await verifySol(solFixture([transfer(solRecipient, 1000000000)]))).verified, false);
   assert.equal((await verifySol(solFixture([], { err: { InstructionError: [0, 'error'] } }))).status, 'FAILED');
+});
+
+test('Solana binds memo and reference, rather than accepting an unrelated valid split', async () => {
+  const engine=solFixture([transfer(config.solana.treasury,20000000),transfer(solRecipient,980000000),{programId:'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',parsed:'lc:intent'}]);
+  const expected={tx_hash:'2'.repeat(88),chain:'solana-devnet',expected_recipient:solRecipient,expected_sender:solSender,expected_memo:'lc:intent',expected_amount:'1'};
+  assert.equal((await engine.verifyTransaction(expected)).verified,true);
+  assert.equal((await engine.verifyTransaction({...expected,expected_memo:'lc:other'})).status,'MISMATCH');
+  assert.equal((await engine.verifyTransaction({...expected,expected_reference:solRecipient})).status,'MISMATCH');
+});
+
+test('Solana rejects an RPC endpoint on a different cluster', async () => {
+  let calls=0;
+  const engine=new ChainVerifier({config:()=>({...config,solana:{...config.solana,genesisHash:'expected-cluster'}}),rpc:{post:async()=>{calls++;return {data:{result:'wrong-cluster'}};}}});
+  assert.equal((await verifySol(engine)).status,'ERROR'); assert.equal(calls,1);
+});
+
+// Full getGenesisHash responses, not the shortened CAIP-2 chain identifiers.
+for (const [cluster, genesis] of [
+  ['devnet', 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG'],
+  ['mainnet-beta', '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d']
+]) test(`configured ${cluster} accepts the full RPC genesis hash`, async t => {
+  const previous = process.env.SOLANA_CLUSTER;
+  t.after(() => { if (previous === undefined) delete process.env.SOLANA_CLUSTER; else process.env.SOLANA_CLUSTER = previous; });
+  process.env.SOLANA_CLUSTER = cluster;
+  const runtime = require('../src/services/paymentConfig').paymentConfig();
+  const engine = new ChainVerifier({
+    config: () => ({ ...runtime, enabled:true, solana:{ ...runtime.solana, enabled:true, treasury:config.solana.treasury } }),
+    rpc:{ post:async (_url,body) => ({ data:{ result:body.method === 'getGenesisHash' ? genesis : {
+      meta:{err:null}, slot:123, transaction:{message:{accountKeys:[{signer:true,pubkey:solSender}],instructions:[transfer(config.solana.treasury,20000000),transfer(solRecipient,980000000)]}}
+    } } }) }
+  });
+  const result = await engine.verifyTransaction({ tx_hash:'2'.repeat(88),chain:runtime.solana.chainId,expected_recipient:solRecipient });
+  assert.equal(result.verified,true);
 });

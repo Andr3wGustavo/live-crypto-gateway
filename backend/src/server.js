@@ -1,6 +1,6 @@
 require('dotenv').config();
 if (process.env.NODE_ENV === 'production') {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET === 'super-secret-jwt-key') {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || /^(replace|change|super-secret)/i.test(process.env.JWT_SECRET)) {
     throw new Error('Production requires a unique JWT_SECRET of at least 32 characters');
   }
   if (!process.env.FRONTEND_URL?.startsWith('https://')) throw new Error('Production requires HTTPS FRONTEND_URL');
@@ -14,6 +14,7 @@ const rateLimit = require('express-rate-limit');
 const { connectRedis } = require('./redis');
 const { initWebSocket } = require('./ws');
 const { startOutboxWorker } = require('./services/settlement');
+const { startReconciliationWorker } = require('./services/paymentIntents');
 
 const logger = require('./utils/logger');
 const db = require('./db');
@@ -27,6 +28,7 @@ const uploadRoutes = require('./routes/upload');
 const publicRoutes = require('./routes/public');
 
 const app = express();
+if (process.env.TRUST_PROXY_HOPS) app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS));
 const server = http.createServer(app);
 
 // Request tracking & timing middleware
@@ -50,6 +52,18 @@ const corsOptions = {
   credentials: true
 };
 app.use(cors(corsOptions));
+// Cookie-authenticated mutations require the exact application origin. The
+// frontend and API are served through one origin; no wildcard proxy trust.
+app.use((req,res,next) => {
+  if (['POST','PUT','PATCH','DELETE'].includes(req.method)) {
+    const origin = req.headers.origin;
+    const protectedMutation = require('./services/sessions').sessionCookie(req) || req.path.startsWith('/api/auth/');
+    if ((origin && origin !== corsOptions.origin) || (protectedMutation && !origin && process.env.NODE_ENV !== 'test')) {
+      return res.status(403).json({ error:'Invalid request origin' });
+    }
+  }
+  next();
+});
 
 // Preserve rawBody for accurate cryptographic HMAC webhook signature validation
 app.use(express.json({
@@ -61,7 +75,7 @@ app.use(express.json({
 // Global rate limiter - 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
@@ -129,6 +143,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dashboard', uploadRoutes);
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/payments', require('./routes/payments'));
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
@@ -141,6 +156,7 @@ app.use((err, req, res, next) => {
 initWebSocket(server);
 
 const PORT = process.env.PORT || 8080;
+const stopWorkers = [];
 
 async function startServer() {
   try {
@@ -152,14 +168,13 @@ async function startServer() {
   }
 
   try {
-    // Pending reconciliation is disabled until payment intents persist the exact network.
-    // The checkout retries the same hash; it never sends a second transaction automatically.
     if (!db.isMemory) {
-      await db.query('SELECT tx_hash FROM Donation_Outbox LIMIT 0');
-      startOutboxWorker();
+      await db.query('SELECT id FROM Payment_Intents LIMIT 0');
+      await db.query('SELECT event_id FROM Donation_Outbox LIMIT 0');
+      stopWorkers.push(startOutboxWorker(), startReconciliationWorker());
     }
   } catch (err) {
-    console.error('Apply db/migrations/001_donation_outbox.sql before starting:', err.message);
+    console.error('Run npm run migrate before starting:', err.message);
     process.exit(1);
   }
 
@@ -170,5 +185,20 @@ async function startServer() {
 }
 
 if (require.main === module) startServer();
+if (require.main === module) {
+  let closing = false;
+  const shutdown = async () => {
+    if (closing) return;
+    closing = true;
+    stopWorkers.forEach(stop => stop());
+    const timeout = setTimeout(() => process.exit(1), 15000); timeout.unref();
+    server.close(); server.closeIdleConnections();
+    await require('./redis').closeRedis();
+    await db.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => void shutdown());
+  process.on('SIGINT', () => void shutdown());
+}
 module.exports = { app, server, startServer };
 
