@@ -1,0 +1,94 @@
+name: livecrypto-production
+x-backend: &backend
+  image: livecrypto-backend:${RELEASE_TAG:-local}
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  env_file: ./deploy/.env
+  environment:
+    NODE_ENV: production
+    PORT: 8080
+    FRONTEND_URL: https://${APP_DOMAIN:?Set APP_DOMAIN}
+    POSTGRES_HOST: postgres
+    POSTGRES_DB: livecrypto
+    POSTGRES_USER: livecrypto
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    REDIS_URL: redis://redis:6379
+    DEV_MEMORY_MODE: "false"
+    TRUST_PROXY_HOPS: "1"
+  networks: [internal]
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: livecrypto
+      POSTGRES_USER: livecrypto
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    networks: [internal]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U livecrypto -d livecrypto"]
+      interval: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, "yes"]
+    volumes: [redis_data:/data]
+    networks: [internal]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      retries: 20
+  migrate:
+    <<: *backend
+    command: [node, scripts/migrate.js]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+  backend:
+    <<: *backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  frontend:
+    image: livecrypto-frontend:${RELEASE_TAG:-local}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: https://${APP_DOMAIN:?Set APP_DOMAIN}
+        NEXT_PUBLIC_WS_URL: wss://${APP_DOMAIN:?Set APP_DOMAIN}/ws
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: http://backend:8080
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+    restart: unless-stopped
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend]
+    networks: [internal]
+    restart: unless-stopped
+networks:
+  internal:
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

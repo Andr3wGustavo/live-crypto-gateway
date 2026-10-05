@@ -1,0 +1,22 @@
+{$APP_DOMAIN} {
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Strict-Transport-Security "max-age=31536000"
+    }
+    @api path /api/*
+    handle @api {
+        reverse_proxy backend:8080
+    }
+    @websocket path /ws /ws/*
+    handle @websocket {
+        reverse_proxy backend:8080
+    }
+    handle {
+        reverse_proxy frontend:3000 {
+            # Do not trust country headers supplied by public clients.
+            header_up -X-Country-Code
+        }
+    }
+}
