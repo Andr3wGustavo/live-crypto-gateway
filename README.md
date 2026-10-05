@@ -1,279 +1,136 @@
 # Live Crypto Gateway
 
-Non-Custodial Web3 Donation Infrastructure & Real-Time OBS Streaming Overlay Engine.
+Live Crypto Gateway is a non-custodial donation service for livestream creators. A donor pays the creator's configured wallet on an enabled chain; the service verifies the transaction, records it durably, and delivers a replayable OBS alert. The service does not custody funds or private keys.
 
-> **Pre-release status:** the landing page and local preview are ready for product validation. Real payments are deliberately disabled by default and only testnet rails that pass the controls in [`OPERATIONS_AND_LAUNCH.md`](OPERATIONS_AND_LAUNCH.md) may be enabled. Do not use this repository to receive production funds yet.
+> Payment rails are disabled by default. This repository provides a local preview and staging deployment configuration. Public-beta validation is still pending. Enable a rail only after the deployment, contract, RPC, and end-to-end testnet checks in [PRODUCTION_GLOBAL_LAUNCH.md](PRODUCTION_GLOBAL_LAUNCH.md).
 
----
+**Resume here:** [project handoff and roadmap](docs/RETOMADA_E_ROADMAP.md) · [current evidence](STATUS.md) · [browser acceptance checklist](docs/VALIDATION_MATRIX.md).
 
-## Executive Summary & Value Proposition
+## Product Gallery
 
-Live Crypto is a decentralized, non-custodial streaming donation SaaS designed for content creators across Twitch, YouTube, Kick, and X. It bridges the gap between decentralized finance and live broadcasting by enabling viewers to send cryptocurrency donations directly to streamers' self-custody wallets with sub-400ms animated alert overlays in OBS Studio.
+The current **Protocol / Matrix** direction combines the logo's blue, cyan and green with violet accents, terminal typography, an SVG blockchain simulation and an interactive OBS demonstration. Login, checkout and Creator Studio share the design and onboarding guides. See [the design notes](docs/LANDING_DESIGN.md); browser acceptance of this revision is pending.
 
-### The Creator Economy Problem
+Screenshots and a short demo will be added here after the browser review. The slots below are reserved for actual captures of the application; they are not evidence of a completed payment or deployment.
 
-Traditional streaming monetization platforms impose severe constraints:
-- Heavy platform revenue cuts ranging from 15% to 50% (Twitch Bits, YouTube Super Chats, Stripe processing).
-- Chargeback fraud and rolling payment holds lasting up to 90 days.
-- Geographic restrictions and currency conversion penalties.
-- Custodial risks where creator funds are held in platform intermediaries.
+| Preview | What to show | Planned image path |
+|---|---|---|
+| Landing page | Product introduction, visual identity, and language selector | `docs/images/landing.webp` |
+| Creator dashboard | Payout setup, alert customization, and transaction history | `docs/images/dashboard.webp` |
+| Donation checkout | Selected network, recipient, amount, and fee breakdown | `docs/images/checkout.webp` |
+| OBS overlay | An alert displayed over a sample stream, labeled as a test | `docs/images/obs-overlay.webp` |
+| Mobile experience | Responsive landing and checkout on a phone-sized screen | `docs/images/mobile.webp` |
 
-### The Live Crypto Solution
+**Demo video:** link to be added after recording the creator setup and testnet donation journey.
 
-- 100% Non-Custodial: Funds route directly peer-to-peer into the streamer's personal wallets. The platform never holds private keys or user balances.
-- Zero Chargeback Risk: Blockchain settlement guarantees irreversible transactions.
-- Sub-400ms Latency: High-performance WebSocket architecture dispatches visual alerts, sound chimes, and Text-to-Speech to OBS Studio in under 400 milliseconds.
-- Configured-Rail Checkout: EVM native donations on Polygon Amoy or Base Sepolia, plus SOL on Solana Devnet, only after server-side configuration and verification.
-- Honest Product Boundary: additional networks, tokens, Lightning, Pix, cards and CEX QR settlement remain unavailable until their independent verification flows are implemented.
+<!-- Uncomment each image only after its file has been added.
+![Live Crypto landing page](docs/images/landing.webp)
+![Creator dashboard with payout and overlay settings](docs/images/dashboard.webp)
+![Donation checkout showing the network and fee breakdown](docs/images/checkout.webp)
+![Test donation alert displayed in OBS](docs/images/obs-overlay.webp)
+![Live Crypto mobile layout](docs/images/mobile.webp)
+-->
 
----
+See [the image guide](docs/images/README.md) for capture and replacement instructions.
 
-## System Architecture
+## Capabilities
 
-```
-                       [ Viewer / Donor ]
-                               │
-                 ┌─────────────┴─────────────┐
-                 │                           │
-          [ 1-Click Web3 ]           [ Mobile QR Scan ]
-          (Phantom, Slush,           (Binance, Coinbase,
-           MetaMask, Rabby)           TrustWallet Mobile)
-                 │                           │
-                 └─────────────┬─────────────┘
-                               │
-                               ▼
-                    [ Blockchain Settlement ]
-             (Configured EVM native or SOL rail)
-                               │
-                               ▼ (On-Chain Event / RPC Indexer)
-                 ┌───────────────────────────┐
-                 │   Live Crypto Backend     │
-                 │   Express + ChainVerifier │
-                 │   Anti-Replay Protection  │
-                 └─────────────┬─────────────┘
-                               │
-                               ▼ (Redis Pub/Sub < 400ms)
-                 ┌───────────────────────────┐
-                 │  WebSocket Connection     │
-                 │  Pool Manager             │
-                 └─────────────┬─────────────┘
-                               │
-                               ▼ (Secure obs_token URI)
-                 ┌───────────────────────────┐
-                 │  OBS Studio Browser       │
-                 │  Source Overlay Engine    │
-                 │  - Glassmorphic Card      │
-                 │  - IPFS Audio Chime       │
-                 │  - Web Speech Voice TTS   │
-                 │  - Live Goal Progress Bar │
-                 └───────────────────────────┘
-```
+- Wallet authentication with SIWE (EVM) and signed Solana login challenges.
+- Revocable 12-hour `HttpOnly`, `SameSite=Strict` sessions backed by Redis.
+- Per-network payout address validation, including reserved router, treasury, zero, and system addresses.
+- Persistent payment intents bound to creator, chain, payout address, sender, amount, memo, and Solana reference.
+- Server-side EVM event discovery and Solana reference discovery, so reconciliation continues after the donor closes checkout.
+- Exact decimal verification for native EVM and SOL payment splits, confirmations, configured RPC network, router, treasury, and payment intent fields.
+- Atomic transaction ledger and donation outbox; OBS alerts are replayed in order until a browser source acknowledges each alert.
+- Locale routes and UI catalogs for English, Brazilian Portuguese, and Spanish.
+- Production Compose stack with PostgreSQL, Redis, migrations, non-root application images, Caddy HTTPS/WSS routing, and CI verification.
 
----
+## Payment Model
 
-## Supported Blockchain Ecosystems
+The backend creates an opaque payment intent before a wallet transaction. Its database record snapshots the creator, configured destination, sender, expected gross amount, fee terms, memo, chain, and monitoring cursor. A verified transaction settles only when all of those values match.
 
-| Network | Native Currency | Current Availability | Settlement Type |
-|---|---|---|---|
-| Polygon Amoy | POL | Testnet only when configured | EVM native via LiveCryptoRouter |
-| Base Sepolia | ETH | Testnet only when configured | EVM native via LiveCryptoRouter |
-| Solana Devnet | SOL | Testnet only when configured | Finalized native SOL split |
-| ERC-20 / SPL | - | Not enabled | Requires token allowlist and verification |
-| Other rails | - | Not enabled | Requires native signing and verifier |
+For EVM, the verifier requires a confirmed `DonationRouted` event from the configured router. For Solana, it requires a finalized native transfer split, the configured cluster genesis hash, a matching memo, and the generated reference account. A browser-submitted transaction hash helps speed reconciliation, but is not the sole discovery mechanism.
 
----
+The financial record and the OBS outbox are inserted atomically. Publishing to Redis does not mark an alert displayed. An OBS browser source receives one alert at a time and sends an `ACK`; unacknowledged alerts remain durable and replay after reconnect.
 
-## Core Components & Repository Structure
+## Local Development
 
-```
-live-crypto-gateway/
-├── backend/
-│   ├── src/
-│   │   ├── db/
-│   │   │   └── index.js             # PostgreSQL pool with high-resilience in-memory fallback
-│   │   ├── middleware/
-│   │   │   └── auth.js              # JWT cryptographic verification middleware
-│   │   ├── redis/
-│   │   │   └── index.js             # Redis Pub/Sub client with in-memory fallback engine
-│   │   ├── routes/
-│   │   │   ├── auth.js              # Dual-wallet auth: SIWE (EVM) and Solana Sign-In
-│   │   │   ├── dashboard.js         # Creator configs, telemetry, goals, and test alert trigger
-│   │   │   ├── public.js            # Sanitized public profile endpoint (no private token leak)
-│   │   │   ├── upload.js            # IPFS file pinning via Pinata (GIFs, MP4s, MP3s)
-│   │   │   └── webhooks.js          # Universal verification endpoint and HMAC webhooks
-│   │   ├── services/
-│   │   │   ├── chainVerifier.js     # Universal multi-chain transaction inspector
-│   │   │   └── polling.js           # Cron fallback scanner for pending on-chain blocks
-│   │   ├── utils/
-│   │   │   └── logger.js            # Structured production logger
-│   │   ├── ws/
-│   │   │   └── index.js             # Streamer WebSocket connection pool
-│   │   └── server.js                # Express entry point, rate limiting, and rawBody HMAC
-│   └── tests/
-│       └── system.test.js           # Automated cryptographic and security test suite
-│
-├── frontend/
-│   ├── public/
-│   │   └── brand/                   # Brand logos, cinematic video loops, and HUD concepts
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── dashboard/page.tsx   # Streamer Command Center (Liquid Glass UI & KPIs)
-│   │   │   ├── login/page.tsx       # Dual Web3 Sign-In (EVM + Solana)
-│   │   │   ├── overlay/[obs_token]/ # Transparent OBS Browser Source Overlay
-│   │   │   ├── pay/[streamer_id]/   # Multi-chain donation checkout (1-Click & QR)
-│   │   │   ├── globals.css          # Liquid glassmorphism, glowing borders, animations
-│   │   │   ├── layout.tsx           # Universal HTML shell and metadata
-│   │   │   └── page.tsx             # Interactive landing page and OBS simulator
-│   │   ├── components/
-│   │   │   ├── BackgroundLayer.tsx  # Ambient video background with OBS isolation
-│   │   │   └── Web3Provider.tsx     # Reown AppKit & Wagmi multi-chain connector
-│   │   └── services/
-│   │       └── coingecko.ts         # Real-time multi-token price feed and fiat converter
-│   └── package.json
-│
-├── contracts/
-│   ├── LiveCryptoRouter.sol         # Solidity atomic fee-splitting router (ERC-20 + Native)
-│   ├── hardhat.config.js            # Multi-network deployment config (Polygon, Base, Amoy)
-│   └── test/
-│       └── LiveCryptoRouter.test.js # Smart contract automated test suite
-│
-├── solana-programs/
-│   └── live_crypto/
-│       └── programs/live_crypto/src/lib.rs # Anchor program for Solana fee routing
-│
-├── dev-runner.js                    # Single-terminal concurrent launcher
-├── docker-compose.yml               # PostgreSQL 15 and Redis 7 container configuration
-└── start-dev.bat                    # 1-Click developer execution script
-```
+Prerequisites: Node.js 24, npm, and optionally Docker Desktop for PostgreSQL and Redis.
 
----
-
-## OBS Studio Setup Guide (Streamer Workflow)
-
-Live Crypto requires zero local plugin installations. It operates natively through the universal OBS Browser Source standard.
-
-### Step-by-Step Configuration
-
-1. Streamer Authentication:
-   Log in at `http://localhost:3000/login` using your Web3 wallet (MetaMask, Phantom, Rabby, etc.).
-
-2. Copy Overlay URL:
-   In the Creator Command Center (`/dashboard`), copy your unique Overlay URL:
-   `https://app.livecrypto.io/overlay/obs_tok_9f8a7c6b5e...`
-
-3. Add Browser Source in OBS Studio:
-   - Click `+` (Add Source) in the Sources panel.
-   - Select `Browser`.
-   - Paste your unique Overlay URL into the `URL` input.
-   - Set Width to `1920` and Height to `1080` (or `800x600`).
-   - Enable `Refresh browser when scene becomes active`.
-   - Disable `Shutdown source when not visible` to maintain persistent WebSocket connectivity.
-
-4. Test Live Broadcast:
-   In your dashboard, click `Test Live OBS Broadcast`. The animated frosted glass card, custom IPFS sound chime, and Text-to-Speech voice will render instantly on stream.
-
----
-
-## Security and Cryptographic Integrity
-
-### 1. Anti-Replay and Deduplication
-Every incoming transaction hash is recorded with a unique constraint. Duplicate submission of previously confirmed transaction hashes is rejected immediately with HTTP 409, preventing double-alert replay attacks.
-
-### 2. Strict HMAC Signature Validation
-Webhooks received from external indexers (Alchemy, Helius, QuickNode) are verified against the raw request buffer (`req.rawBody`) using HMAC-SHA256:
-```
-signature = HMAC_SHA256(rawBody, WEBHOOK_SECRET)
-```
-This eliminates signature mismatches caused by JSON parser key reordering.
-
-### 3. Recipient Wallet Address Enforcement
-The `ChainVerifier` cross-references on-chain destination addresses against the streamer's registered payout addresses before marking any transaction as confirmed.
-
-### 4. XSS Sanitization on Speech Synthesis
-Viewer donation messages are stripped of all HTML tags, script injections, and non-printable characters before being processed by the browser speech synthesis engine.
-
----
-
-## Quick Start & Local Execution
-
-### Option A: 1-Click Launcher (Recommended for Windows)
-
-Double-click `start-dev.bat` in the repository root. It is the official entry point and launches safe preview mode: temporary in-memory data and real donations disabled. This initiates `dev-runner.js`, which installs missing dependencies, waits for the backend API (:8080) and frontend (:3000), then opens the browser.
-
-```bash
+```powershell
 .\start-dev.bat
 ```
 
-For the full local PostgreSQL + Redis stack, start Docker Desktop and run the same root launcher. It runs Docker Compose automatically:
+This starts preview mode with temporary data and payments disabled. For persistent local services, start Docker Desktop first and run:
 
-```bat
+```powershell
 .\start-dev.bat --full
 ```
 
-Read [`OPERATIONS_AND_LAUNCH.md`](OPERATIONS_AND_LAUNCH.md) before enabling any payment rail.
+The local API is served on `http://localhost:8080`; the web application is served on `http://localhost:3000`.
 
-### Option B: Manual Execution (Maintenance Only)
+### Startup and memory troubleshooting
 
-Normal development and validation must use the root `start-dev.bat`. The commands below are only for diagnosing a single service.
+Keep the launcher terminal open. It checks the API first, then waits for a complete HTML response before opening the browser. A Next.js `Ready` message alone does not mean the first page has compiled.
 
-#### 1. Backend Server
+- Allow several minutes for a cold start, especially immediately after reboot or inside Dropbox/OneDrive. Progress is printed every 15 seconds; the API has a four-minute startup budget and the initial page has ten minutes.
+- Aim for at least 2 GB of available RAM. On Windows, leave the paging file system-managed with enough free disk space. The launcher checks available RAM and virtual memory before starting the services.
+- If you see `Failed to allocate memory` or `heap out of memory`, close unused apps/tabs before retrying. Increasing the Node heap limit is not a remedy for exhausted system memory.
+- The Windows launcher's local Webpack configuration disables persistent pack caching and optimizes wallet-package imports to reduce compilation pressure. Cold compilation may still take time.
+- For frontend diagnostics, inspect `frontend/.next/dev/logs/next-development.log`. API failures are reported separately in the launcher terminal.
+- `start-dev.bat --check` validates localized pages, redirects, API, assets, and sitemap, then stops its application processes. It does not test a real wallet signature or donation.
 
-```bash
+Launcher regression tests can be run from the repository root with `node --test tests/startup-checks.test.js`.
+
+## Verification
+
+```powershell
+# Backend HTTP, authentication, verifier, and preview tests
 cd backend
-npm install
-npm run dev
-```
-The backend API and WebSocket server will run at `http://localhost:8080`.
+npm test
 
-#### 2. Frontend Web Application
+# PostgreSQL integration tests require a running local database
+$env:TEST_DATABASE_URL='postgresql://postgres:password@127.0.0.1:5432/livecrypto'
+npm run migrate
+npm test
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-The Next.js web application will run at `http://localhost:3000`.
+# Frontend locale tests, lint, and production build
+cd ..\frontend
+npm run test:i18n
+npm run lint:product
+npm run build
 
-#### 3. Run Automated Security Test Suite
-
-```bash
-cd backend
+# Smart contract tests
+cd ..\contracts
 npm test
 ```
 
----
+## Production Deployment
 
-## Smart Contract Deployment
+The production stack is defined in `compose.production.yml`. It exposes only Caddy on ports 80 and 443. PostgreSQL, Redis, frontend, backend, and the migration job remain on an internal Docker network.
 
-### Solidity Router (EVM)
-
-The `LiveCryptoRouter.sol` contract handles atomic fee splitting for EVM networks:
-
-```solidity
-function donateNative(address payable streamer) external payable;
-function donateERC20(address token, address streamer, uint256 amount) external;
+```powershell
+Copy-Item deploy/.env.example deploy/.env
+# Set APP_DOMAIN, POSTGRES_PASSWORD, JWT_SECRET, and testnet configuration.
+docker compose --env-file deploy/.env -f compose.production.yml up -d --build
 ```
 
-To compile and test the contracts:
+DNS for `APP_DOMAIN` must point to the host before Caddy can issue a certificate. Use distinct secrets, databases, wallets, RPC endpoints, and domains for staging and production. The full operational checklist, rollback, and payment enablement gates are in [PRODUCTION_GLOBAL_LAUNCH.md](PRODUCTION_GLOBAL_LAUNCH.md).
 
-```bash
-cd contracts
-npm install
-npx hardhat compile
-npx hardhat test
-npm run sync:abi
+## Repository Layout
+
+```text
+backend/       Express API, settlement workers, WebSocket server, and tests
+frontend/      Next.js application, locales, checkout, dashboard, and OBS overlay
+contracts/     EVM donation router and Solidity tests
+db/            Base schema and versioned migrations
+deploy/        Caddy configuration and deployment environment template
+docs/images/   README screenshots and capture instructions
 ```
 
-To deploy to Polygon Amoy Testnet:
+## Current Status
 
-```bash
-npx hardhat run scripts/deploy.js --network amoy
-```
-
-The deployment now requires `PRIVATE_KEY`, `PLATFORM_TREASURY` and `PLATFORM_FEE_BPS` in the environment. It intentionally has no default deployer or treasury address.
-
----
+See [STATUS.md](STATUS.md) for implementation evidence and remaining external validation. [PRODUCT_BUSINESS_AND_GTM_PLAN.md](PRODUCT_BUSINESS_AND_GTM_PLAN.md) defines the staged revenue, traffic, marketing, measurement, and commercial launch plan. In particular, real browser-extension login, testnet transactions, OBS rendering, backups, TLS deployment, and independent smart-contract review require environments and credentials outside this repository.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

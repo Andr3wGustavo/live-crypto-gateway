@@ -8,7 +8,7 @@ Concluir uma beta controlada de doações cripto não custodiais para criadores,
 
 Fluxo do criador: **entrar com carteira → conferir o destino → configurar overlay → instalar no OBS → testar → compartilhar o checkout público**.
 
-## Onde paramos
+## Estado no início da retomada (04/10)
 
 - A base inclui autenticação por assinaturas EVM/Solana, cookies revogáveis, cadastro de destinos, intenções persistentes, reconciliação, ledger e outbox de alertas.
 - A inicialização Windows foi corrigida após falta de memória e timeouts; exige nova conferência na retomada.
@@ -31,11 +31,11 @@ Fluxo do criador: **entrar com carteira → conferir o destino → configurar ov
 
 | ID | Prioridade | Entrega | Estado na retomada | Critério de conclusão | Dependência |
 |---|---|---|---|---|---|
-| R01 | P0 | Registrar e revisar o trabalho acumulado | Em andamento | Estado fiel documentado; arquivos revisados e commits publicados | Git e acesso ao remoto |
+| R01 | P0 | Registrar e revisar o trabalho acumulado | Organizado em commits; referências no histórico abaixo | Estado fiel documentado; arquivos revisados e commits publicados | Git e acesso ao remoto |
 | R02 | P0 | Inicialização local | Implementada; revalidar | API, frontend e páginas abrem pelo `.bat`; encerramento libera portas | Node e memória disponível |
-| R03 | P0 | Identidade Matrix compartilhada | Parcial | Landing/login/painel/checkout coerentes, responsivos e navegáveis | Revisão visual e build |
+| R03 | P0 | Identidade Matrix compartilhada | Integrada; validação visual/build pendentes | Landing/login/painel/checkout coerentes, responsivos e navegáveis | Revisão visual e build |
 | R04 | P0 | Animação blockchain | Implementada; validar | Movimento real, controles, scroll e comportamento reduzido verificados no navegador | Chromium; testes mobile |
-| R05 | P0 | Guia do criador | Componentes criados; integrar | Login, destino, OBS e link público explicados dentro das telas | R03 |
+| R05 | P0 | Guia do criador | Integrado; validar interação | Login, destino, OBS e link público explicados dentro das telas | R03 |
 | R06 | P0 | Banco e migrações | Código e testes existentes | Suíte passa em PostgreSQL; instalação nova e atualização verificadas | Docker ou banco descartável |
 | R07 | P0 | Dependências e isolamento | Revisão pendente | Auditoria atualizada; problemas corrigidos sem downgrade incompatível; sessões e isolamento testados | Dependências/RPCs |
 | R08 | P0 | Doação EVM em testnet | Pendente | Carteira real → router → ledger exato → alerta OBS; repetição não duplica crédito | Router, RPC e carteiras de teste |
@@ -90,6 +90,10 @@ Não publicar segredos, arquivos `.env`, chaves, tokens de overlay ou dados priv
 
 | Data | Marco | Evidência | Publicação |
 |---|---|---|---|
-| 04/10/2026 | Registro inicial da retomada | Status e componentes conferidos; testes históricos separados da revisão Matrix | Consultar o commit que adiciona este arquivo |
+| 04/10/2026 | Registro inicial da retomada | Status e componentes conferidos; testes históricos separados da revisão Matrix | `cfe2335`, push confirmado |
+| 05/10/2026 | Integração Matrix, guias e revisão do trabalho acumulado | TypeScript/lint aprovados; 6 testes de idiomas; 32 backend aprovados e 3 pulados | `881b112` |
+| 05/10/2026 | Infraestrutura, launcher e CI | 5 testes do launcher aprovados; CI inclui lint/build e PostgreSQL; execução remota ainda não verificada | `d961787` |
+
+O responsável optou por continuar sem teste visual diante da memória disponível. Build atual, navegador e PostgreSQL permanecem pendentes, sem reutilizar os resultados visuais antigos como aprovação. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
 
 Os próximos marcos devem atualizar este histórico e `STATUS.md`, com resultados reais de teste e referência aos commits. As porcentagens discutidas anteriormente eram estimativas de planejamento, não medição de prontidão financeira.

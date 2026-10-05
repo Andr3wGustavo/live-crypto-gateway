@@ -1,5 +1,7 @@
 # 🗺️ Live Crypto Gateway — Strategic Roadmap & Launch Plan
 
+> **Historical plan:** the completion labels and multi-chain scope below are outdated. Use [STATUS.md](STATUS.md) for the current code-based assessment and prioritized launch criteria.
+
 > **Product:** Live Crypto Gateway — Non-Custodial Multi-Chain Web3 Donation SaaS for Streamers  
 > **Status:** Phase 2 Complete (Universal Multi-Chain Backend, Liquid Glassmorphism UI, 1-Click Multi-Wallet Checkout)  
 > **Target:** Production SaaS Launch with Sub-400ms On-Chain Settlement

@@ -1,5 +1,7 @@
 # 📍 Live Crypto Gateway — Checkpoint & Progresso Geral
 
+> **Histórico desatualizado:** as marcações abaixo descrevem uma etapa anterior e não representam o suporte atual. Consulte [STATUS.md](STATUS.md) e [o roadmap de retomada](docs/RETOMADA_E_ROADMAP.md) para evidências, pendências e critérios de conclusão atuais.
+
 > **Data de Atualização:** 07/09/2026  
 > **Status Geral do Projeto:** Fase 2 & Fase 4 (Parcial) Concluídas — SaaS Multi-Chain com Solana, SUI, EVM, Bitcoin Lightning, TRON, TON, UI Liquid Glassmorphism, Uploader IPFS, Checkout 1-Click com Fast Fiat Presets, OBS Live Studio Customizer e Síntese de Som Procedural.
 
@@ -85,4 +87,3 @@ O **Live Crypto Gateway** é um SaaS descentralizado e não-custodial análogo a
 - [x] **Single-Terminal Dev Runner ([`dev-runner.js`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/dev-runner.js)):** Execução concorrente do Backend (:8080) e Frontend (:3000).
 - [x] **Launcher 1-Click ([`start-dev.bat`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/start-dev.bat)):** Inicialização instantânea sem necessidade de configurações manuais.
 - [x] **Testes Automatizados do Backend:** 6/6 testes de segurança passando em [`system.test.js`](file:///A:/Dropbox/DEV-AI/Projectios/live-crypto/live-crypto-gateway/backend/tests/system.test.js).
-

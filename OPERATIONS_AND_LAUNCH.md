@@ -10,7 +10,7 @@ Live Crypto is a non-custodial donation experience for live creators:
 2. The payment router splits the configured platform fee and the creator payout atomically.
 3. The backend verifies the finalized transaction against the configured network, router, recipient and fee.
 4. The verified event is persisted transactionally and queued in `Donation_Outbox`.
-5. The outbox worker publishes the alert to the creator's authenticated OBS browser source.
+5. The outbox worker publishes a notification; the authenticated OBS source replays the durable queue and acknowledges displayed alerts.
 
 The platform does not hold a user balance or private key. The initial proposed business model is a 2% routing fee (`PLATFORM_FEE_BPS=200`) plus the network fee charged separately by the blockchain.
 
@@ -50,13 +50,21 @@ Start Docker Desktop, then run:
 
 The launcher installs missing application dependencies, starts Docker Compose and waits for service health in full mode, then waits for `GET /api/health` and the first Next.js response before opening the browser. Full mode fails closed when Docker, PostgreSQL or Redis is unavailable. Copy `backend/.env.example` to `backend/.env` before configuring testnet values. `GET /api/health` returns `preview` for memory mode; it must report `ok` with connected database and Redis before any payment test.
 
-Apply the migration once for an existing database:
+The launcher explicitly sets `DEV_MEMORY_MODE=false` in full mode and validates storage status from the health response. Both modes use API port 8080. Add `--no-browser` to keep the servers running without opening a browser, or `--check` to validate storage, language redirects, localized landing/login/dashboard/checkout/overlay pages, metadata and API access, then close the application servers. Docker containers remain running. The `.bat` preserves the runner's exit code.
 
 ```powershell
-Get-Content db\migrations\001_donation_outbox.sql | docker compose exec -T postgres psql -U postgres -d livecrypto
+.\start-dev.bat --full --check
 ```
 
-For a new Docker volume, `db/init.sql` creates the outbox automatically.
+This smoke check does not connect a real wallet or make a payment. Verify the browser journey separately. Current EVM extension login uses injected connectors; see [STATUS.md](STATUS.md) for remaining validation.
+
+Apply versioned migrations for a new or existing database (the full launcher runs this too):
+
+```powershell
+npm --prefix backend run migrate
+```
+
+The base schema alone is not sufficient: payment intents and replay columns require the versioned migrations. Do not edit applied migration files.
 
 ## Testnet Payment Gate
 
@@ -67,7 +75,7 @@ For a new Docker volume, `db/init.sql` creates the outbox automatically.
 5. Register a creator wallet for that exact network through the authenticated dashboard.
 6. Set `DONATIONS_ENABLED=true` only after contract address and treasury are reviewed by a second person.
 7. Send a native testnet payment. Verify: exact recipient, 2% fee, configured confirmation depth, `Transactions` row, `Donation_Outbox` row and one OBS alert.
-8. Submit the same transaction hash twice. The second request must return `409`, and OBS must emit no second alert.
+8. Submit the same hash through its payment intent twice. The result must remain idempotent: one ledger record and one durable alert. The retired direct-hash settlement route cannot credit the ledger.
 9. Test a wrong recipient, wrong router, wrong fee, reverted transaction and insufficient confirmations. All must be rejected or remain pending.
 10. Rotate the OBS token and confirm the previous URL is rejected.
 
@@ -77,7 +85,7 @@ For a new Docker volume, `db/init.sql` creates the outbox automatically.
 - A dedicated RPC provider per enabled rail, rate limits, provider health alerts and network-specific confirmation policy.
 - PostgreSQL backup and restoration drill; Redis persistence/availability strategy; outbox delivery metrics and dead-letter alerting.
 - HTTPS-only `FRONTEND_URL`, real 32+ character `JWT_SECRET`, secret manager, no default credentials, protected Docker host and restricted database ports.
-- Migrate browser-held JWTs to HttpOnly secure cookies and add CSRF protection before public creator accounts.
+- Verify the implemented HttpOnly/Secure cookie, origin checks and Redis-backed logout revocation behind the actual production proxy.
 - Legal, tax, consumer disclosure, sanctions/AML and jurisdiction review before charging real users.
 - Error monitoring, structured audit logs without sensitive payloads, uptime monitoring and a public incident/contact channel.
 - Threat model and load test of WebSockets, webhook ingestion and wallet verification.

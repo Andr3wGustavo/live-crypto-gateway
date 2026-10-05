@@ -1,73 +1,60 @@
-# Live Crypto Gateway Status
+# LiveCrypto — implementation and verification status
 
-> Last reviewed: 2026-09-21
-> Operational state: preview ready; real payments are disabled by default; production is not approved.
+**Updated: 5 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
 
-## Start Here
+## Current delivery
 
-Always start the project from the root launcher in `live-crypto-gateway`:
+The Matrix/Protocol design combines the logo's blue/cyan/green with violet accents. Shared branding and guides are integrated into landing, login, Creator Studio and checkout. The SVG blockchain scene provides automatic playback, scroll, pause/replay and manual exploration. Reduced-motion users can explicitly opt in.
 
-```bat
-.\start-dev.bat
-```
+Creator Studio now explains authentication, receiving destinations, payment availability, OBS Browser Source setup and the difference between public checkout and private overlay links. UI status uses the profile/network configuration, not an assumed successful payment or OBS connection.
 
-This is the safe preview mode. It installs missing frontend/backend dependencies, starts the API and web application, opens `http://localhost:3000`, keeps all data in memory, and forces `DONATIONS_ENABLED=false`.
+The backend work accumulated before this resumption includes revocable cookie sessions, persistent creator-bound payment intents, RPC discovery/reconciliation, exact-value settlement and durable OBS replay/ACK. Mainnet acceptance remains pending.
 
-For the local persistent stack, open Docker Desktop first and run:
+## Evidence from this resumption
 
-```bat
-.\start-dev.bat --full
-```
+| Check | Result | Scope |
+|---|---|---|
+| Frontend TypeScript (`--noEmit --incremental false`) | Passed | Application types; not browser interaction |
+| Targeted frontend ESLint | Passed | Product routes, animation/guide components and localization |
+| Locale/catalog tests | 6 passed | Negotiation, route handling, exact decimal display and translation parity |
+| Backend tests | 32 passed; 3 skipped | HTTP auth, sessions, verification and preview behavior; PostgreSQL tests skipped without `TEST_DATABASE_URL` |
+| Launcher regression tests | 5 passed | Memory diagnostics, readiness, timeout and storage-mode checks |
+| Solana cluster constants | Corrected and regression-tested | Full genesis hashes confirmed against public Devnet/mainnet `getGenesisHash` responses; no funds moved |
+| Current browser/design acceptance | Deferred | Owner chose to continue without visual testing on the constrained machine |
+| Current production build | Pending | Earlier build results belong to the previous visual revision |
+| PostgreSQL integration / Docker images | Pending | Docker did not respond during the attempted inspection |
+| GitHub Actions | Workflow included; result not verified here | `gh` CLI is unavailable in this environment |
 
-Full mode starts PostgreSQL and Redis with Docker Compose before starting the application. It fails if Docker is not running or the required services are unhealthy. Do not start the API and frontend in separate terminals for normal development.
+The Solana configuration previously contained shortened chain identifiers where the verifier required full genesis hashes. Both configured-cluster acceptance cases now pass alongside the wrong-cluster rejection test.
 
-## What Works
+## Historical evidence
 
-| Area | State |
-|---|---|
-| Product landing, creator demo and fee calculator | Ready for product validation |
-| Creator login | EVM SIWE and Solana Ed25519 signature validation |
-| Dashboard and OBS overlay | Available in preview; alerts use local temporary data |
-| Checkout | Only server-configured EVM native and SOL rails are shown |
-| EVM settlement | Verifies network, router event, recipient, fee and confirmations |
-| SOL settlement | Verifies finalized transfer split and registered recipient |
-| Duplicate settlement prevention | Database transaction plus outbox record |
-| Smart contract | Native and ERC-20 router tests passing; no audited deployment |
+Before the Matrix rewrite, the Afterglow landing passed production build and headless browser checks. The Windows launcher also passed five HTTP scenarios covering fifteen localized pages after memory/startup corrections. Eight Solidity contract tests passed in a previous review. These are historical results, not a fresh approval of this release.
 
-## Deliberately Not Available
+## Remaining gates
 
-- Production payments, mainnet wallets and custody.
-- ERC-20 and SPL donations in the public checkout.
-- Sui, Bitcoin, Lightning, TRON, TON, Dogecoin, Pix, cards and CEX QR settlement.
-- Automatic background reconciliation of missed donor-browser verification requests.
-- Production cookie sessions, CSRF protection, audit approval and legal/compliance controls.
+1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md), production build and actual wallet-extension journey.
+2. Run the complete backend suite with PostgreSQL, clean/upgrade migrations and restart recovery. Preview tests use process-local Redis substitutes and do not validate real Redis recovery.
+3. Refresh dependency auditing. The previous frontend audit reported moderate transitive findings through the legacy Solana SDK; no forced downgrade has been applied.
+4. Validate EVM and Solana testnet donations end to end with the exact router, treasury, fee, RPC and real OBS source, including outage and duplicate scenarios.
+5. Build/start the production Compose stack on staging; verify DNS, TLS/WSS, health checks, migrations, rollback and externally stored backup restoration.
+6. Complete monitoring, operational ownership and a small creator pilot.
+7. Before mainnet, complete independent contract/security review and the business's legal, tax, privacy, fee and support decisions.
 
-## Verification Snapshot
+## Product boundaries
 
-| Check | Result |
-|---|---|
-| Backend tests | 21 passed; 1 PostgreSQL integration test skipped without `TEST_DATABASE_URL` |
-| Contract tests | 8 passed |
-| Frontend production build | Passed |
-| Root preview launcher | Verified: API health and landing returned HTTP 200 |
-| Full Docker stack | Not verified in this workspace because Docker Desktop was not running |
+- Payments default to disabled. Only configured native EVM and SOL rails can create intents.
+- Ledger/outbox durability requires PostgreSQL. Demo mode is temporary and does not accept payments.
+- Wallet keys and funds remain outside platform custody. A test alert is not payment proof.
+- USD estimates are unavailable. Goals are manually configured; automatic fiat conversion and minimum-amount filtering remain inactive.
+- Token checkout, additional networks, fiat rails, public paid TTS quotas, subscriptions and billing are future work.
+- A Git push is not a VPS deployment. No remote production service or mainnet acceptance is claimed.
 
-The frontend build emits a non-blocking `bigint` native binding warning and uses its JavaScript fallback.
+## Documentation
 
-## Before Testnet Payments
+- [Design and animation](docs/LANDING_DESIGN.md)
+- [Resumption roadmap and publication log](docs/RETOMADA_E_ROADMAP.md)
+- [VPS/staging runbook](PRODUCTION_GLOBAL_LAUNCH.md)
+- [Business, pricing and acquisition hypotheses](PRODUCT_BUSINESS_AND_GTM_PLAN.md)
 
-1. Start Docker Desktop and run the root launcher with `--full`.
-2. Run the PostgreSQL integration test with `TEST_DATABASE_URL`.
-3. Deploy and independently review `LiveCryptoRouter` on Polygon Amoy or Base Sepolia.
-4. Configure dedicated RPC endpoints, router address, treasury, JWT secret and permitted frontend URL in `backend/.env`.
-5. Test exact fee split, recipient, confirmations, duplicate hash and OBS delivery on testnet.
-6. Add a persistent reconciliation worker before allowing external donors to rely on alerts.
-
-## Before Production
-
-- Complete an independent contract/security audit and remediation review.
-- Replace browser-held JWTs with secure HttpOnly cookies and CSRF protection.
-- Add observability, backup/restore drills, dead-letter handling and incident response.
-- Complete legal, tax, sanctions/AML and consumer disclosure review for each launch jurisdiction.
-
-Detailed payment and operational gates are in [OPERATIONS_AND_LAUNCH.md](OPERATIONS_AND_LAUNCH.md).
+Earlier checklist files are historical planning context. This status distinguishes implemented code, executed tests, deferred checks and deployment.
