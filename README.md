@@ -6,6 +6,8 @@ Live Crypto Gateway is a non-custodial donation service for livestream creators.
 
 **Resume here:** [project handoff and roadmap](docs/RETOMADA_E_ROADMAP.md) · [current evidence](STATUS.md) · [browser acceptance checklist](docs/VALIDATION_MATRIX.md).
 
+**Testing the changes:** [step-by-step local, wallet and OBS guide](docs/COMO_TESTAR.md) · [backend review and API compatibility notes](docs/BACKEND_REVIEW.md).
+
 ## Product Gallery
 
 The current **Protocol / Matrix** direction combines the logo's blue, cyan and green with violet accents, terminal typography, an SVG blockchain simulation and an interactive OBS demonstration. Login, checkout and Creator Studio share the design and onboarding guides. See [the design notes](docs/LANDING_DESIGN.md); browser acceptance of this revision is pending.

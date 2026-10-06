@@ -119,6 +119,7 @@ const en = {
     decimalHint: 'Enter an amount without thousands separators. A dot or comma can be used for decimals.',
   },
   dashboard: {
+    savedOffline: 'Saved, but live overlay synchronization is unavailable. Retry saving or reconnect OBS when the service returns.',
     title: 'Creator Studio', subtitle: 'Your destinations. Your identity. Your stream.', public: 'Public checkout', loadError: 'Unable to load the studio. Reload to try again.',
     revenue: 'Estimated revenue', estimate: 'Reference estimate · not an accounting statement', donations: 'Recorded donations', goal: 'Goal progress', appearance: 'Theme and position',
     controls: 'Live controls', test: 'Test OBS alert', sending: 'Sending…', sent: 'Test alert sent', skip: 'Skip active alert', skipped: 'Skip command sent', muted: 'TTS muted', unmuted: 'TTS active',
@@ -264,6 +265,7 @@ const pt: Messages = {
     decimalHint: 'Informe o valor sem separador de milhar. Use ponto ou vírgula para decimais.',
   },
   dashboard: {
+    savedOffline: 'Salvo, mas a sincronização ao vivo está indisponível. Salve novamente ou reconecte o OBS quando o serviço voltar.',
     title: 'Estúdio do criador', subtitle: 'Seus destinos. Sua identidade. Sua live.', public: 'Checkout público', loadError: 'Não foi possível carregar o estúdio. Recarregue para tentar novamente.',
     revenue: 'Receita estimada', estimate: 'Estimativa de referência · não é um extrato contábil', donations: 'Doações registradas', goal: 'Progresso da meta', appearance: 'Tema e posição',
     controls: 'Controles da live', test: 'Testar alerta OBS', sending: 'Enviando…', sent: 'Alerta de teste enviado', skip: 'Pular alerta ativo', skipped: 'Comando de pular enviado', muted: 'TTS silenciado', unmuted: 'TTS ativo',
@@ -407,6 +409,7 @@ const es: Messages = {
     decimalHint: 'Introduce el importe sin separadores de miles. Puedes usar punto o coma para los decimales.',
   },
   dashboard: {
+    savedOffline: 'Guardado, pero la sincronización en vivo no está disponible. Guarda de nuevo o reconecta OBS cuando vuelva el servicio.',
     title: 'Estudio del creador', subtitle: 'Tus destinos. Tu identidad. Tu directo.', public: 'Checkout público', loadError: 'No se pudo cargar el estudio. Recarga para intentarlo de nuevo.',
     revenue: 'Ingresos estimados', estimate: 'Estimación de referencia · no es un extracto contable', donations: 'Donaciones registradas', goal: 'Progreso de la meta', appearance: 'Tema y posición',
     controls: 'Controles del directo', test: 'Probar alerta OBS', sending: 'Enviando…', sent: 'Alerta de prueba enviada', skip: 'Saltar alerta activa', skipped: 'Orden de saltar enviada', muted: 'TTS silenciado', unmuted: 'TTS activo',

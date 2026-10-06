@@ -1,79 +1,46 @@
 const express = require('express');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const axios = require('axios');
 const FormData = require('form-data');
-const db = require('../db');
-
-const authMiddleware = require('../middleware/auth');
+const { saveAlertSettings, notifyAlertSettings } = require('../services/alertSettings');
+const { mediaFormat } = require('../services/mediaFormat');
 
 const router = express.Router();
-router.use(authMiddleware);
+router.use(require('../middleware/auth'));
+const upload = multer({ storage:multer.memoryStorage(), limits:{ fileSize:5*1024*1024,files:1,fields:1,parts:2,fieldSize:128 } });
+const limiter = rateLimit({ windowMs:60*60*1000,limit:20,keyGenerator:req=>String(req.user.id),standardHeaders:true,legacyHeaders:false });
 
-// Configure Multer for in-memory file storage
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
-});
-
-const PINATA_JWT = process.env.PINATA_JWT;
-
-/**
- * POST /api/dashboard/upload
- * Uploads media (GIF/Audio) to IPFS via Pinata and saves the URL to Alert_Configs
- */
-router.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file provided' });
-  }
-
-  const streamerId = req.user.id;
-  const fileType = req.body.type; // 'media' or 'audio'
-
-  if (!streamerId || !['media', 'audio'].includes(fileType)) {
-    return res.status(400).json({ error: 'Invalid streamer_id or type' });
-  }
-
+router.post('/upload', limiter, (req,res,next) => {
+  if (!process.env.PINATA_JWT) return res.status(503).json({ error:'Media storage is not configured' });
+  next();
+}, upload.single('file'), async (req,res,next) => {
+  if (!req.file) return res.status(400).json({ error:'No file provided' });
+  const kind = req.body.type;
+  if (!['media','audio'].includes(kind)) return res.status(400).json({ error:'Invalid upload type' });
+  const format = mediaFormat(req.file.buffer,kind);
+  if (!format) return res.status(415).json({ error:'Unsupported media content for this upload type' });
+  const form = new FormData();
+  form.append('file',req.file.buffer,{ filename:`alert.${format.extension}`,contentType:format.mime });
+  form.append('pinataMetadata',JSON.stringify({name:`Streamer_${req.user.id}_${kind}`}));
+  let cid;
   try {
-    // 1. Prepare file for Pinata
-    const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
+    const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS',form,{
+      timeout:15000,maxRedirects:0,maxBodyLength:6*1024*1024,maxContentLength:65536,
+      headers:{...form.getHeaders(),Authorization:`Bearer ${process.env.PINATA_JWT}`}
     });
-
-    const metadata = JSON.stringify({
-      name: `Streamer_${streamerId}_${fileType}`,
-    });
-    formData.append('pinataMetadata', metadata);
-
-    // 2. Upload to Pinata (IPFS)
-    const pinataRes = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
-      maxBodyLength: 'Infinity',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
-        'Authorization': `Bearer ${PINATA_JWT}`,
-      },
-    });
-
-    const ipfsHash = pinataRes.data.IpfsHash;
-    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-
-    // 3. Save to database in Alert_Configs
-    const column = fileType === 'media' ? 'media_url' : 'audio_url';
-    
-    await db.query(
-      `INSERT INTO Alert_Configs (streamer_id, ${column}) 
-       VALUES ($1, $2)
-       ON CONFLICT (streamer_id) 
-       DO UPDATE SET ${column} = EXCLUDED.${column}`,
-      [streamerId, ipfsUrl]
-    );
-
-    res.json({ success: true, url: ipfsUrl, hash: ipfsHash });
-  } catch (error) {
-    console.error('Upload error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to upload to IPFS' });
+    cid = response.data?.IpfsHash;
+    if (typeof cid !== 'string' || !/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{20,120})$/.test(cid)) throw new Error('Invalid provider response');
+  } catch {
+    // Do not log Axios objects, response bodies, credentials or provider URLs.
+    return res.status(502).json({ error:'Media provider unavailable or returned an invalid response' });
   }
+  try {
+    // A safe filename hint also lets the overlay recognize a video CID URL.
+    const url = `https://gateway.pinata.cloud/ipfs/${cid}?filename=alert.${format.extension}`;
+    const config = await saveAlertSettings(req.user.id,{ [kind === 'media' ? 'media_url' : 'audio_url']:url });
+    const realtime = await notifyAlertSettings(req.user.id,config);
+    res.json({ success:true,url,hash:cid,realtime });
+  } catch (error) { next(error); }
 });
-
 module.exports = router;

@@ -62,11 +62,13 @@ router.get('/payment-config', (req, res) => {
 
 // POST /api/public/tts-synthesize - High-fidelity AI speech synthesis using ElevenLabs API (with fallback)
 router.post('/tts-synthesize', async (req, res) => {
+  res.set('Cache-Control','no-store');
   const { text, voice_id = '21m00Tcm4TlvDq8ikWAM' } = req.body;
   
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Text string is required for TTS synthesis' });
   }
+  if (typeof voice_id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(voice_id)) return res.status(400).json({ error:'Invalid voice identifier' });
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   // Paid synthesis needs authenticated quotas before public access is enabled.
@@ -81,6 +83,7 @@ router.post('/tts-synthesize', async (req, res) => {
   try {
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'audio/mpeg',
         'Content-Type': 'application/json',
@@ -97,20 +100,20 @@ router.post('/tts-synthesize', async (req, res) => {
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.warn('[ElevenLabs] API error:', response.status, errText);
-      return res.status(502).json({ error: 'ElevenLabs API synthesis error', details: errText });
+      await response.body?.cancel();
+      console.warn('[ElevenLabs] Provider request failed:', response.status);
+      return res.status(502).json({ error: 'ElevenLabs API synthesis error' });
     }
 
     const audioBuffer = await response.arrayBuffer();
     res.set({
       'Content-Type': 'audio/mpeg',
       'Content-Length': audioBuffer.byteLength,
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'no-store'
     });
     return res.send(Buffer.from(audioBuffer));
   } catch (error) {
-    console.error('TTS synthesis server error:', error);
+    console.error('TTS provider request unavailable');
     res.status(500).json({ error: 'Internal TTS processing error' });
   }
 });

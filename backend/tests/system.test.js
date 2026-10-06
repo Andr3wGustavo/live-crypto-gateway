@@ -50,6 +50,28 @@ test('paid TTS route exists before any profile request and defaults to local spe
   assert.equal(response.status, 200);
   assert.equal((await response.json()).mode, 'web_speech_fallback');
 });
+
+test('TTS rejects path-like voice identifiers and does not reflect provider error details', async t => {
+  assert.equal((await post('/api/public/tts-synthesize',{text:'Hello',voice_id:'../account'})).status,400);
+  const oldKey=process.env.ELEVENLABS_API_KEY, oldEnabled=process.env.PUBLIC_TTS_ENABLED;
+  t.after(()=>{
+    if(oldKey===undefined)delete process.env.ELEVENLABS_API_KEY;else process.env.ELEVENLABS_API_KEY=oldKey;
+    if(oldEnabled===undefined)delete process.env.PUBLIC_TTS_ENABLED;else process.env.PUBLIC_TTS_ENABLED=oldEnabled;
+  });
+  process.env.ELEVENLABS_API_KEY='test-only'; process.env.PUBLIC_TTS_ENABLED='true';
+  const actualFetch=global.fetch;
+  let externalCalls=0;
+  t.mock.method(global,'fetch',(url,options)=>{
+    if(String(url).startsWith('https://api.elevenlabs.io/')) {
+      externalCalls++; assert.ok(options.signal);
+      return Promise.resolve(new Response('private-provider-detail',{status:429}));
+    }
+    return actualFetch(url,options);
+  });
+  const response=await post('/api/public/tts-synthesize',{text:'Hello'});
+  assert.equal(response.status,502); assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.doesNotMatch(await response.text(),/private-provider-detail/); assert.equal(externalCalls,1);
+});
 test('Solana login rejects unsigned account impersonation', async () => {
   assert.equal((await post('/api/auth/verify', { type: 'solana', publicKey: '11111111111111111111111111111111' })).status, 401);
 });

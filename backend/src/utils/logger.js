@@ -1,10 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-// Ensure logs directory exists
+// Containers write to stdout/stderr. The non-root runtime must not require
+// write access to the application directory just to import the logger.
+let fileLogging = process.env.NODE_ENV !== 'production' && process.env.LOG_TO_FILES !== 'false';
 const logsDir = path.join(__dirname, '../../logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+if (fileLogging) {
+  try { fs.mkdirSync(logsDir, { recursive: true }); }
+  catch { fileLogging = false; console.warn('File logs unavailable; using stdout/stderr.'); }
 }
 
 const logFile = path.join(logsDir, 'app.log');
@@ -17,6 +20,7 @@ function formatLog(level, message, meta = {}) {
 }
 
 function writeToFile(filePath, logLine) {
+  if (!fileLogging) return;
   fs.appendFile(filePath, logLine + '\n', (err) => {
     if (err) console.error('Failed to write to log file:', err);
   });

@@ -105,6 +105,10 @@ async function query(text, params = []) {
 
   // 2. INSERT into Streamers
   if (queryLower.includes('insert into streamers')) {
+    if (queryLower.includes('on conflict')) {
+      const existing = memoryStore.streamers.find(streamer => streamer.public_address === String(params[0]));
+      if (existing) return { rows:[existing] };
+    }
     const newId = memoryStore.streamers.length + 1;
     const newStreamer = {
       id: newId,
@@ -143,6 +147,16 @@ async function query(text, params = []) {
   }
 
   // 4. Alert_Configs queries
+  if (queryLower.includes('insert into alert_configs') && params.length === 13) {
+    const { fields, defaults } = require('../services/alertSettings');
+    const streamerId = Number(params[0]);
+    let config = memoryStore.alertConfigs.find(item => item.streamer_id === streamerId);
+    if (!config) { config = { streamer_id:streamerId,...defaults }; memoryStore.alertConfigs.push(config); }
+    const supplied = JSON.parse(params[12]);
+    fields.forEach((field,i) => { if (supplied.includes(field)) config[field] = params[i+1]; });
+    return { rows:[Object.fromEntries(fields.map(field => [field,config[field] ?? defaults[field]]))] };
+  }
+
   if (queryLower.includes('from alert_configs')) {
     const streamerId = parseInt(params[0]) || 1;
     let match = memoryStore.alertConfigs.find(a => a.streamer_id === streamerId);

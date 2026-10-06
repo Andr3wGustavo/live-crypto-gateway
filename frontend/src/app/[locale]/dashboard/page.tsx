@@ -89,9 +89,9 @@ export default function Dashboard() {
     if (busy) return;
     setBusy(id); setError(''); setNotice('');
     try {
-      await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const result = await request<{ realtime?: boolean }>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (id === 'mute') setMuted(previous => !previous);
-      setNotice(success);
+      setNotice(id === 'config' && result.realtime === false ? d.savedOffline : success);
     } catch (error) { console.error(error); setError(c.error); }
     finally { setBusy(''); }
   }
@@ -112,9 +112,9 @@ export default function Dashboard() {
     setBusy('upload'); setNotice(''); setError('');
     try {
       const body = new FormData(); body.append('file', file); body.append('type', uploadType);
-      const result = await request<{ url: string }>('/api/dashboard/upload', { method: 'POST', body });
+      const result = await request<{ url: string; realtime?: boolean }>('/api/dashboard/upload', { method: 'POST', body });
       update(uploadType === 'media' ? 'media_url' : 'audio_url', result.url);
-      setNotice(d.uploaded);
+      setNotice(result.realtime === false ? d.savedOffline : d.uploaded);
     } catch (error) { console.error(error); setError(d.uploadError); }
     finally { setBusy(''); }
   }

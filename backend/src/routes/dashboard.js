@@ -3,6 +3,8 @@ const db = require('../db');
 const { pubClient } = require('../redis');
 const { paymentConfig, publicConfig } = require('../services/paymentConfig');
 const { normalizePayoutAddress } = require('../services/payoutAddress');
+const { fields: alertSettingFields, saveAlertSettings, notifyAlertSettings } = require('../services/alertSettings');
+const { summarizeTransactions } = require('../services/analytics');
 
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
@@ -30,7 +32,11 @@ router.get('/', async (req, res) => {
     res.json({
       streamer: streamerRes.rows[0],
       wallets: walletsRes.rows,
-      alertConfig: alertsRes.rows[0] || null,
+      // The preview adapter may include internal row properties. Keep the API
+      // shape identical to PostgreSQL so GET -> edit -> POST is valid in both.
+      alertConfig: alertsRes.rows[0] ? Object.fromEntries(alertSettingFields
+        .filter(field => alertsRes.rows[0][field] !== undefined)
+        .map(field => [field, alertsRes.rows[0][field]])) : null,
       paymentConfig: publicConfig()
     });
   } catch (error) {
@@ -64,77 +70,14 @@ router.post('/wallet', async (req, res) => {
 });
 
 // Update Alert Config, Theme, Media, Audio, and Goal
-router.post('/config', async (req, res) => {
-  const streamerId = req.user.id;
-  const { min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url } = req.body;
-
-  const choices = { active_theme:['cyberpunk','matrix','fire','minimal'],position:['top-left','top-right','center','bottom-center','bottom-right'],sound_preset:['arcade_coin','cyber_chime','cash_register','laser_beam'],voice_profile:['cyber_announcer','anime_kawaii','scifi_robot','natural_host'] };
-  for (const [field,allowed] of Object.entries(choices)) if (req.body[field] !== undefined && !allowed.includes(req.body[field])) return res.status(422).json({ error:`Invalid ${field}` });
-  for (const field of ['min_amount','goal_amount','goal_current']) if (req.body[field] !== undefined && (!/^\d+(\.\d{1,8})?$/.test(String(req.body[field])) || Number(req.body[field]) > 999999999)) return res.status(422).json({ error:`Invalid ${field}` });
-  if (goal_title !== undefined && (typeof goal_title !== 'string' || goal_title.length>255)) return res.status(422).json({ error:'Invalid goal title' });
-  for (const value of [media_url,audio_url]) if (value != null && (typeof value !== 'string' || value.length>2048 || !/^https:\/\//.test(value))) return res.status(422).json({ error:'Media URLs must use HTTPS' });
-
+router.post('/config', async (req, res, next) => {
   try {
-    const { rows } = await db.query(
-      `INSERT INTO Alert_Configs (streamer_id, min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url, position, sound_preset, voice_profile, show_leaderboard)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       ON CONFLICT (streamer_id)
-       DO UPDATE SET 
-         min_amount = COALESCE(EXCLUDED.min_amount, Alert_Configs.min_amount),
-         active_theme = COALESCE(EXCLUDED.active_theme, Alert_Configs.active_theme),
-         goal_amount = COALESCE(EXCLUDED.goal_amount, Alert_Configs.goal_amount),
-         goal_current = COALESCE(EXCLUDED.goal_current, Alert_Configs.goal_current),
-         goal_title = COALESCE(EXCLUDED.goal_title, Alert_Configs.goal_title),
-         media_url = COALESCE(EXCLUDED.media_url, Alert_Configs.media_url),
-          audio_url = COALESCE(EXCLUDED.audio_url, Alert_Configs.audio_url),
-          position = EXCLUDED.position, sound_preset = EXCLUDED.sound_preset,
-          voice_profile = EXCLUDED.voice_profile, show_leaderboard = EXCLUDED.show_leaderboard
-       RETURNING min_amount, active_theme, goal_amount, goal_current, goal_title, media_url, audio_url, position, sound_preset, voice_profile, show_leaderboard`,
-      [
-        streamerId, 
-        min_amount || '0.0', 
-        active_theme || 'cyberpunk', 
-        goal_amount || '0.0', 
-        goal_current || '0.0', 
-        goal_title || 'Donation Goal',
-        media_url || null,
-        audio_url || null,
-        req.body.position || 'bottom-center', req.body.sound_preset || 'arcade_coin',
-        req.body.voice_profile || 'cyber_announcer', req.body.show_leaderboard !== false
-      ]
-    );
-
-    // Publish CONFIG_UPDATE to Redis Pub/Sub so OBS overlay updates instantly
-    const channel = `streamer:${streamerId}:events`;
-    const payload = JSON.stringify({
-      event: 'CONFIG_UPDATE',
-      theme: active_theme || 'cyberpunk',
-      goal_amount: parseFloat(goal_amount || '0.0'),
-      goal_current: parseFloat(goal_current || '0.0'),
-      goal_title: goal_title || 'Donation Goal',
-      media_url: rows[0].media_url,
-      audio_url: rows[0].audio_url,
-      position: req.body.position || 'bottom-center',
-      sound_preset: req.body.sound_preset || 'arcade_coin',
-      voice_profile: req.body.voice_profile || 'cyber_announcer',
-      show_leaderboard: req.body.show_leaderboard !== undefined ? req.body.show_leaderboard : true
-    });
-    
-    await pubClient.publish(channel, payload);
-
-    res.json({ 
-      success: true, 
-      config: {
-        ...rows[0],
-        position: req.body.position || 'bottom-center',
-        sound_preset: req.body.sound_preset || 'arcade_coin',
-        voice_profile: req.body.voice_profile || 'cyber_announcer',
-        show_leaderboard: req.body.show_leaderboard !== undefined ? req.body.show_leaderboard : true
-      } 
-    });
+    const config = await saveAlertSettings(req.user.id, req.body);
+    const realtime = await notifyAlertSettings(req.user.id, config);
+    res.json({ success:true, config, realtime });
   } catch (error) {
-    console.error('Config update error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.status === 422) return res.status(422).json({ error:error.message });
+    next(error);
   }
 });
 
@@ -157,31 +100,11 @@ router.get('/analytics', async (req, res) => {
   const streamerId = req.user.id;
   try {
     const txRes = await db.query(
-      'SELECT amount, currency, status, timestamp FROM Transactions WHERE streamer_id = $1',
+      'SELECT amount, currency, status, timestamp, chain_id FROM Transactions WHERE streamer_id = $1',
       [streamerId]
     );
 
-    const transactions = txRes.rows.filter(tx => tx.status === 'CONFIRMED');
-    const totalTransactions = transactions.length;
-
-    // Aggregate by currency
-    const tokenBreakdown = {};
-
-
-
-    transactions.forEach(tx => {
-      const amt = parseFloat(tx.amount) || 0;
-      const curr = (tx.currency || 'USDC').toUpperCase();
-      tokenBreakdown[curr] = (tokenBreakdown[curr] || 0) + amt;
-
-    });
-
-    res.json({
-      totalTransactions,
-      estimatedTotalUSD: null,
-      tokenBreakdown,
-      recentCount: transactions.slice(0, 7).length
-    });
+    res.json(summarizeTransactions(txRes.rows));
   } catch (error) {
     console.error('Analytics error:', error);
     res.status(500).json({ error: 'Internal server error' });

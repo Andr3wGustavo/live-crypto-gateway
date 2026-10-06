@@ -8,6 +8,7 @@ const { paymentConfig } = require('../services/paymentConfig');
 const { createSession, revokeSession } = require('../services/sessions');
 
 const router = express.Router();
+router.use((_req,res,next) => { res.set('Cache-Control','no-store'); next(); });
 router.get('/session', require('../middleware/auth'), (req,res) => res.json({ user: { id:req.user.id,public_address:req.user.public_address } }));
 router.post('/logout', revokeSession);
 
@@ -58,7 +59,7 @@ router.post('/verify', async (req, res) => {
       let streamer;
       if (streamerRes.rows.length === 0) {
         streamerRes = await db.query(
-          'INSERT INTO Streamers (public_address) VALUES ($1) RETURNING id, public_address, obs_token',
+          'INSERT INTO Streamers (public_address) VALUES ($1) ON CONFLICT(public_address) DO UPDATE SET public_address=EXCLUDED.public_address RETURNING id, public_address, obs_token',
           [solanaAddress]
         );
         streamer = streamerRes.rows[0];
@@ -111,7 +112,7 @@ router.post('/verify', async (req, res) => {
     let streamer;
     if (streamerRes.rows.length === 0) {
       streamerRes = await db.query(
-        'INSERT INTO Streamers (public_address) VALUES ($1) RETURNING id, public_address, obs_token',
+        'INSERT INTO Streamers (public_address) VALUES ($1) ON CONFLICT(public_address) DO UPDATE SET public_address=EXCLUDED.public_address RETURNING id, public_address, obs_token',
         [publicAddress]
       );
       streamer = streamerRes.rows[0];

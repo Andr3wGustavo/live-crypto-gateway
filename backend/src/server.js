@@ -34,9 +34,10 @@ const server = http.createServer(app);
 // Request tracking & timing middleware
 app.use((req, res, next) => {
   const startTime = Date.now();
+  const requestPath = req.path;
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    logger.info(`${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`, {
+    logger.info(`${req.method} ${requestPath} - ${res.statusCode} (${duration}ms)`, {
       ip: req.ip,
       status: res.statusCode,
       duration: `${duration}ms`
@@ -71,8 +72,15 @@ app.use(express.json({
     req.rawBody = buf;
   }
 }));
+app.use((req,res,next) => {
+  if (req.is('application/json') && req.body !== undefined && (!req.body || Array.isArray(req.body) || typeof req.body !== 'object')) {
+    return res.status(400).json({ error:'Expected a JSON object' });
+  }
+  req.body ??= {};
+  next();
+});
 
-// Global rate limiter - 100 requests per 15 minutes per IP
+// Global rate limiter - 1000 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
@@ -138,7 +146,8 @@ const webhookLimiter = rateLimit({
 });
 
 // Mount Routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use(['/api/auth/nonce','/api/auth/verify'], authLimiter);
+app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/dashboard', uploadRoutes);
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
@@ -147,8 +156,13 @@ app.use('/api/payments', require('./routes/payments'));
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
-  logger.error('Unhandled server error:', err, { path: req.path, method: req.method });
-  res.status(500).json({ error: 'Internal Server Error', message: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ error:'Malformed JSON body' });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error:'Request body too large' });
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error:'Maximum upload size is 5 MB' });
+  if (err.name === 'MulterError') return res.status(400).json({ error:'Invalid multipart upload' });
+  // RPC/provider exceptions can embed URLs, credentials and request payloads.
+  logger.error('Unhandled server error', null, { path:req.path,method:req.method });
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 

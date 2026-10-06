@@ -93,6 +93,9 @@ Não publicar segredos, arquivos `.env`, chaves, tokens de overlay ou dados priv
 | 04/10/2026 | Registro inicial da retomada | Status e componentes conferidos; testes históricos separados da revisão Matrix | `cfe2335`, push confirmado |
 | 05/10/2026 | Integração Matrix, guias e revisão do trabalho acumulado | TypeScript/lint aprovados; 6 testes de idiomas; 32 backend aprovados e 3 pulados | `881b112` |
 | 05/10/2026 | Infraestrutura, launcher e CI | 5 testes do launcher aprovados; CI inclui lint/build e PostgreSQL; execução remota ainda não verificada | `d961787` |
+| 06/10/2026 | Revisão do backend e guia de testes | 42 testes backend aprovados, 3 pulados; audit sem achados; lint/idiomas/TypeScript aprovados | Consultar o commit desta revisão |
+
+Relatório detalhado: [BACKEND_REVIEW.md](BACKEND_REVIEW.md). Passos para o responsável testar a interface, configurações, carteira e OBS: [COMO_TESTAR.md](COMO_TESTAR.md). O relatório também registra os pontos que ainda não foram resolvidos ou homologados.
 
 O responsável optou por continuar sem teste visual diante da memória disponível. Build atual, navegador e PostgreSQL permanecem pendentes, sem reutilizar os resultados visuais antigos como aprovação. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
 

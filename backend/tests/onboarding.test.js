@@ -174,3 +174,112 @@ test('cookie sessions reject foreign-origin mutations and logout revokes both co
   assert.equal((await getSession()).status,401);
   assert.equal((await fetch(`${base}/api/dashboard`, { headers: { Authorization:`Bearer ${session.token}` } })).status,401);
 });
+
+test('partial settings preserve other presets, save zero/false, clear media and isolate creators', async t => {
+  const { pubClient } = require('../src/redis');
+  const events=[];
+  t.mock.method(pubClient,'publish',async (channel,payload)=>{events.push({channel,...JSON.parse(payload)});return 0;});
+  const originalSol = (await dashboard(solSession)).alertConfig;
+  const seeded = await post('/api/dashboard/config',{goal_amount:'12.5',goal_current:'5',goal_title:'Original',active_theme:'matrix',position:'top-left',sound_preset:'cyber_chime',voice_profile:'natural_host',show_leaderboard:false,media_url:'https://example.com/alert.gif'},evmSession.token);
+  assert.equal(seeded.status,200);
+  const responses=await Promise.all([
+    post('/api/dashboard/config',{goal_current:0},evmSession.token),
+    post('/api/dashboard/config',{goal_title:'Updated'},evmSession.token)
+  ]);
+  assert.ok(responses.every(response=>response.status===200));
+  const cleared=await post('/api/dashboard/config',{media_url:null},evmSession.token);
+  const {config,realtime}=await cleared.json();
+  assert.equal(realtime,true);
+  assert.equal(config.goal_title,'Updated'); assert.equal(Number(config.goal_amount),12.5); assert.equal(Number(config.goal_current),0);
+  assert.equal(config.show_leaderboard,false); assert.equal(config.media_url,null); assert.equal(config.position,'top-left'); assert.equal(config.active_theme,'matrix');
+  assert.equal(config.sound_preset,'cyber_chime'); assert.equal(config.voice_profile,'natural_host');
+  const saved=(await dashboard(evmSession)).alertConfig;
+  assert.equal(Object.hasOwn(saved,'streamer_id'),false);
+  assert.equal((await post('/api/dashboard/config',saved,evmSession.token)).status,200,'dashboard settings can be submitted back unchanged');
+  assert.equal(saved.media_url,null); assert.equal(saved.goal_title,'Updated'); assert.equal(Number(saved.goal_current),0);
+  assert.equal(events.at(-1).theme,'matrix'); assert.equal(events.at(-1).goal_current,0); assert.equal(events.at(-1).show_leaderboard,false);
+  assert.deepEqual((await dashboard(solSession)).alertConfig,originalSol);
+  for (const body of [{show_leaderboard:'false'},{goal_amount:[1]},{goal_title:null},{media_url:'https://'},{media_url:'https://user:pass@example.com/a.png'},{unknown:true}]) {
+    assert.equal((await post('/api/dashboard/config',body,evmSession.token)).status,422);
+  }
+  assert.equal((await dashboard(evmSession)).alertConfig.goal_title,'Updated');
+});
+
+test('saved settings report a Redis publication outage without losing the database update', async t => {
+  t.mock.method(require('../src/redis').pubClient,'publish',async()=>{throw new Error('Redis unavailable');});
+  const response=await post('/api/dashboard/config',{goal_title:'Saved while offline'},evmSession.token);
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).realtime,false);
+  assert.equal((await dashboard(evmSession)).alertConfig.goal_title,'Saved while offline');
+});
+
+test('malformed, array and oversized JSON bodies return client errors instead of HTTP 500', async () => {
+  for (const [body,status] of [['{',400],['[]',400],['null',400],[JSON.stringify({value:'x'.repeat(110000)}),413]]) {
+    const response=await fetch(`${base}/api/payments/intents`,{method:'POST',headers:{'Content-Type':'application/json'},body});
+    assert.equal(response.status,status);
+  }
+});
+
+test('uploads identify content, enforce size, preserve presets and redact provider failures', async t => {
+  const previous=process.env.PINATA_JWT;
+  t.after(()=>{if(previous===undefined)delete process.env.PINATA_JWT;else process.env.PINATA_JWT=previous;});
+  const cid=`Qm${'a'.repeat(44)}`;
+  let calls=0, providerFailure=false, invalidCid=false;
+  t.mock.method(require('axios'),'post',async (_url,form,options)=>{
+    calls++;
+    assert.equal(options.timeout,15000); assert.equal(options.maxRedirects,0);
+    assert.match(form.getBuffer().toString(),/filename="alert.gif"/);
+    assert.match(form.getBuffer().toString(),/Content-Type: image\/gif/);
+    if(providerFailure)throw Object.assign(new Error('secret-provider-error'),{response:{data:'sensitive-provider-body'}});
+    return {data:{IpfsHash:invalidCid?'../invalid':cid}};
+  });
+  const gif=Buffer.from('R0lGODlhAQABAIABAP///wAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==','base64');
+  const upload=async (content=gif,type='media')=>{
+    const body=new FormData(); body.append('type',type); body.append('file',new Blob([content],{type:'image/gif'}),'untrusted.html');
+    return fetch(`${base}/api/dashboard/upload`,{method:'POST',headers:{Authorization:`Bearer ${evmSession.token}`},body});
+  };
+  delete process.env.PINATA_JWT;
+  assert.equal((await upload()).status,503);
+  process.env.PINATA_JWT='test-only-placeholder';
+  assert.equal((await upload(Buffer.from('<html>not an image</html>'))).status,415);
+  assert.equal((await upload(gif,'audio')).status,415);
+  assert.equal((await upload(Buffer.alloc(5*1024*1024+1))).status,413);
+  assert.equal(calls,0);
+  const before=(await dashboard(evmSession)).alertConfig;
+  const success=await upload(); assert.equal(success.status,200);
+  const result=await success.json(); assert.match(result.url,/\?filename=alert\.gif$/);
+  const saved=(await dashboard(evmSession)).alertConfig;
+  assert.equal(saved.media_url,result.url); assert.equal(saved.goal_title,before.goal_title); assert.equal(saved.active_theme,before.active_theme);
+  providerFailure=true;
+  const failed=await upload(); assert.equal(failed.status,502); assert.doesNotMatch(await failed.text(),/secret-provider|sensitive-provider/);
+  providerFailure=false; invalidCid=true;
+  assert.equal((await upload()).status,502);
+  assert.equal((await dashboard(evmSession)).alertConfig.media_url,result.url);
+});
+
+test('Redis outage returns 503 for auth and logout, keeps the cookie retryable, then revokes it', async t => {
+  const {pubClient}=require('../src/redis');
+  const get=t.mock.method(pubClient,'get',async()=>{throw new Error('Redis unavailable');});
+  assert.equal((await fetch(`${base}/api/dashboard`,{headers:{cookie:evmSession.cookie}})).status,503);
+  get.mock.restore();
+  const del=t.mock.method(pubClient,'del',async()=>{throw new Error('Redis unavailable');});
+  const logout=()=>fetch(`${base}/api/auth/logout`,{method:'POST',headers:{cookie:evmSession.cookie,origin:process.env.FRONTEND_URL}});
+  const failure=await logout(); assert.equal(failure.status,503); assert.equal(failure.headers.get('set-cookie'),null);
+  assert.equal((await fetch(`${base}/api/dashboard`,{headers:{cookie:evmSession.cookie}})).status,200);
+  del.mock.restore();
+  assert.equal((await logout()).status,200);
+  assert.equal((await fetch(`${base}/api/dashboard`,{headers:{cookie:evmSession.cookie}})).status,401);
+});
+
+test('simultaneous first logins with independent nonces share one creator account', async () => {
+  const wallet=Wallet.createRandom();
+  const responses=await Promise.all([1,2].map(async()=>{
+    const challenge=await fetch(`${base}/api/auth/nonce`);
+    assert.equal(challenge.status,200); assert.match(challenge.headers.get('cache-control'),/no-store/);
+    const message=new SiweMessage({domain:'localhost:3000',address:wallet.address,uri:process.env.FRONTEND_URL,version:'1',chainId:1,nonce:await challenge.text()}).prepareMessage();
+    const response=await post('/api/auth/verify',{message,signature:await wallet.signMessage(message)});
+    assert.equal(response.status,200); return response.json();
+  }));
+  assert.equal(responses[0].user.id,responses[1].user.id);
+  assert.equal((await dashboard(responses[0])).wallets.length,1);
+});

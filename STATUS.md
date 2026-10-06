@@ -1,6 +1,6 @@
 # LiveCrypto — implementation and verification status
 
-**Updated: 5 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
+**Updated: 6 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
 
 ## Current delivery
 
@@ -12,12 +12,15 @@ The backend work accumulated before this resumption includes revocable cookie se
 
 ## Evidence from this resumption
 
+The latest backend review fixes logout during Redis failure, concurrent account insertion, partial alert settings, upload/provider failure handling, exact analytics, production file logging and WebSocket backpressure. See [the review report](docs/BACKEND_REVIEW.md) and [manual test instructions](docs/COMO_TESTAR.md). The client now distinguishes a saved setting from failed live synchronization.
+
 | Check | Result | Scope |
 |---|---|---|
 | Frontend TypeScript (`--noEmit --incremental false`) | Passed | Application types; not browser interaction |
 | Targeted frontend ESLint | Passed | Product routes, animation/guide components and localization |
 | Locale/catalog tests | 6 passed | Negotiation, route handling, exact decimal display and translation parity |
-| Backend tests | 32 passed; 3 skipped | HTTP auth, sessions, verification and preview behavior; PostgreSQL tests skipped without `TEST_DATABASE_URL` |
+| Backend tests | 42 passed; 3 skipped (45 total) | HTTP, settings, uploads, exact analytics, sessions, verification, read-only production logging and WebSocket backpressure; PostgreSQL tests skipped without `TEST_DATABASE_URL` |
+| Backend production dependency audit | No vulnerabilities reported | Axios updated to 1.20.0; audit is a dependency check, not a complete security review |
 | Launcher regression tests | 5 passed | Memory diagnostics, readiness, timeout and storage-mode checks |
 | Solana cluster constants | Corrected and regression-tested | Full genesis hashes confirmed against public Devnet/mainnet `getGenesisHash` responses; no funds moved |
 | Current browser/design acceptance | Deferred | Owner chose to continue without visual testing on the constrained machine |
@@ -53,6 +56,8 @@ Before the Matrix rewrite, the Afterglow landing passed production build and hea
 ## Documentation
 
 - [Design and animation](docs/LANDING_DESIGN.md)
+- [Backend review and remaining findings](docs/BACKEND_REVIEW.md)
+- [How to test and what changed visually](docs/COMO_TESTAR.md)
 - [Resumption roadmap and publication log](docs/RETOMADA_E_ROADMAP.md)
 - [VPS/staging runbook](PRODUCTION_GLOBAL_LAUNCH.md)
 - [Business, pricing and acquisition hypotheses](PRODUCT_BUSINESS_AND_GTM_PLAN.md)

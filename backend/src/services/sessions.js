@@ -15,15 +15,28 @@ async function createSession(res, user, chain) {
   res.set('Cache-Control', 'no-store');
   return res.json({ user, ...(process.env.NODE_ENV === 'test' ? { token } : {}) });
 }
-async function authenticate(req) {
+function readSession(req) {
   const token = sessionCookie(req) || (process.env.NODE_ENV === 'test' ? req.headers.authorization?.replace(/^Bearer /,'') : null);
-  if (!token) throw new Error('Missing session');
+  if (!token) throw new jwt.JsonWebTokenError('Missing session');
   const user = jwt.verify(token, secret(), { issuer: 'livecrypto', audience: 'creator', algorithms: ['HS256'] });
-  if (!user.sid || await pubClient.get(`session:${user.sid}`) !== String(user.id)) throw new Error('Revoked session');
+  if (!user.sid || typeof user.sid !== 'string' || !Number.isSafeInteger(user.id)) throw new jwt.JsonWebTokenError('Invalid session');
+  return user;
+}
+async function authenticate(req) {
+  const user = readSession(req);
+  if (await pubClient.get(`session:${user.sid}`) !== String(user.id)) throw new jwt.JsonWebTokenError('Revoked session');
   return user;
 }
 async function revokeSession(req,res) {
-  try { const user = await authenticate(req); await pubClient.del(`session:${user.sid}`); } catch { /* Logout is idempotent. */ }
+  let user;
+  try { user = readSession(req); } catch (error) { if (!(error instanceof jwt.JsonWebTokenError)) throw error; }
+  // A valid token must be revoked server-side before reporting success. Preserve
+  // the cookie on an outage so the user can retry instead of silently losing it.
+  if (user) {
+    try { await pubClient.del(`session:${user.sid}`); }
+    catch { return res.status(503).json({ error:'Session store unavailable. Retry logout.' }); }
+  }
+  res.set('Cache-Control','no-store');
   res.clearCookie(cookieName, cookieOptions); res.json({ success: true });
 }
-module.exports = { authenticate, createSession, revokeSession, sessionCookie };
+module.exports = { authenticate, createSession, revokeSession, sessionCookie, isSessionError:error => error instanceof jwt.JsonWebTokenError };

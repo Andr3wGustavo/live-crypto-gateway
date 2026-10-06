@@ -13,7 +13,18 @@ function initWebSocket(server) {
     let streamerId, channel, inflight = null, pumping = false, messages = 0;
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
-    const send = payload => { if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < 1024 * 1024) ws.send(JSON.stringify(payload)); };
+    ws.on('error', () => ws.terminate());
+    const send = payload => {
+      if (ws.readyState !== WebSocket.OPEN) return false;
+      if (ws.bufferedAmount >= 1024 * 1024) {
+        // A silent drop would leave an event in-flight forever. Close the slow
+        // consumer so its normal reconnect replays the unacknowledged row.
+        ws.close(1013, 'Slow consumer; reconnect for replay');
+        return false;
+      }
+      ws.send(JSON.stringify(payload));
+      return true;
+    };
     async function pump() {
       if (db.isMemory || !streamerId || pumping || ws.readyState !== WebSocket.OPEN) return;
       pumping = true;
@@ -28,8 +39,8 @@ function initWebSocket(server) {
           LEFT JOIN Alert_Configs c ON c.streamer_id=o.streamer_id
           WHERE o.streamer_id=$1 AND o.acknowledged_at IS NULL ORDER BY o.event_id LIMIT 1`, [streamerId]);
         if (rows.length) {
-          const row = rows[0]; inflight = String(row.event_id);
-          send({ ...row.payload, event_id: inflight, media_url: row.media_url, audio_url: row.audio_url });
+          const row = rows[0], id = String(row.event_id);
+          if (send({ ...row.payload, event_id: id, media_url: row.media_url, audio_url: row.audio_url })) inflight = id;
         }
       } catch (error) { console.error('[OBS replay]', error.message); }
       finally { pumping = false; }
