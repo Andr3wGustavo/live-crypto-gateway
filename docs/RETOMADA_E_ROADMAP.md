@@ -36,7 +36,7 @@ Fluxo do criador: **entrar com carteira → conferir o destino → configurar ov
 | R03 | P0 | Identidade Matrix compartilhada | Integrada; validação visual/build pendentes | Landing/login/painel/checkout coerentes, responsivos e navegáveis | Revisão visual e build |
 | R04 | P0 | Animação blockchain | Implementada; validar | Movimento real, controles, scroll e comportamento reduzido verificados no navegador | Chromium; testes mobile |
 | R05 | P0 | Guia do criador | Integrado; validar interação | Login, destino, OBS e link público explicados dentro das telas | R03 |
-| R06 | P0 | Banco e migrações | Código e testes existentes | Suíte passa em PostgreSQL; instalação nova e atualização verificadas | Docker ou banco descartável |
+| R06 | P0 | Banco e migrações | Suíte PostgreSQL e runner local aprovados em 07/10; restore/upgrade de produção pendentes | Suíte passa em PostgreSQL; instalação nova e atualização verificadas | Docker ou banco descartável |
 | R07 | P0 | Dependências e isolamento | Revisão pendente | Auditoria atualizada; problemas corrigidos sem downgrade incompatível; sessões e isolamento testados | Dependências/RPCs |
 | R08 | P0 | Doação EVM em testnet | Pendente | Carteira real → router → ledger exato → alerta OBS; repetição não duplica crédito | Router, RPC e carteiras de teste |
 | R09 | P0 | Doação Solana em Devnet | Pendente | Assinatura, cluster, referência, split e finalização verificados de ponta a ponta | SDK, RPC e carteiras de teste |
@@ -94,9 +94,12 @@ Não publicar segredos, arquivos `.env`, chaves, tokens de overlay ou dados priv
 | 05/10/2026 | Integração Matrix, guias e revisão do trabalho acumulado | TypeScript/lint aprovados; 6 testes de idiomas; 32 backend aprovados e 3 pulados | `881b112` |
 | 05/10/2026 | Infraestrutura, launcher e CI | 5 testes do launcher aprovados; CI inclui lint/build e PostgreSQL; execução remota ainda não verificada | `d961787` |
 | 06/10/2026 | Revisão do backend e guia de testes | 42 testes backend aprovados, 3 pulados; audit sem achados; lint/idiomas/TypeScript aprovados | Consultar o commit desta revisão |
+| 07/10/2026 | Docker iniciado e validação persistente | PostgreSQL/Redis saudáveis; migrações conferidas; 45 testes aprovados com PostgreSQL, nenhum pulado | Consultar o commit deste registro |
+
+Na tentativa de 07/10, o `.bat --full --no-browser --check` parou antes de iniciar API/frontend: apenas 233 MB de RAM disponíveis. Os contêineres ficaram ligados; as portas 3000/8080 continuaram livres. Próxima ação operacional: liberar memória e repetir o launcher, então validar as páginas. Esta execução não colocou o site no ar.
 
 Relatório detalhado: [BACKEND_REVIEW.md](BACKEND_REVIEW.md). Passos para o responsável testar a interface, configurações, carteira e OBS: [COMO_TESTAR.md](COMO_TESTAR.md). O relatório também registra os pontos que ainda não foram resolvidos ou homologados.
 
-O responsável optou por continuar sem teste visual diante da memória disponível. Build atual, navegador e PostgreSQL permanecem pendentes, sem reutilizar os resultados visuais antigos como aprovação. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
+O responsável optou anteriormente por continuar sem teste visual diante da memória disponível. Build atual e navegador permanecem pendentes; a suíte PostgreSQL foi validada em 07/10. Os resultados visuais antigos não aprovam o design atual. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
 
 Os próximos marcos devem atualizar este histórico e `STATUS.md`, com resultados reais de teste e referência aos commits. As porcentagens discutidas anteriormente eram estimativas de planejamento, não medição de prontidão financeira.

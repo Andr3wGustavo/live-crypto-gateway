@@ -1,6 +1,6 @@
 # LiveCrypto — implementation and verification status
 
-**Updated: 6 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
+**Updated: 7 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
 
 ## Current delivery
 
@@ -19,16 +19,24 @@ The latest backend review fixes logout during Redis failure, concurrent account 
 | Frontend TypeScript (`--noEmit --incremental false`) | Passed | Application types; not browser interaction |
 | Targeted frontend ESLint | Passed | Product routes, animation/guide components and localization |
 | Locale/catalog tests | 6 passed | Negotiation, route handling, exact decimal display and translation parity |
-| Backend tests | 42 passed; 3 skipped (45 total) | HTTP, settings, uploads, exact analytics, sessions, verification, read-only production logging and WebSocket backpressure; PostgreSQL tests skipped without `TEST_DATABASE_URL` |
+| Backend tests with `TEST_DATABASE_URL` | 45 passed; 0 failed; 0 skipped | Real PostgreSQL coverage now includes onboarding, concurrent/partial settings, settlement, replay/ACK and restart-safe discovery cursors; Redis test stores and RPC/provider fixtures remain simulated |
 | Backend production dependency audit | No vulnerabilities reported | Axios updated to 1.20.0; audit is a dependency check, not a complete security review |
 | Launcher regression tests | 5 passed | Memory diagnostics, readiness, timeout and storage-mode checks |
 | Solana cluster constants | Corrected and regression-tested | Full genesis hashes confirmed against public Devnet/mainnet `getGenesisHash` responses; no funds moved |
 | Current browser/design acceptance | Deferred | Owner chose to continue without visual testing on the constrained machine |
 | Current production build | Pending | Earlier build results belong to the previous visual revision |
-| PostgreSQL integration / Docker images | Pending | Docker did not respond during the attempted inspection |
+| Local Docker / PostgreSQL / Redis | Running; both Compose services healthy | Docker Desktop started with owner authorization; migration runner completed successfully |
+| Production Docker images | Pending | Local database containers do not validate application images or VPS deployment |
+| Full `.bat` startup, 7 October | Blocked by available memory | Preflight reported 233 MB free RAM and exited before API/frontend startup; the guard was not bypassed |
 | GitHub Actions | Workflow included; result not verified here | `gh` CLI is unavailable in this environment |
 
 The Solana configuration previously contained shortened chain identifiers where the verifier required full genesis hashes. Both configured-cluster acceptance cases now pass alongside the wrong-cluster rejection test.
+
+### Local startup attempt — 7 October
+
+Docker Desktop's start command was interrupted by the harness, but a follow-up check confirmed Desktop running and engine version 29.6.2. `docker compose up -d --wait` brought PostgreSQL and Redis to healthy state. `npm run migrate` completed against the existing local database; `npm test` with `TEST_DATABASE_URL` then passed all 45 tests. Isolated test schemas were cleaned up by the tests.
+
+`start-dev.bat --full --no-browser --check` was attempted with donations disabled for the process. It stopped at the memory preflight, before starting either application server. The final check still showed about 205 MB free RAM and no listeners on 3000/8080. Database containers were left running. The application is **not currently available at localhost:3000** as a result of this attempt; free memory before retrying the launcher.
 
 ## Historical evidence
 
@@ -37,7 +45,7 @@ Before the Matrix rewrite, the Afterglow landing passed production build and hea
 ## Remaining gates
 
 1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md), production build and actual wallet-extension journey.
-2. Run the complete backend suite with PostgreSQL, clean/upgrade migrations and restart recovery. Preview tests use process-local Redis substitutes and do not validate real Redis recovery.
+2. Complete real Redis outage/recovery, production-image startup, migration upgrade scenarios and backup restoration drills. The PostgreSQL-backed suite now passes; process-local Redis substitutes in that suite do not validate real Redis recovery.
 3. Refresh dependency auditing. The previous frontend audit reported moderate transitive findings through the legacy Solana SDK; no forced downgrade has been applied.
 4. Validate EVM and Solana testnet donations end to end with the exact router, treasury, fee, RPC and real OBS source, including outage and duplicate scenarios.
 5. Build/start the production Compose stack on staging; verify DNS, TLS/WSS, health checks, migrations, rollback and externally stored backup restoration.

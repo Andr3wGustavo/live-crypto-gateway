@@ -4,7 +4,9 @@
 
 Revisão dos pontos de entrada HTTP, autenticação/sessões, configuração do criador, upload/TTS, verificação de pagamentos, reconciliação, ledger/outbox, WebSocket, armazenamento e logging. Foram corrigidos problemas reproduzíveis e adicionados testes de regressão. Esta revisão de código não substitui auditoria independente, pagamentos testnet reais, recuperação em PostgreSQL/Redis ou homologação na VPS.
 
-**Evidência da rodada:** 45 testes backend, **42 aprovados e 3 pulados** por ausência de `TEST_DATABASE_URL`; auditoria npm de dependências de produção sem vulnerabilidades reportadas após atualizar Axios para 1.20.0. Lint do produto, seis testes de idiomas e TypeScript passaram. O comando combinado atingiu timeout na primeira tentativa de TypeScript; a execução isolada posterior passou.
+**Evidência inicial da rodada:** 45 testes backend, **42 aprovados e 3 pulados** por ausência de `TEST_DATABASE_URL`; auditoria npm de dependências de produção sem vulnerabilidades reportadas após atualizar Axios para 1.20.0. Lint do produto, seis testes de idiomas e TypeScript passaram. O comando combinado atingiu timeout na primeira tentativa de TypeScript; a execução isolada posterior passou.
+
+**Atualização de 07/10:** Docker Desktop iniciado com autorização; PostgreSQL e Redis saudáveis. O runner de migrações terminou com sucesso. A suíte foi repetida com PostgreSQL real: **45 aprovados, zero falhas e zero pulados**. Isso valida também as alterações de configuração e concorrência no banco. Os testes ainda usam substitutos Redis e fixtures RPC/provedor; não houve pagamento on-chain ou teste de OBS Studio real. A inicialização do frontend foi bloqueada pelo preflight de memória do `.bat`.
 
 ## Correções
 
@@ -40,7 +42,7 @@ Revisão dos pontos de entrada HTTP, autenticação/sessões, configuração do 
 
 | Prioridade | Área | Próxima evidência/ação |
 |---|---|---|
-| P0 | PostgreSQL e Redis reais | Executar a suíte com banco, incluindo o novo upsert parcial e cadastro concorrente; ensaiar interrupção/reconexão real do Redis |
+| P0 | PostgreSQL e Redis reais | Suíte PostgreSQL aprovada em 07/10, incluindo upsert parcial e cadastro concorrente; ainda ensaiar interrupção/reconexão real do Redis e restauração |
 | P0 | Pagamentos EVM/Solana | Validar com RPC e carteira reais: receptor/remetente/memo/referência, taxa, confirmações, falha e reorganização; testes atuais usam fixtures RPC |
 | P0 | OBS durável | Repetir replay/ACK com PostgreSQL e OBS real; testar token rotacionado, instâncias concorrentes e falha entre exibição e ACK |
 | P1 | Reconciliação | Exercitar varreduras que excedam a lease de 120 s, comportamento em múltiplas instâncias, janela de sete dias e estados de falha/substituição |
