@@ -86,6 +86,14 @@ const en = {
     closing: 'YOUR NEXT MOMENT STARTS WITH YOU', closingTitle: ['Take your stream', 'further.'], beta: 'Product preview · public launch in preparation',
     footer: 'Made for creators. Built with transparency.', contact: 'Questions and availability',
   },
+  fx: {
+    intro: ['BOOTING LIVECRYPTO', 'CONNECTING THE WALLET LAYER', 'SYNCING CHAIN SIGNALS', 'READY TO GO LIVE'],
+    skip: 'Skip intro',
+    simulation: 'LIVE NETWORK SIMULATION',
+    note: 'ILLUSTRATIVE DATA · NOT LIVE CHAIN DATA',
+    block: 'BLOCK', throughput: 'TX / SEC', finality: 'FINALITY', nodes: 'NODES',
+    marquee: ['WALLET', 'CHAIN', 'OBS', 'COMMUNITY', 'NO CUSTODY'],
+  },
   demo: {
     interactive: 'INTERACTIVE PREVIEW', next: 'YOUR NEXT LEVEL.', support: 'DEMONSTRATION DONATION', message: 'This community is on another level.',
     placeholder: 'Your next donation appears here.', prompt: 'Trigger an alert to try it.', canvas: '1920 × 1080 / OBS BROWSER SOURCE', noTransfer: 'DEMO · NO TRANSACTION',
@@ -232,6 +240,14 @@ const pt: Messages = {
     closing: 'O PRÓXIMO MOMENTO COMEÇA COM VOCÊ', closingTitle: ['Leve sua live', 'mais longe.'], beta: 'Prévia do produto · lançamento público em preparação',
     footer: 'Feito para quem cria. Construído com transparência.', contact: 'Dúvidas e disponibilidade',
   },
+  fx: {
+    intro: ['INICIANDO LIVECRYPTO', 'CONECTANDO A CAMADA DE CARTEIRAS', 'SINCRONIZANDO SINAIS DA REDE', 'PRONTO PARA A LIVE'],
+    skip: 'Pular intro',
+    simulation: 'SIMULAÇÃO DE REDE AO VIVO',
+    note: 'DADOS ILUSTRATIVOS · NÃO É A REDE REAL',
+    block: 'BLOCO', throughput: 'TX / SEG', finality: 'FINALIDADE', nodes: 'NÓS',
+    marquee: ['CARTEIRA', 'REDE', 'OBS', 'COMUNIDADE', 'SEM CUSTÓDIA'],
+  },
   demo: {
     interactive: 'PRÉVIA INTERATIVA', next: 'SEU PRÓXIMO NÍVEL.', support: 'APOIO DEMONSTRATIVO', message: 'Essa comunidade é de outro nível.',
     placeholder: 'Seu próximo apoio aparece aqui.', prompt: 'Dispare um alerta para experimentar.', canvas: '1920 × 1080 / FONTE DE NAVEGADOR OBS', noTransfer: 'DEMO · SEM TRANSAÇÃO',
@@ -375,6 +391,14 @@ const es: Messages = {
     ],
     closing: 'TU PRÓXIMO MOMENTO EMPIEZA CONTIGO', closingTitle: ['Lleva tu directo', 'más lejos.'], beta: 'Vista previa del producto · lanzamiento público en preparación',
     footer: 'Hecho para creadores. Construido con transparencia.', contact: 'Preguntas y disponibilidad',
+  },
+  fx: {
+    intro: ['INICIANDO LIVECRYPTO', 'CONECTANDO LA CAPA DE CARTERAS', 'SINCRONIZANDO SEÑALES DE RED', 'LISTO PARA EL DIRECTO'],
+    skip: 'Saltar intro',
+    simulation: 'SIMULACIÓN DE RED EN VIVO',
+    note: 'DATOS ILUSTRATIVOS · NO ES LA RED REAL',
+    block: 'BLOQUE', throughput: 'TX / SEG', finality: 'FINALIDAD', nodes: 'NODOS',
+    marquee: ['CARTERA', 'RED', 'OBS', 'COMUNIDAD', 'SIN CUSTODIA'],
   },
   demo: {
     interactive: 'VISTA PREVIA INTERACTIVA', next: 'TU SIGUIENTE NIVEL.', support: 'DONACIÓN DE DEMOSTRACIÓN', message: 'Esta comunidad está a otro nivel.',

@@ -95,11 +95,14 @@ Não publicar segredos, arquivos `.env`, chaves, tokens de overlay ou dados priv
 | 05/10/2026 | Infraestrutura, launcher e CI | 5 testes do launcher aprovados; CI inclui lint/build e PostgreSQL; execução remota ainda não verificada | `d961787` |
 | 06/10/2026 | Revisão do backend e guia de testes | 42 testes backend aprovados, 3 pulados; audit sem achados; lint/idiomas/TypeScript aprovados | Consultar o commit desta revisão |
 | 07/10/2026 | Docker iniciado e validação persistente | PostgreSQL/Redis saudáveis; migrações conferidas; 45 testes aprovados com PostgreSQL, nenhum pulado | Consultar o commit deste registro |
+| 30/10/2026 | Camada cinematográfica da landing | TypeScript, lint e 6 testes de idiomas aprovados; revisão Chromium headless em 1440×900, 1024×800 e 390×844 sem overflow horizontal nem erros de console; intro, skip, reveals, tilt, spotlight e modo de movimento reduzido exercitados; build de produção aprovado (14 páginas) e spot check do bundle em 3001 | Consultar o commit desta revisão |
 
 Na tentativa de 07/10, o `.bat --full --no-browser --check` parou antes de iniciar API/frontend: apenas 233 MB de RAM disponíveis. Os contêineres ficaram ligados; as portas 3000/8080 continuaram livres. Próxima ação operacional: liberar memória e repetir o launcher, então validar as páginas. Esta execução não colocou o site no ar.
 
+Em 30/10, a máquina reportou 8 GiB instalados e cerca de 1,0–1,1 GB livres; o preflight parou em 976 MB contra o requisito de 1024 MB. O trabalho visual foi revisado com `next dev --webpack` iniciado diretamente e backend em `DEV_MEMORY_MODE=true`. Isso contorna o launcher e não conta como validação do `.bat`. O Docker Desktop estava parado, então a suíte com PostgreSQL não foi repetida.
+
 Relatório detalhado: [BACKEND_REVIEW.md](BACKEND_REVIEW.md). Passos para o responsável testar a interface, configurações, carteira e OBS: [COMO_TESTAR.md](COMO_TESTAR.md). O relatório também registra os pontos que ainda não foram resolvidos ou homologados.
 
-O responsável optou anteriormente por continuar sem teste visual diante da memória disponível. Build atual e navegador permanecem pendentes; a suíte PostgreSQL foi validada em 07/10. Os resultados visuais antigos não aprovam o design atual. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
+A camada cinematográfica passou revisão visual em Chromium headless contra o servidor de desenvolvimento em 30/10. O build de produção, a jornada real com extensão de carteira e a renderização no OBS continuam pendentes; a suíte PostgreSQL foi validada em 07/10. Os resultados visuais antigos não aprovam o design atual. Foi corrigida a comparação de genesis hash Solana usando os valores completos retornados pelos RPCs públicos, com dois testes de regressão.
 
 Os próximos marcos devem atualizar este histórico e `STATUS.md`, com resultados reais de teste e referência aos commits. As porcentagens discutidas anteriormente eram estimativas de planejamento, não medição de prontidão financeira.

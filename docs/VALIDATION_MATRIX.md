@@ -1,6 +1,6 @@
 # Matrix UI acceptance checklist
 
-Status: **pending browser execution for the October 2026 revision**. The owner authorized publication of the implementation with this limitation recorded. Static checks are not a substitute for these scenarios.
+Status: **partially executed for the October 2026 revision.** The cinematic motion layer was reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against `next dev`; the remaining scenarios, the production bundle and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
 
 ## Setup
 
@@ -17,7 +17,10 @@ Status: **pending browser execution for the October 2026 revision**. The owner a
 | Full scene: Auto → pause → replay | Animation advances, freezes, then restarts | Recording including controls |
 | Scroll mode | Native scrolling changes animation progress; wheel and touch scrolling remain native | Desktop and touch-sized viewport |
 | Range control | Mouse and keyboard can explore start, middle and end states | Keyboard check |
-| Reduced motion | No automatic video/scene playback; explicit enable starts the scene | OS preference and result |
+| Reduced motion | No automatic video/scene playback; no intro, aurora, marquee or reveal animation; explicit enable starts the motion layer | OS preference and result |
+| Cinematic intro | Four status lines animate; skip button, click, wheel, touch and Escape dismiss; returning in the same tab does not replay it | Desktop and touch-sized recording |
+| Reveal, parallax and tilt | Sections fade in as they enter; hero/network parallax stays subtle; cards tilt with the pointer without hiding text | Desktop pointer recording |
+| Simulated ticker | Numbers advance only while motion is enabled and the strip is labelled as illustrative, not live chain data | Screenshot and DOM check |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |
 | 320/390 px and short desktop | Controls/text fit; blockchain can still be played; no horizontal page overflow | Screenshots |
 | Demo alert | Themes match swatches; sound only plays after opt-in; demo never records funds | Screenshot and audio check |

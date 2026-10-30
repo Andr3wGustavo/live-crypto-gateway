@@ -1,10 +1,12 @@
 # LiveCrypto — implementation and verification status
 
-**Updated: 7 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
+**Updated: 30 October 2026.** See [the resumption roadmap](docs/RETOMADA_E_ROADMAP.md) for priorities, dependencies and publication policy.
 
 ## Current delivery
 
 The Matrix/Protocol design combines the logo's blue/cyan/green with violet accents. Shared branding and guides are integrated into landing, login, Creator Studio and checkout. The SVG blockchain scene provides automatic playback, scroll, pause/replay and manual exploration. Reduced-motion users can explicitly opt in.
+
+The landing now carries a cinematic motion layer: a skippable boot intro, an interactive canvas crypto network, cursor spotlight, scroll progress, reveal-on-scroll, parallax, pointer-driven card tilt, a simulated network ticker, a kinetic marquee and floating token markers. The canvas and ambient video pause off-screen or in a hidden tab, and reduced-motion visitors receive the static page until they explicitly enable motion. The ticker is labelled as illustrative data, never as live chain telemetry.
 
 Creator Studio now explains authentication, receiving destinations, payment availability, OBS Browser Source setup and the difference between public checkout and private overlay links. UI status uses the profile/network configuration, not an assumed successful payment or OBS connection.
 
@@ -16,27 +18,31 @@ The latest backend review fixes logout during Redis failure, concurrent account 
 
 | Check | Result | Scope |
 |---|---|---|
-| Frontend TypeScript (`--noEmit --incremental false`) | Passed | Application types; not browser interaction |
-| Targeted frontend ESLint | Passed | Product routes, animation/guide components and localization |
-| Locale/catalog tests | 6 passed | Negotiation, route handling, exact decimal display and translation parity |
-| Backend tests with `TEST_DATABASE_URL` | 45 passed; 0 failed; 0 skipped | Real PostgreSQL coverage now includes onboarding, concurrent/partial settings, settlement, replay/ACK and restart-safe discovery cursors; Redis test stores and RPC/provider fixtures remain simulated |
-| Backend production dependency audit | No vulnerabilities reported | Axios updated to 1.20.0; audit is a dependency check, not a complete security review |
-| Launcher regression tests | 5 passed | Memory diagnostics, readiness, timeout and storage-mode checks |
-| Solana cluster constants | Corrected and regression-tested | Full genesis hashes confirmed against public Devnet/mainnet `getGenesisHash` responses; no funds moved |
-| Current browser/design acceptance | Deferred | Owner chose to continue without visual testing on the constrained machine |
-| Current production build | Pending | Earlier build results belong to the previous visual revision |
-| Local Docker / PostgreSQL / Redis | Running; both Compose services healthy | Docker Desktop started with owner authorization; migration runner completed successfully |
+| Frontend TypeScript (`--noEmit --incremental false`) | Passed | Application types after the cinematic layer; not browser interaction |
+| Targeted frontend ESLint | Passed | Product routes, cinematic components, animation/guide components and localization |
+| Locale/catalog tests | 6 passed | Negotiation, route handling, exact decimal display and translation parity, including the new `fx` catalog |
+| Backend tests without PostgreSQL | 42 passed; 3 skipped; 0 failed | Default suite; PostgreSQL-only cases skip by design |
+| Backend tests with `TEST_DATABASE_URL` (7 October) | 45 passed; 0 failed; 0 skipped | Historical PostgreSQL run; Redis test stores and RPC/provider fixtures remain simulated |
+| Backend production dependency audit (6 October) | No vulnerabilities reported | Axios updated to 1.20.0; audit is a dependency check, not a complete security review |
+| Launcher regression tests (historical) | 5 passed | Memory diagnostics, readiness, timeout and storage-mode checks |
+| Solana cluster constants (historical) | Corrected and regression-tested | Full genesis hashes confirmed against public Devnet/mainnet `getGenesisHash` responses; no funds moved |
+| Cinematic landing browser review (30 October) | Passed against `next dev` | Chromium headless at 1440×900, 1024×800 and 390×844: `scrollWidth` equals viewport, no horizontal page overflow; intro reached 4/4 lines and skip/reload suppression worked; reveals progressed with scroll; tilt reported 1.25°/1.80°; spotlight and aura updated; reduced-motion run showed no animations and no intro; 0 console errors |
+| Production-bundle browser spot check (30 October) | Passed | Production build served on port 3001: hydration around 620 ms, intro rendered with four lines, 1440×900 and 390×844 heroes, reduced-motion page static, 0 console errors; not a full acceptance pass, wallet journey or OBS check |
+| Current production build (30 October) | Passed | Next.js 16.3.6 (Turbopack): compiled in 2.1 min, TypeScript in 48 s, 14 static pages generated; includes the cinematic layer |
+| Local Docker / PostgreSQL / Redis (30 October) | Stopped | Docker Desktop was not running during this session; earlier Compose services were healthy |
 | Production Docker images | Pending | Local database containers do not validate application images or VPS deployment |
-| Full `.bat` startup, 7 October | Blocked by available memory | Preflight reported 233 MB free RAM and exited before API/frontend startup; the guard was not bypassed |
+| Full `.bat` startup (30 October) | Blocked by available memory | Preflight reported 976 MB free against a 1024 MB requirement on a machine with 8 GiB installed; the guard was not bypassed |
 | GitHub Actions | Workflow included; result not verified here | `gh` CLI is unavailable in this environment |
 
 The Solana configuration previously contained shortened chain identifiers where the verifier required full genesis hashes. Both configured-cluster acceptance cases now pass alongside the wrong-cluster rejection test.
 
-### Local startup attempt — 7 October
+### Local startup attempts
 
-Docker Desktop's start command was interrupted by the harness, but a follow-up check confirmed Desktop running and engine version 29.6.2. `docker compose up -d --wait` brought PostgreSQL and Redis to healthy state. `npm run migrate` completed against the existing local database; `npm test` with `TEST_DATABASE_URL` then passed all 45 tests. Isolated test schemas were cleaned up by the tests.
+**7 October.** Docker Desktop's start command was interrupted by the harness, but a follow-up check confirmed Desktop running and engine version 29.6.2. `docker compose up -d --wait` brought PostgreSQL and Redis to healthy state. `npm run migrate` completed against the existing local database; `npm test` with `TEST_DATABASE_URL` then passed all 45 tests. Isolated test schemas were cleaned up by the tests.
 
 `start-dev.bat --full --no-browser --check` was attempted with donations disabled for the process. It stopped at the memory preflight, before starting either application server. The final check still showed about 205 MB free RAM and no listeners on 3000/8080. Database containers were left running. The application is **not currently available at localhost:3000** as a result of this attempt; free memory before retrying the launcher.
+
+**30 October.** The machine reports 8 GiB installed and 7.999 GiB visible; the earlier “4 GB usable” reading was stale. Available physical memory was about 1.0–1.1 GB, and `start-dev.bat --check` stopped at the preflight with `976 MB free` against a 1024 MB requirement. No listener was left on 3000/8080. The motion work was therefore reviewed by starting `next dev --webpack` directly and running the backend in `DEV_MEMORY_MODE=true`; this bypasses the launcher's guard and is not a launcher validation. Docker Desktop was stopped, so the PostgreSQL-backed suite was not rerun in this session.
 
 ## Historical evidence
 
@@ -44,7 +50,7 @@ Before the Matrix rewrite, the Afterglow landing passed production build and hea
 
 ## Remaining gates
 
-1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md), production build and actual wallet-extension journey.
+1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md) against the production build and complete the actual wallet-extension journey. The cinematic motion layer passed a Chromium headless review against the dev server; real MetaMask/Rabby/Phantom interaction, OBS rendering and production-build screenshots remain pending.
 2. Complete real Redis outage/recovery, production-image startup, migration upgrade scenarios and backup restoration drills. The PostgreSQL-backed suite now passes; process-local Redis substitutes in that suite do not validate real Redis recovery.
 3. Refresh dependency auditing. The previous frontend audit reported moderate transitive findings through the legacy Solana SDK; no forced downgrade has been applied.
 4. Validate EVM and Solana testnet donations end to end with the exact router, treasury, fee, RPC and real OBS source, including outage and duplicate scenarios.
