@@ -50,7 +50,7 @@ Before the Matrix rewrite, the Afterglow landing passed production build and hea
 
 ## Remaining gates
 
-1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md) against the production build and complete the actual wallet-extension journey. The cinematic motion layer passed a Chromium headless review against the dev server; real MetaMask/Rabby/Phantom interaction, OBS rendering and production-build screenshots remain pending.
+1. Run the [Matrix browser acceptance checklist](docs/VALIDATION_MATRIX.md) against the production build and complete the actual wallet-extension journey. The cinematic motion layer passed a Chromium headless review against the dev server and a production-bundle spot check; the full checklist, real MetaMask/Rabby/Phantom interaction and OBS rendering remain pending.
 2. Complete real Redis outage/recovery, production-image startup, migration upgrade scenarios and backup restoration drills. The PostgreSQL-backed suite now passes; process-local Redis substitutes in that suite do not validate real Redis recovery.
 3. Refresh dependency auditing. The previous frontend audit reported moderate transitive findings through the legacy Solana SDK; no forced downgrade has been applied.
 4. Validate EVM and Solana testnet donations end to end with the exact router, treasury, fee, RPC and real OBS source, including outage and duplicate scenarios.
