@@ -29,6 +29,9 @@ Status: **partially executed for the October–November 2026 revision.** The cin
 | Studio activity chart | Fourteen UTC buckets match confirmed ledger rows; the chart is `aria-hidden` and the ledger remains the accessible source | DOM comparison of counts |
 | Studio scroll spy | The sticky nav highlights the section at the reading line, with exactly one `aria-current` link | Scroll check |
 | Quick amounts | A chip sets the amount, updates the live fee split and is disabled during signing; keyboard focus remains visible | Screenshot and DOM check |
+| Landing motion switch | The header control reports the true state through `aria-pressed`; pausing stops every video and CSS animation, stores the choice and survives reload; resuming restarts them | DOM check plus two-frame capture |
+| Brand reels | Both loops autoplay only when visible and with motion on; the tag reads `AUTO LOOP` or `PAUSED` truthfully; posters keep the band complete with motion disabled | Screenshot and `currentTime` check |
+| Reduced-motion notice | With the OS preference set, the page stays static, the hero explains why and its enable button starts motion; no notice appears for visitors who animate | Emulated `prefers-reduced-motion` check |
 | Metric counters | Real values count up; assistive technology reads the final value once; with motion off the final value renders immediately | DOM check |
 | Checkout fee split | Creator/fee bar matches the live fee basis points and amount; the timeline is visible in idle state and advances only with real payment state | Amount change and screenshot |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |

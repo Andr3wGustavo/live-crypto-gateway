@@ -80,6 +80,20 @@ Act III is a design refinement on top of Act II, not a second motion layer. The 
 - **Login ring.** The core gains a rotating ring for preparing, signing and verifying, a static success ring, and a shake plus alert ring when an error is set. Errors still come from real wallet or API failures.
 - **Focus and buttons.** Product-wide `:focus-visible` rings and a hover/focus sheen on buttons keep keyboard and pointer feedback consistent with the landing.
 
+## Act IV — motion you can see and control
+
+The Act I–III build already animated, but the movement was easy to miss: the ambient film sat at 0.2 opacity behind heavy gradients, and the only motion switch was a floating pill in the corner. Act IV makes the layer obvious and keeps the user in control.
+
+| Piece | Role |
+|---|---|
+| Header switch (`MotionToggle`) | The landing motion switch now lives in the header, always visible, with `aria-pressed` and a live dot when motion is on. It replaces the floating corner pill. |
+| Reduced-motion notice (`MotionHint`) | When the operating system asks for reduced motion, the hero explains why the page is static and offers an enable button. The notice renders only after hydration, so animating visitors never see a flash. |
+| Brand reels | A new `01.5 / In motion` band loops the two existing brand videos (identity cube and network mesh) in framed 16:9 panels, with real posters extracted from the clips and captions labelled as illustrative footage. |
+| Reel state tag (`MotionReelTag`) | Reads `AUTO LOOP` while the clip plays and `PAUSED` when motion is off, so the label never claims motion that is not happening. |
+| Hero film | Raised from 0.2 to 0.38 opacity with a 30 s drift. The existing wash still protects text contrast on the left. |
+
+The same rules as Act II apply: the videos are `aria-hidden`, start only when they intersect the viewport, pause when the tab is hidden or motion is off, and never autoplay for a reduced-motion visitor. The reel posters are real frames of the clips, so the section stays complete with motion disabled.
+
 ## Creator journey
 
 | Screen | Guidance |
@@ -101,6 +115,8 @@ Studio guidance is derived from the authenticated profile and configured network
 | `frontend/src/components/Brand.tsx` | Shared logo/header |
 | `frontend/src/components/useMotionPreference.ts` | Shared motion preference, storage and cross-component event |
 | `frontend/src/components/LandingMotion.tsx` | Landing motion provider and video lifecycle |
+| `frontend/src/components/MotionToggle.tsx` | Header motion switch and the reduced-motion notice |
+| `frontend/src/components/MotionReelTag.tsx` | `AUTO LOOP` / `PAUSED` state label for the brand reels |
 | `frontend/src/components/SiteMotion.tsx` | Site-wide Act II controller: reveals, ambience, pointer light and toggle |
 | `frontend/src/components/AnimatedValue.tsx` | Accessible metric counter |
 | `frontend/src/components/SectionRail.tsx` | Landing chapter rail with scroll-position tracking |
@@ -119,3 +135,5 @@ Studio guidance is derived from the authenticated profile and configured network
 TypeScript, targeted product lint and six locale/catalog tests passed after Act II. A Chromium headless review of the production bundle at 1440×900, 1024×800 and 390×844 found no horizontal page overflow and no console errors. The review confirmed: hero 3D tilt (1.10°/2.25°), a persistent chapter rail that follows to `#pricing`, all login reveals after async mount, a real 98%/2% checkout split with an always-visible idle timeline, Creator Studio reveals for late-mounted panels, the 2.4 s hydration failsafe, and a fully static reduced-motion page with a working explicit opt-in. The production build passed (Next.js 16.3.6, 14 static pages). The review does not validate real wallet extensions or OBS. See [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) for the remaining acceptance pass.
 
 Act III passed the same static gates (TypeScript, targeted lint, six locale tests) and a second Chromium headless review of the production bundle. At 1440×900, the hero rendered three protocol chips and three command-deck cells with no clipped cell; the chapter list reported `--chapter-progress: 0.333` with one `aria-current="step"`; the dashboard rendered a five-placeholder skeleton before resolving, then 14 activity buckets (6 with confirmed data), a 42% goal dial and a sticky nav that moved from `#studio-setup` to `#studio-ledger`; the checkout quick amount switched the input to 0.25 and updated the fee split; the login core resolved the signing ring. At 390×844 the same screens reported no horizontal page overflow. Reduced motion stayed static and the explicit opt-in still worked. No console errors were recorded. This remains a design/interaction review, not a payment or OBS acceptance pass.
+
+Act IV was reviewed on the production bundle with motion enabled and with `prefers-reduced-motion: reduce`. With motion allowed, the header switch reported `aria-pressed="true"`, the hero film played at 0.38 opacity, both brand reels autoplayed at 1280×720 with advancing `currentTime` and showed `AUTO LOOP`, and a frame diff measured 25.4% changed pixels over 1.3 s across the reel band. Pausing stored `lc-motion-preference=off`, stopped every video and reduced running animations to zero; resuming restarted both reels. Under reduced motion the page reported zero running animations, no reel `src`, `PAUSADO` tags on the posters, and the hero notice with an enable button that started playback when clicked. The fixed chapter rail no longer overlaps the reel grid, and `scrollWidth` still equals the viewport at 1440×900 and 390×844.

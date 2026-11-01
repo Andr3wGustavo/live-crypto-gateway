@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { useI18n } from '@/i18n/Provider';
 import { useMotionPreference } from './useMotionPreference';
 
 const Motion = createContext({ enabled:false, reduced:true, toggle:() => {} });
@@ -9,7 +8,6 @@ export const useLandingMotion = () => useContext(Motion);
 
 export function LandingMotion({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
-  const { messages: { guide: g } } = useI18n();
   const { enabled, reduced, toggle } = useMotionPreference();
 
   useEffect(() => {
@@ -37,6 +35,5 @@ export function LandingMotion({ children }: { children: ReactNode }) {
 
   return <Motion.Provider value={{ enabled, reduced, toggle }}><div ref={root} className="marketing-page matrix-landing" data-motion={enabled ? 'on' : 'off'}>
     {children}
-    <button type="button" className="motion-control" aria-pressed={enabled} onClick={toggle}><span aria-hidden="true">{enabled ? 'Ⅱ' : '▷'}</span>{enabled ? g.pause : g.enable}</button>
   </div></Motion.Provider>;
 }

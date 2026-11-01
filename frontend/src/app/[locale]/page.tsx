@@ -14,6 +14,8 @@ import { LiveNetworkTicker } from '@/components/LiveNetworkTicker';
 import { CreatorGuide, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
 import { SectionRail } from '@/components/SectionRail';
 import { ScrollChapters } from '@/components/ScrollChapters';
+import { MotionHint, MotionToggle } from '@/components/MotionToggle';
+import { MotionReelTag } from '@/components/MotionReelTag';
 import { LanguageSwitcher } from '@/i18n/Provider';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, localePath } from '@/i18n/locale';
@@ -35,7 +37,11 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const { home: h, common: c, guide: g, fx } = dictionaries[locale];
   const x = h.cinema;
   const login = localePath(locale, '/login');
-  const poster = '/brand/ChatGPT Image Aug 12, 2026, 12_28_01 PM.png';
+  const poster = '/brand/reel-cube.jpg';
+  const reels = [
+    { src: '/brand/animation.mp4', poster: '/brand/reel-cube.jpg', label: h.motion.reelLabels[0], caption: h.motion.reelCaptions[0] },
+    { src: '/brand/consegue_fazer_um_video_de_um.mp4', poster: '/brand/reel-mesh.jpg', label: h.motion.reelLabels[1], caption: h.motion.reelCaptions[1] },
+  ];
   return <LandingMotion>
     <CinematicIntro />
     <CinematicFX />
@@ -44,7 +50,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     <header className="site-header cinema-header">
       <Brand href={`/${locale}`} label={`Live Crypto · ${c.home}`} />
       <nav aria-label={h.nav}><a href="#how-it-works">{h.how}</a><a href="#experience">OBS Studio</a><a href="#security">{g.securityLink}</a></nav>
-      <div className="header-actions"><LanguageSwitcher /><Link href={login} className="brand-button secondary small">{c.creator} <span aria-hidden="true">↗</span></Link></div>
+      <div className="header-actions"><MotionToggle /><LanguageSwitcher /><Link href={login} className="brand-button secondary small">{c.creator} <span aria-hidden="true">↗</span></Link></div>
     </header>
     <main id="main">
       <section className="cinema-hero" aria-labelledby="hero-title">
@@ -66,6 +72,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <p className="cinema-description">{h.description}</p>
           <ul className="hero-signals" aria-hidden="true">{fx.protocol.slice(0, 3).map((item, index) => <li key={item}><span>0{index + 1}</span>{item}</li>)}</ul>
           <div className="button-row"><Link href={login} className="brand-button primary">{h.explore}<span aria-hidden="true">↗</span></Link><a href="#experience" className="brand-button secondary"><span className="play-symbol" aria-hidden="true">▷</span>{h.watch}</a></div>
+          <MotionHint />
           <p className="cinema-caption">{h.caption}</p>
         </div>
         <div className="hero-network" data-parallax="0.035" data-tilt-strong><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><div className="hero-deck-hud" aria-hidden="true"><i className="deck-scan" />{x.nodes.map((node, index) => <b key={node}><i>0{index + 1}</i>{node}</b>)}</div><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
@@ -75,6 +82,24 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <div className="cinema-proof" data-reveal>{x.proof.map((label, i) => <span key={label}><b aria-hidden="true">{['↗', '◉', '⬡'][i]}</b>{label}</span>)}</div>
       <LiveNetworkTicker />
       <div className="kinetic-marquee" aria-hidden="true"><div>{Array.from({ length: 3 }, (_, cycle) => fx.marquee.map((word, index) => <span key={`${cycle}-${index}`}>{word}<i>↗</i></span>))}</div></div>
+
+      <section className="motion-reel section-wrap" id="in-motion" aria-labelledby="reel-title">
+        <div className="reel-heading">
+          <div data-reveal><p className="eyebrow">01.5 / {h.motion.eyebrow}</p><h2 id="reel-title">{h.motion.title[0]}<br /><span>{h.motion.title[1]}</span></h2></div>
+          <p data-reveal data-reveal-delay="90">{h.motion.intro}</p>
+        </div>
+        <div className="reel-grid" data-reveal data-reveal-delay="140">
+          {reels.map((reel, index) => <figure className="reel" key={reel.src}>
+            <div className="reel-frame">
+              <video data-ambient data-src={reel.src} poster={reel.poster} muted loop playsInline preload="none" tabIndex={-1} aria-hidden="true" />
+              <MotionReelTag label={h.motion.liveTag} />
+              <span className="reel-label">{reel.label}</span>
+              <span className="reel-index" aria-hidden="true">0{index + 1} / 02</span>
+            </div>
+            <figcaption>{reel.caption}</figcaption>
+          </figure>)}
+        </div>
+      </section>
 
       <section className="chain-sequence" id="how-it-works" aria-labelledby="chain-title">
         <div className="chain-stage section-wrap">
