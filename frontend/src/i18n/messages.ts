@@ -93,6 +93,8 @@ const en = {
     note: 'ILLUSTRATIVE DATA · NOT LIVE CHAIN DATA',
     block: 'BLOCK', throughput: 'TX / SEC', finality: 'FINALITY', nodes: 'NODES',
     marquee: ['WALLET', 'CHAIN', 'OBS', 'COMMUNITY', 'NO CUSTODY'],
+    rail: 'Page chapters',
+    protocol: ['NON-CUSTODIAL', 'WALLET-SIGNED', 'OBS-READY', 'TESTNET FIRST'],
   },
   demo: {
     interactive: 'INTERACTIVE PREVIEW', next: 'YOUR NEXT LEVEL.', support: 'DEMONSTRATION DONATION', message: 'This community is on another level.',
@@ -111,6 +113,7 @@ const en = {
     nonce: 'Preparing secure sign-in…', signing: 'Waiting for your wallet signature…', verifying: 'Verifying signature…', success: 'Signed in successfully',
     failure: 'Sign-in could not be completed. Check your wallet and try again.', noWallet: 'No compatible Solana wallet was found. Install or unlock Phantom to continue.',
     signature: 'Signing authenticates your account. It does not send a donation.',
+    steps: ['Connect', 'Sign', 'Verify', 'Studio'],
   },
   pay: {
     intentCreated: 'Payment reference created',
@@ -125,6 +128,7 @@ const en = {
     failure: 'The wallet did not complete the submission. Check the network, balance and destination, then try again.',
     unsupported: 'ERC-20/SPL, Bitcoin, Lightning, Sui, Pix and cards are on the roadmap. Only enabled networks can be used here.',
     decimalHint: 'Enter an amount without thousands separators. A dot or comma can be used for decimals.',
+    timeline: ['Reference created', 'Wallet signature', 'Network confirmation'],
   },
   dashboard: {
     savedOffline: 'Saved, but live overlay synchronization is unavailable. Retry saving or reconnect OBS when the service returns.',
@@ -247,6 +251,8 @@ const pt: Messages = {
     note: 'DADOS ILUSTRATIVOS · NÃO É A REDE REAL',
     block: 'BLOCO', throughput: 'TX / SEG', finality: 'FINALIDADE', nodes: 'NÓS',
     marquee: ['CARTEIRA', 'REDE', 'OBS', 'COMUNIDADE', 'SEM CUSTÓDIA'],
+    rail: 'Capítulos da página',
+    protocol: ['SEM CUSTÓDIA', 'ASSINADO NA CARTEIRA', 'PRONTO PARA OBS', 'TESTNET PRIMEIRO'],
   },
   demo: {
     interactive: 'PRÉVIA INTERATIVA', next: 'SEU PRÓXIMO NÍVEL.', support: 'APOIO DEMONSTRATIVO', message: 'Essa comunidade é de outro nível.',
@@ -265,6 +271,7 @@ const pt: Messages = {
     nonce: 'Preparando acesso seguro…', signing: 'Aguardando assinatura na carteira…', verifying: 'Verificando assinatura…', success: 'Acesso realizado com sucesso',
     failure: 'Não foi possível entrar. Confira sua carteira e tente novamente.', noWallet: 'Nenhuma carteira Solana compatível foi encontrada. Instale ou desbloqueie a Phantom para continuar.',
     signature: 'A assinatura autentica sua conta. Ela não envia uma doação.',
+    steps: ['Conectar', 'Assinar', 'Verificar', 'Estúdio'],
   },
   pay: {
     intentCreated: 'Referência de pagamento criada',
@@ -279,6 +286,7 @@ const pt: Messages = {
     failure: 'A carteira não concluiu o envio. Confira rede, saldo e destino e tente novamente.',
     unsupported: 'ERC-20/SPL, Bitcoin, Lightning, Sui, Pix e cartões estão no planejamento. Só redes habilitadas podem ser usadas aqui.',
     decimalHint: 'Informe o valor sem separador de milhar. Use ponto ou vírgula para decimais.',
+    timeline: ['Referência criada', 'Assinatura na carteira', 'Confirmação na rede'],
   },
   dashboard: {
     savedOffline: 'Salvo, mas a sincronização ao vivo está indisponível. Salve novamente ou reconecte o OBS quando o serviço voltar.',
@@ -399,6 +407,8 @@ const es: Messages = {
     note: 'DATOS ILUSTRATIVOS · NO ES LA RED REAL',
     block: 'BLOQUE', throughput: 'TX / SEG', finality: 'FINALIDAD', nodes: 'NODOS',
     marquee: ['CARTERA', 'RED', 'OBS', 'COMUNIDAD', 'SIN CUSTODIA'],
+    rail: 'Capítulos de la página',
+    protocol: ['SIN CUSTODIA', 'FIRMADO EN CARTERA', 'LISTO PARA OBS', 'TESTNET PRIMERO'],
   },
   demo: {
     interactive: 'VISTA PREVIA INTERACTIVA', next: 'TU SIGUIENTE NIVEL.', support: 'DONACIÓN DE DEMOSTRACIÓN', message: 'Esta comunidad está a otro nivel.',
@@ -417,6 +427,7 @@ const es: Messages = {
     nonce: 'Preparando acceso seguro…', signing: 'Esperando la firma de tu billetera…', verifying: 'Verificando firma…', success: 'Sesión iniciada correctamente',
     failure: 'No se pudo iniciar sesión. Revisa tu billetera e inténtalo de nuevo.', noWallet: 'No se encontró una billetera Solana compatible. Instala o desbloquea Phantom para continuar.',
     signature: 'La firma autentica tu cuenta. No envía una donación.',
+    steps: ['Conectar', 'Firmar', 'Verificar', 'Estudio'],
   },
   pay: {
     intentCreated: 'Referencia de pago creada',
@@ -431,6 +442,7 @@ const es: Messages = {
     failure: 'La billetera no completó el envío. Revisa red, saldo y destino e inténtalo de nuevo.',
     unsupported: 'ERC-20/SPL, Bitcoin, Lightning, Sui, Pix y tarjetas están planificados. Solo se pueden usar redes habilitadas.',
     decimalHint: 'Introduce el importe sin separadores de miles. Puedes usar punto o coma para los decimales.',
+    timeline: ['Referencia creada', 'Firma en la billetera', 'Confirmación en la red'],
   },
   dashboard: {
     savedOffline: 'Guardado, pero la sincronización en vivo no está disponible. Guarda de nuevo o reconecta OBS cuando vuelva el servicio.',

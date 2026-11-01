@@ -91,6 +91,12 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
     if (/^\d+(\.\d+)?$/.test(amount) && (amount.split('.')[1]?.length || 0) <= decimals) raw = parseUnits(amount, decimals);
   } catch { /* Invalid values cannot be submitted. */ }
   const fee = raw * BigInt(config?.feeBps || 0) / 10000n;
+  const feeShare = raw > 0n ? Math.min(100, Math.max(0, Number(fee * 10000n / raw) / 100)) : 0;
+  const paymentStep = state === 'confirmed' ? 3 : submitted?.hash ? 2 : submitted || state === 'signing' ? 1 : 0;
+  // The timeline is always visible: it explains the three real stages before
+  // the donor commits. Idle draws no progress so it never implies a payment.
+  const paymentStarted = Boolean(submitted) || state !== 'idle';
+  const timelineStep = paymentStarted ? paymentStep : -1;
   const canPay = !loading && network?.enabled && recipient && raw > 0n && !submitted && state !== 'signing';
 
   useEffect(() => {
@@ -202,7 +208,7 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
   return (
     <main className="checkout-shell">
       <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><LanguageSwitcher /></header>
-      <section className="product-panel checkout-panel" aria-labelledby="checkout-title">
+      <section className="product-panel checkout-panel" aria-labelledby="checkout-title" data-reveal data-glow>
         <p className="eyebrow">{p.creator.replace('{id}', streamer_id)}</p>
         <h1 id="checkout-title">{p.title}</h1>
         <p className="muted">{p.intro}</p>
@@ -212,18 +218,34 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
         <select id="network" className="glass-input field-control" value={networkId} disabled={!!submitted || state === 'signing'} onChange={e => setNetworkId(e.target.value)}>
           {config?.networks.map(n => <option value={n.chainId} key={n.chainId}>{n.name} · {n.currency}{!n.enabled ? ` · ${c.unavailable}` : ''}</option>)}
         </select>
+        {network && <p className={`network-badge${network.testnet ? ' is-testnet' : ''}`} aria-live="polite"><span aria-hidden="true" />{network.name} · {network.currency} · {network.testnet ? c.testnet : c.active}</p>}
         {network?.testnet && <p className="field-hint">{p.testnet}</p>}
         <label className="field-label" htmlFor="amount">{p.amount} {network?.currency}</label>
         <input id="amount" className="glass-input field-control" inputMode="decimal" value={amount} disabled={!!submitted || state === 'signing'} onChange={e => setAmount(e.target.value.replace(',', '.'))} autoComplete="off" aria-describedby="decimal-hint" />
         <p id="decimal-hint" className="field-hint">{p.decimalHint}</p>
+        <div className="fee-split" aria-hidden="true">
+          <span className="split-creator" style={{ width: `${raw > 0n ? 100 - feeShare : 0}%` }} />
+          <span className="split-fee" style={{ width: `${feeShare}%` }} />
+          <i />
+        </div>
+        <div className="fee-split-legend" aria-hidden="true">
+          <span><i />{p.receives} <b>{decimal(formatUnits(raw - fee, decimals))} {network?.currency}</b></span>
+          <span><i className="fee-dot" />{p.fee} <b>{decimal(formatUnits(fee, decimals))} {network?.currency}</b></span>
+        </div>
         <dl className="fee-breakdown">
           <div><dt>{p.fee} ({number((config?.feeBps || 0) / 100)}%)</dt><dd>{decimal(formatUnits(fee, decimals))} {network?.currency}</dd></div>
           <div><dt>{p.receives}</dt><dd>{decimal(formatUnits(raw - fee, decimals))} {network?.currency}</dd></div>
           <div><dt>{p.gas}</dt><dd>{p.gasHint}</dd></div>
         </dl>
         <p className="field-hint">{p.destination}: <bdi dir="ltr" className="break-all">{recipient || p.missingWallet}</bdi></p>
+        <ol className={`payment-timeline${paymentStarted ? '' : ' is-idle'}`} data-step={timelineStep} data-state={state} aria-label={p.pending}>
+          {p.timeline.map((step, index) => <li key={step} className={index < timelineStep ? 'is-done' : index === timelineStep ? 'is-active' : ''}>
+            <span>{String(index + 1).padStart(2, '0')}</span><b>{step}</b>
+          </li>)}
+        </ol>
         {!submitted && <button className="brand-button primary full-width" disabled={!canPay} onClick={() => void donate()}>{state === 'signing' ? p.signing : p.review}</button>}
         {submitted && <div className="notice" role="status">
+          {state === 'confirmed' && <span className="confirm-burst" aria-hidden="true" />}
           <strong>{state === 'confirmed' ? p.confirmed : submitted.hash ? p.pending : p.intentCreated}</strong>
           {state === 'confirmed' && netReceived && <p>{p.received}: {decimal(netReceived)} {submitted.network.currency}</p>}
           <p>{state === 'confirmed' ? p.queued : p.wait}</p>
@@ -236,7 +258,7 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
         {error && <p className="error-notice" role="alert">{error}</p>}
         <p className="field-hint">{p.unsupported}</p>
       </section>
-      <div className="checkout-security"><SecurityGuide /></div>
+      <div className="checkout-security" data-reveal data-reveal-delay="100"><SecurityGuide /></div>
       <p className="field-hint">{c.privateKeys}</p>
     </main>
   );

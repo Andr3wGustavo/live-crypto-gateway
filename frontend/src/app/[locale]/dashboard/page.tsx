@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Brand } from '@/components/Brand';
+import { AnimatedValue } from '@/components/AnimatedValue';
 import { CreatorGuide, ObsInstructions, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
 import { LanguageSwitcher, useI18n } from '@/i18n/Provider';
 import { localePath } from '@/i18n/locale';
@@ -47,6 +48,7 @@ export default function Dashboard() {
   const [uploadType, setUploadType] = useState<'media' | 'audio'>('media');
   const [muted, setMuted] = useState(false);
   const [origin, setOrigin] = useState('');
+  const [alertNonce, setAlertNonce] = useState(0);
 
   const request = useCallback(async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
     const headers = new Headers(options.headers);
@@ -85,12 +87,20 @@ export default function Dashboard() {
   }, [request, d.loadError]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings(previous => ({ ...previous, [key]: value }));
+
+  // The preview flashes only after the API accepted a test-alert command.
+  useEffect(() => {
+    if (!alertNonce) return;
+    const timer = window.setTimeout(() => setAlertNonce(0), 1600);
+    return () => window.clearTimeout(timer);
+  }, [alertNonce]);
   async function action(id: string, url: string, body: unknown, success: string) {
     if (busy) return;
     setBusy(id); setError(''); setNotice('');
     try {
       const result = await request<{ realtime?: boolean }>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (id === 'mute') setMuted(previous => !previous);
+      if (id === 'test') setAlertNonce(value => value + 1);
       setNotice(id === 'config' && result.realtime === false ? d.savedOffline : success);
     } catch (error) { console.error(error); setError(c.error); }
     finally { setBusy(''); }
@@ -128,33 +138,34 @@ export default function Dashboard() {
   const currentWallets = profile?.wallets.filter(wallet => profile.paymentConfig.networks.some(network => network.chainId === wallet.chain_id)) || [];
   const canReceive = currentWallets.some(wallet => profile?.paymentConfig.networks.some(network => network.chainId === wallet.chain_id && network.enabled));
   const anyNetworkEnabled = profile?.paymentConfig.networks.some(network => network.enabled);
-  const goal = Math.min(100, Math.max(0, Number(settings.goal_current) / (Number(settings.goal_amount) || 1) * 100));
+  const goalRatio = Number(settings.goal_current) / (Number(settings.goal_amount) || 1) * 100;
+  const goal = Number.isFinite(goalRatio) ? Math.min(100, Math.max(0, goalRatio)) : 0;
   const currency = (value: number | string) => number(Number(value) || 0, { style: 'currency', currency: 'USD' });
 
   return <main className="product-shell">
     <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><div className="header-actions"><LanguageSwitcher /><button className="brand-button secondary small" disabled={!!busy} onClick={() => { if (busy) return; setBusy('logout'); void request('/api/auth/logout', { method:'POST' }).then(() => { localStorage.removeItem('jwt'); router.replace(path('/login')); }).catch(() => { setError(c.error); setBusy(''); }); }}>{c.logout}</button></div></header>
-    <div className="studio-heading" id="studio-account"><div><p className="eyebrow">LIVECRYPTO / COMMAND_CENTER</p><h1>{d.title}</h1><p className="muted">{d.subtitle}</p></div>{profile && <a href={payUrl} target="_blank" rel="noreferrer" className="brand-button secondary">{d.public} ↗</a>}</div>
+    <div className="studio-heading" id="studio-account"><span className="studio-ghost" aria-hidden="true">LC</span><div><p className="eyebrow">LIVECRYPTO / COMMAND_CENTER</p><h1>{d.title}</h1><p className="muted">{d.subtitle}</p></div>{profile && <a href={payUrl} target="_blank" rel="noreferrer" className="brand-button secondary">{d.public} ↗</a>}</div>
     {error && <p className="error-notice" role="alert">{error}</p>}
     {notice && <p className="notice" role="status">{notice}</p>}
-    {loading && <p className="notice" role="status">{c.loading}</p>}
+    {loading && <p className="notice loading-notice" role="status">{c.loading}</p>}
     {!loading && !profile && <button className="brand-button secondary" onClick={() => window.location.reload()}>{c.retry}</button>}
     {profile && <>
       <nav className="studio-nav" aria-label={d.title}><a href="#studio-setup">{g.openGuide}</a><a href="#studio-wallets">{d.wallets}</a><a href="#studio-obs">OBS Studio</a><a href="#studio-ledger">{d.ledger}</a></nav>
-      <p className="notice environment-notice">{!anyNetworkEnabled ? g.environmentOff : canReceive ? g.environmentOn : g.environmentMissing}</p>
+      <p className="notice environment-notice" data-reveal><span className={`status-signal${canReceive ? '' : ' is-paused'}`} aria-hidden="true" />{!anyNetworkEnabled ? g.environmentOff : canReceive ? g.environmentOn : g.environmentMissing}</p>
       <div id="studio-setup"><CreatorGuide studio walletReady={currentWallets.length > 0} /></div>
       <section className="studio-metrics" aria-label={d.title}>
-        <article className="product-panel"><h2>{d.revenue}</h2><strong>{analytics.estimatedTotalUSD == null ? c.unavailable : currency(analytics.estimatedTotalUSD)}</strong><p className="field-hint">{d.estimate}</p></article>
-        <article className="product-panel"><h2>{d.donations}</h2><strong>{number(analytics.totalTransactions)}</strong></article>
-        <article className="product-panel"><h2>{d.goal}</h2><strong>{number(goal / 100, { style: 'percent', maximumFractionDigits: 0 })}</strong><p className="field-hint">{currency(settings.goal_current)} / {currency(settings.goal_amount)}</p></article>
+        <article className="product-panel metric-panel" data-reveal data-glow><span className="metric-index" aria-hidden="true">01 / USD</span><h2>{d.revenue}</h2><strong>{analytics.estimatedTotalUSD == null ? c.unavailable : <AnimatedValue value={Number(analytics.estimatedTotalUSD)} format={currency} />}</strong><p className="field-hint">{d.estimate}</p></article>
+        <article className="product-panel metric-panel" data-reveal data-reveal-delay="80" data-glow><span className="metric-index" aria-hidden="true">02 / LEDGER</span><h2>{d.donations}</h2><strong><AnimatedValue value={analytics.totalTransactions} format={value => number(Math.round(value))} /></strong></article>
+        <article className="product-panel metric-panel" data-reveal data-reveal-delay="160" data-glow><span className="metric-index" aria-hidden="true">03 / GOAL</span><h2>{d.goal}</h2><strong><AnimatedValue value={goal} format={value => number(value / 100, { style: 'percent', maximumFractionDigits: 0 })} /></strong><div className="goal-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(goal)} aria-label={d.goal}><span style={{ width: `${goal}%` }} /><i aria-hidden="true" /></div><p className="field-hint">{currency(settings.goal_current)} / {currency(settings.goal_amount)}</p></article>
       </section>
-      <section className="product-panel studio-share" id="studio-share"><h2>{g.publicLink}</h2><p className="field-hint">{g.setupSteps[3][2]}</p><label><span className="sr-only">{g.publicLink}</span><input className="glass-input field-control" readOnly dir="ltr" value={payUrl} /></label><div className="button-row"><button className="brand-button primary" onClick={() => void copy(payUrl)}>{c.copy}</button><a className="brand-button secondary" href={payUrl} target="_blank" rel="noreferrer">{d.public} ↗</a></div></section>
-      <section className="product-panel studio-controls" id="studio-test"><h2>{d.controls}</h2><div className="button-row">
+      <section className="product-panel studio-share" id="studio-share" data-reveal data-glow><h2>{g.publicLink}</h2><p className="field-hint">{g.setupSteps[3][2]}</p><label><span className="sr-only">{g.publicLink}</span><input className="glass-input field-control" readOnly dir="ltr" value={payUrl} /></label><div className="button-row"><button className="brand-button primary" onClick={() => void copy(payUrl)}>{c.copy}</button><a className="brand-button secondary" href={payUrl} target="_blank" rel="noreferrer">{d.public} ↗</a></div></section>
+      <section className="product-panel studio-controls" id="studio-test" data-reveal data-glow><h2>{d.controls}</h2><div className="button-row">
         <button disabled={!!busy} className="brand-button primary" onClick={() => void action('test', '/api/dashboard/test-alert', { amount: 25, currency: 'SOL', sender: 'LiveCryptoTester.sol', message: d.testMessage }, d.sent)}>{busy === 'test' ? d.sending : d.test}</button>
         <button disabled={!!busy} className="brand-button secondary" onClick={() => void action('skip', '/api/dashboard/skip-alert', {}, d.skipped)}>{d.skip}</button>
         <button disabled={!!busy} aria-pressed={muted} className="brand-button secondary" onClick={() => void action('mute', '/api/dashboard/mute-tts', {}, muted ? d.unmuted : d.muted)}>{muted ? d.muted : d.unmuted}</button>
       </div><p className="field-hint">{g.obsSteps[3]}</p></section>
       <div className="studio-grid">
-        <div className="studio-column">
+        <div className="studio-column" data-reveal data-reveal-delay="40">
           <section className="product-panel studio-panel" id="studio-obs"><h2>{d.obs}</h2><p className="muted">{d.obsIntro}</p><Field label={d.obsUrl}><input className="glass-input field-control" readOnly dir="ltr" value={obsUrl} /></Field><div className="button-row"><button className="brand-button primary" onClick={() => void copy(obsUrl)}>{d.copyObs}</button><a className="brand-button secondary" href={obsUrl} target="_blank" rel="noreferrer">{c.preview} ↗</a></div><ObsInstructions /><a className="field-hint obs-test-link" href="#studio-test">{d.test} ↑</a></section>
           <section className="product-panel studio-panel" id="studio-wallets"><h2>{d.wallets}</h2><p className="muted">{d.walletsIntro}</p>
             <ul className="wallet-list">{profile.wallets.map(wallet => <li key={wallet.chain_id}><span>{profile.paymentConfig.networks.find(network => network.chainId === wallet.chain_id)?.name || `${wallet.chain_id} · ${d.outside}`}</span><bdi dir="ltr">{wallet.public_address}</bdi><button className="brand-button secondary small" onClick={() => void copy(wallet.public_address)} aria-label={`${c.copy} ${wallet.public_address}`}>{c.copy}</button></li>)}</ul>
@@ -173,9 +184,9 @@ export default function Dashboard() {
             <p className="field-hint break-all">{d.currentMedia}: {settings.media_url || d.defaultAsset}</p><p className="field-hint break-all">{d.currentAudio}: {settings.audio_url || d.defaultAsset}</p>
           </section>
         </div>
-        <div className="studio-column">
-          <section className="product-panel studio-panel"><h2>{d.studio}</h2><p className="muted">{d.studioIntro}</p>
-            <div className={`studio-canvas position-${settings.position} visual-${settings.active_theme}`}><small>{d.demo}</small><div className="studio-sample"><strong>alex.sol <span>+25 SOL</span></strong><p>{d.sample}</p></div></div>
+        <div className="studio-column" data-reveal data-reveal-delay="90">
+          <section className="product-panel studio-panel" data-glow><h2>{d.studio}</h2><p className="muted">{d.studioIntro}</p>
+            <div className={`studio-canvas position-${settings.position} visual-${settings.active_theme}${alertNonce ? ' is-alerting' : ''}`}><small>{d.demo}</small><div className="studio-sample" key={alertNonce}><strong>alex.sol <span>+25 SOL</span></strong><p>{d.sample}</p></div></div>
             <Field label={d.position}><select className="glass-input field-control" value={settings.position} onChange={event => update('position', event.target.value as Position)}>{positions.map(position => <option key={position} value={position}>{d.positions[position]}</option>)}</select></Field>
             <div className="studio-form-grid"><Field label={d.sound}><select className="glass-input field-control" value={settings.sound_preset} onChange={event => update('sound_preset', event.target.value as SoundPresetId)}>{SOUND_PRESETS.map(preset => <option key={preset.id} value={preset.id}>{d.sounds[preset.id]}</option>)}</select></Field><button className="brand-button secondary" onClick={() => playSynthesizedSound(settings.sound_preset, 0.5)}>{d.listen} ♪</button></div>
             <div className="studio-form-grid"><Field label={d.voice}><select className="glass-input field-control" value={settings.voice_profile} onChange={event => update('voice_profile', event.target.value as VoiceProfileId)}>{VOICE_PROFILES.map(voice => <option key={voice.id} value={voice.id}>{d.voices[voice.id]}</option>)}</select></Field><button className="brand-button secondary" onClick={() => void speakWithNeuralOrFallback(d.voicePreview, settings.voice_profile, 1, locale)}>{d.listen} ▷</button></div>
@@ -188,7 +199,7 @@ export default function Dashboard() {
             <div className="studio-form-grid"><Field label={d.target}><input className="glass-input field-control" type="number" min="0" step="any" required value={settings.goal_amount} onChange={event => update('goal_amount', event.target.value)} /></Field><Field label={d.current}><input className="glass-input field-control" type="number" min="0" step="any" required value={settings.goal_current} onChange={event => update('goal_current', event.target.value)} /></Field></div>
             <button className="brand-button primary full-width" disabled={!!busy} type="submit">{busy === 'config' ? c.saving : d.save}</button>
           </form></section>
-          <section className="product-panel studio-panel" id="studio-ledger"><h2>{d.ledger}</h2>{!transactions.length ? <p className="field-hint">{c.empty}</p> : <div className="ledger-scroll"><table className="studio-ledger"><thead><tr>{[d.sender, d.amount, d.status, d.timestamp].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{transactions.map(tx => <tr key={tx.tx_hash}><td><bdi dir="ltr">{tx.sender_address}</bdi></td><td>{decimal(tx.amount)} {tx.currency}</td><td>{d.statuses[tx.status as keyof typeof d.statuses] || c.unavailable}</td><td>{date(tx.timestamp)}</td></tr>)}</tbody></table></div>}</section>
+          <section className="product-panel studio-panel" id="studio-ledger" data-glow><h2>{d.ledger}</h2>{!transactions.length ? <p className="field-hint">{c.empty}</p> : <div className="ledger-scroll"><table className="studio-ledger"><thead><tr>{[d.sender, d.amount, d.status, d.timestamp].map(label => <th key={label}>{label}</th>)}</tr></thead><tbody>{transactions.map((tx, index) => <tr key={tx.tx_hash} style={{ '--row': index } as React.CSSProperties}><td><bdi dir="ltr">{tx.sender_address}</bdi></td><td>{decimal(tx.amount)} {tx.currency}</td><td>{d.statuses[tx.status as keyof typeof d.statuses] || c.unavailable}</td><td>{date(tx.timestamp)}</td></tr>)}</tbody></table></div>}</section>
         </div>
       </div>
     </>}

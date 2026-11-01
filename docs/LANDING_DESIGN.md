@@ -1,6 +1,6 @@
 # Protocol / Matrix — shared product design
 
-Current implementation: October 2026. The cinematic motion layer passed a Chromium headless review against the dev server at 1440×900, 1024×800 and 390×844, and a production-bundle spot check on port 3001. Real wallet/OBS journeys remain pending.
+Current implementation: October 2026. The cinematic motion layer and the site-wide "Act II" motion system passed a Chromium headless review against the production bundle at 1440×900, 1024×800 and 390×844. Real wallet/OBS journeys remain pending.
 
 ## Direction
 
@@ -40,6 +40,27 @@ Reduced-motion behavior is deliberate: the intro is suppressed, canvas animation
 
 The dev-server review recorded no console errors and no horizontal page overflow. Reveal counts progressed from 0 at the hero to 2, 5, 11 and 17 as sections were visited; a continuous human scroll reveals the remaining items. Tilt, spotlight and the intro skip path were exercised programmatically.
 
+## Act II — site-wide motion system
+
+Act II extends the same visual language to the whole product instead of adding a second, independent animation layer. Motion preference is now one contract shared by the landing and the app shell.
+
+| Piece | Role |
+|---|---|
+| `useMotionPreference.ts` | Reads the OS `prefers-reduced-motion` value, stores an explicit override in `lc-motion-preference`, and broadcasts changes through a custom event so every consumer agrees. |
+| `SiteMotion.tsx` | Route curtain, ambient orbs/grid/scan/grain, scroll progress, cursor glow, pointer panel light, reveal choreography and the product motion toggle. Decorative layers are `aria-hidden`. |
+| `AnimatedValue.tsx` | Counts a real metric from its previous value to its new value. The accessible label is always the final value; with motion off it renders immediately. |
+| `SectionRail.tsx` | Landing chapter rail. Active chapter is the last section whose top passed a 40% viewport reading line, so one chapter stays active through the interlude and between sections. |
+
+### Product-surface treatment
+
+- **Reveals are data-aware.** `SiteMotion` scans with a `MutationObserver` plus a `WeakSet`, so panels that mount after an API response still animate. A 2.4 s pre-hydration failsafe (`site-motion-fallback`) reveals the page if JavaScript is slow; content is never held invisible by an animation.
+- **Creator Studio.** Real revenue, donation count and goal metrics count up, the goal meter animates from the configured amount, panels glow under the pointer, the demo canvas flashes only after the API accepted a test alert, and ledger rows stagger.
+- **Login.** A decorative wallet orbit surrounds the logo, while a four-step indicator reflects the real states: connect, sign, verify, studio. Success styling appears only after signature verification.
+- **Checkout.** The creator/platform split bar is computed from the live fee basis points and amount, the network badge distinguishes testnet, and the three-stage timeline is always visible in neutral `is-idle` state so it explains the flow before the donor signs.
+- **Landing.** The hero network tilts in 3D with the pointer, the aurora has depth, the chapter rail tracks reading position, and a protocol interlude carries the non-custodial/testnet-first message.
+
+All values shown by these animations come from real page state. The effects are additive: with motion disabled, every screen remains complete and readable.
+
 ## Creator journey
 
 | Screen | Guidance |
@@ -56,9 +77,14 @@ Studio guidance is derived from the authenticated profile and configured network
 | File | Role |
 |---|---|
 | `frontend/src/app/matrix-theme.css` | Shared identity and product layouts |
-| `frontend/src/app/[locale]/landing.css` | Landing composition, terminal scene and responsive rules |
+| `frontend/src/app/cinematic-app.css` | Act II product motion: ambience, curtain, reveals, meters, login/checkout motion and responsive rules |
+| `frontend/src/app/[locale]/landing.css` | Landing composition, terminal scene, chapter rail, interlude and responsive rules |
 | `frontend/src/components/Brand.tsx` | Shared logo/header |
-| `frontend/src/components/LandingMotion.tsx` | Motion preference, explicit toggle and video lifecycle |
+| `frontend/src/components/useMotionPreference.ts` | Shared motion preference, storage and cross-component event |
+| `frontend/src/components/LandingMotion.tsx` | Landing motion provider and video lifecycle |
+| `frontend/src/components/SiteMotion.tsx` | Site-wide Act II controller: reveals, ambience, pointer light and toggle |
+| `frontend/src/components/AnimatedValue.tsx` | Accessible metric counter |
+| `frontend/src/components/SectionRail.tsx` | Landing chapter rail with scroll-position tracking |
 | `frontend/src/components/CinematicIntro.tsx` | Skippable boot sequence |
 | `frontend/src/components/CryptoField.tsx` | Interactive canvas crypto network |
 | `frontend/src/components/CinematicFX.tsx` | Scroll progress, spotlight, reveal, parallax and tilt |
@@ -69,4 +95,4 @@ Studio guidance is derived from the authenticated profile and configured network
 
 ## Current evidence
 
-TypeScript, targeted product lint and six locale/catalog tests passed after the cinematic layer was added. A Chromium headless review at 1440×900, 1024×800 and 390×844 found no horizontal page overflow, no console errors, a working intro skip and once-per-session suppression, progressive reveals, pointer spotlight, tilt and a fully static reduced-motion page. The production build passed (Next.js 16.3.6, 14 static pages) and a spot check of that bundle on port 3001 rendered the intro, desktop/mobile heroes and the reduced-motion page with no console errors. The review does not validate real wallet extensions or OBS. See [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) for the remaining acceptance pass.
+TypeScript, targeted product lint and six locale/catalog tests passed after Act II. A Chromium headless review of the production bundle at 1440×900, 1024×800 and 390×844 found no horizontal page overflow and no console errors. The review confirmed: hero 3D tilt (1.10°/2.25°), a persistent chapter rail that follows to `#pricing`, all login reveals after async mount, a real 98%/2% checkout split with an always-visible idle timeline, Creator Studio reveals for late-mounted panels, the 2.4 s hydration failsafe, and a fully static reduced-motion page with a working explicit opt-in. The production build passed (Next.js 16.3.6, 14 static pages). The review does not validate real wallet extensions or OBS. See [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md) for the remaining acceptance pass.

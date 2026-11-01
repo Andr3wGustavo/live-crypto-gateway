@@ -1,6 +1,6 @@
 # Matrix UI acceptance checklist
 
-Status: **partially executed for the October 2026 revision.** The cinematic motion layer was reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against `next dev`; the remaining scenarios, the production bundle and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
+Status: **partially executed for the October 2026 revision.** The cinematic landing layer and the site-wide Act II motion system were reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
 
 ## Setup
 
@@ -21,6 +21,11 @@ Status: **partially executed for the October 2026 revision.** The cinematic moti
 | Cinematic intro | Four status lines animate; skip button, click, wheel, touch and Escape dismiss; returning in the same tab does not replay it | Desktop and touch-sized recording |
 | Reveal, parallax and tilt | Sections fade in as they enter; hero/network parallax stays subtle; cards tilt with the pointer without hiding text | Desktop pointer recording |
 | Simulated ticker | Numbers advance only while motion is enabled and the strip is labelled as illustrative, not live chain data | Screenshot and DOM check |
+| Chapter rail | The rail stays visible on desktop, follows scroll and always keeps one chapter active, including the interlude; hidden below 1100 px | Screenshots at two scroll positions |
+| Site motion toggle | Toggling in the landing or product shell updates `lc-motion-preference`, persists across reload and is shared by both surfaces | DOM/storage check |
+| Async reveals | Metrics and panels mounted after the API response still reveal; the 2.4 s failsafe shows the page if hydration is slow | DOM opacity and screenshot |
+| Metric counters | Real values count up; assistive technology reads the final value once; with motion off the final value renders immediately | DOM check |
+| Checkout fee split | Creator/fee bar matches the live fee basis points and amount; the timeline is visible in idle state and advances only with real payment state | Amount change and screenshot |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |
 | 320/390 px and short desktop | Controls/text fit; blockchain can still be played; no horizontal page overflow | Screenshots |
 | Demo alert | Themes match swatches; sound only plays after opt-in; demo never records funds | Screenshot and audio check |

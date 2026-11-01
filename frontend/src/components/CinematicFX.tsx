@@ -61,12 +61,23 @@ export function CinematicFX() {
         const rect = hero.getBoundingClientRect();
         hero.style.setProperty('--pointer-x', `${(event.clientX - rect.left).toFixed(0)}px`);
         hero.style.setProperty('--pointer-y', `${(event.clientY - rect.top).toFixed(0)}px`);
+        hero.style.setProperty('--pointer-dx', (event.clientX / window.innerWidth - 0.5).toFixed(3));
+        hero.style.setProperty('--pointer-dy', (event.clientY / window.innerHeight - 0.5).toFixed(3));
       }
 
       if (aura) {
         aura.style.setProperty('--x', `${event.clientX}px`);
         aura.style.setProperty('--y', `${event.clientY}px`);
         aura.classList.add('is-active');
+      }
+
+      const strong = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-tilt-strong]');
+      if (strong) {
+        const rect = strong.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        strong.style.setProperty('--strong-x', `${(-y * 5.5).toFixed(2)}deg`);
+        strong.style.setProperty('--strong-y', `${(x * 7.5).toFixed(2)}deg`);
       }
 
       const tiltTarget = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-tilt]');
@@ -79,14 +90,24 @@ export function CinematicFX() {
     };
 
     const onTiltOut = (event: PointerEvent) => {
-      const tiltTarget = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-tilt]');
+      const target = event.target as HTMLElement | null;
+      const strong = target?.closest<HTMLElement>('[data-tilt-strong]');
+      if (strong && !(event.relatedTarget instanceof Node && strong.contains(event.relatedTarget))) {
+        strong.style.setProperty('--strong-x', '0deg');
+        strong.style.setProperty('--strong-y', '0deg');
+      }
+      const tiltTarget = target?.closest<HTMLElement>('[data-tilt]');
       if (!tiltTarget) return;
       if (event.relatedTarget instanceof Node && tiltTarget.contains(event.relatedTarget)) return;
       tiltTarget.style.setProperty('--tilt-x', '0deg');
       tiltTarget.style.setProperty('--tilt-y', '0deg');
     };
 
-    const onLeave = () => aura?.classList.remove('is-active');
+    const onLeave = () => {
+      aura?.classList.remove('is-active');
+      hero?.style.setProperty('--pointer-dx', '0');
+      hero?.style.setProperty('--pointer-dy', '0');
+    };
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);

@@ -12,6 +12,7 @@ import { CinematicIntro } from '@/components/CinematicIntro';
 import { CryptoField } from '@/components/CryptoField';
 import { LiveNetworkTicker } from '@/components/LiveNetworkTicker';
 import { CreatorGuide, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
+import { SectionRail } from '@/components/SectionRail';
 import { LanguageSwitcher } from '@/i18n/Provider';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, localePath } from '@/i18n/locale';
@@ -38,6 +39,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     <CinematicIntro />
     <CinematicFX />
     <a href="#main" className="skip-link">{h.skip}</a>
+    <SectionRail label={fx.rail} />
     <header className="site-header cinema-header">
       <Brand href={`/${locale}`} label={`Live Crypto · ${c.home}`} />
       <nav aria-label={h.nav}><a href="#how-it-works">{h.how}</a><a href="#experience">OBS Studio</a><a href="#security">{g.securityLink}</a></nav>
@@ -64,7 +66,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <div className="button-row"><Link href={login} className="brand-button primary">{h.explore}<span aria-hidden="true">↗</span></Link><a href="#experience" className="brand-button secondary"><span className="play-symbol" aria-hidden="true">▷</span>{h.watch}</a></div>
           <p className="cinema-caption">{h.caption}</p>
         </div>
-        <div className="hero-network" data-parallax="0.035"><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
+        <div className="hero-network" data-parallax="0.035" data-tilt-strong><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
         <div className="cinema-hero-bottom"><span>01 — {x.stage}</span><a href="#how-it-works">{h.discover} <span aria-hidden="true">↓</span></a></div>
       </section>
 
@@ -82,6 +84,18 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           </div>
           <div className="chain-visual" data-reveal data-reveal-delay="120"><BlockchainScene /></div>
         </div>
+      </section>
+
+      <section className="signal-interlude" aria-labelledby="interlude-title">
+        <div className="interlude-orbit" aria-hidden="true" data-parallax="0.1"><i /><i /><i /><span>LC</span></div>
+        <div className="interlude-copy" data-reveal>
+          <p className="eyebrow">02.5 / {h.flowEyebrow}</p>
+          <h2 id="interlude-title">{h.flow[0]}<br /><span>{h.flow[1]}</span></h2>
+          <p className="section-copy">{h.flowIntro}</p>
+        </div>
+        <ul className="interlude-protocol" data-reveal data-reveal-delay="140">
+          {fx.protocol.map((item, index) => <li key={item}><span>0{index + 1}</span>{item}</li>)}
+        </ul>
       </section>
 
       <div className="section-wrap setup-section" data-reveal><CreatorGuide /></div>

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "../globals.css";
 import "../matrix-theme.css";
+import "../cinematic-app.css";
 import { BackgroundLayer } from "@/components/BackgroundLayer";
+import { SiteMotion } from "@/components/SiteMotion";
 import { notFound } from 'next/navigation';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, locales } from '@/i18n/locale';
@@ -61,8 +63,10 @@ export default async function RootLayout({
       className={`${terminal.variable} ${spaceGrotesk.variable} h-full antialiased dark`}
     >
       <body className="matrix-theme min-h-full font-sans relative overflow-x-hidden">
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var p=localStorage.getItem('lc-motion-preference');var on=p==='on'||(p!=='off'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);var path=location.pathname.replace(/^\\/(en|pt-BR|es)(\\/|$)/,'$2');if(!path)path='/';var app=path!=='/'&&path.indexOf('/overlay')!==0;var r=document.documentElement;r.dataset.siteMotion=on?'on':'off';if(on&&app){r.classList.add('site-motion-ready');window.__lcRevealTimer=setTimeout(function(){r.classList.add('site-motion-fallback');},2400);}}catch(e){document.documentElement.dataset.siteMotion='off';}})();" }} />
         <I18nProvider locale={locale} messages={dictionaries[locale]}>
         <BackgroundLayer />
+        <SiteMotion />
 
         {/* Dynamic App Content */}
         <div className="relative z-10 min-h-full flex flex-col">

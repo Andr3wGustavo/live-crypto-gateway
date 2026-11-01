@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useWalletPicker } from '@/components/Web3Provider';
 import { SiweMessage } from 'siwe';
@@ -76,11 +77,29 @@ export default function LoginPage() {
   }
 
   const label = status === 'idle' ? tab === 'solana' ? l.signSol : isConnected ? l.signEvm : l.connect : l[status];
+  const activeStep = status === 'idle' ? 0 : status === 'nonce' || status === 'signing' ? 1 : status === 'verifying' ? 2 : 3;
   return <main className="checkout-shell">
     <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><LanguageSwitcher /></header>
     <div className="login-grid">
-    <div><LoginInstructions /><SecurityGuide /></div>
-    <section className="product-panel checkout-panel" aria-labelledby="login-title">
+    <div>
+      <div className="login-visual-wrap" data-reveal>
+        <div className="auth-visual" aria-hidden="true">
+          <div className="auth-rings"><i /><i /><i /></div>
+          <div className="auth-core"><Image src="/brand/logo-png.png" alt="" width={124} height={124} unoptimized /></div>
+          <span className="auth-node auth-node-1">Ξ</span>
+          <span className="auth-node auth-node-2">◎</span>
+          <span className="auth-node auth-node-3">✳</span>
+          <span className="auth-scan" />
+        </div>
+        <ol className="auth-steps" aria-label={l.title}>
+          {l.steps.map((step, index) => <li key={step} className={index < activeStep ? 'is-done' : index === activeStep ? 'is-active' : ''}>
+            <span>{String(index + 1).padStart(2, '0')}</span>{step}
+          </li>)}
+        </ol>
+      </div>
+      <div data-reveal data-reveal-delay="80"><LoginInstructions /><SecurityGuide /></div>
+    </div>
+    <section className={`product-panel checkout-panel login-panel is-${status}`} aria-labelledby="login-title" data-reveal data-reveal-delay="120" data-glow>
       <p className="eyebrow">{c.creator}</p><h1 id="login-title">{l.title}</h1><p className="muted">{l.intro}</p>
       <div className="button-row" aria-label={l.connect}>
         {(['evm', 'solana'] as const).map(value => <button key={value} className={`brand-button ${tab === value ? 'primary' : 'secondary'}`} aria-pressed={tab === value} disabled={busy} onClick={() => { setTab(value); setError(''); }}>{value === 'evm' ? 'EVM' : 'Solana'}</button>)}

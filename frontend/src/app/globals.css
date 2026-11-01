@@ -393,7 +393,9 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  html:not([data-site-motion="on"]) *,
+  html:not([data-site-motion="on"]) *::before,
+  html:not([data-site-motion="on"]) *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
 /* Shared global product shell; text can grow without fixed-height controls. */

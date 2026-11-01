@@ -1,25 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useI18n } from '@/i18n/Provider';
+import { useMotionPreference } from './useMotionPreference';
 
-const query = '(prefers-reduced-motion: reduce)';
-const subscribe = (notify: () => void) => {
-  const media = window.matchMedia(query);
-  media.addEventListener('change', notify);
-  return () => media.removeEventListener('change', notify);
-};
-const snapshot = () => window.matchMedia(query).matches;
 const Motion = createContext({ enabled:false, reduced:true, toggle:() => {} });
 export const useLandingMotion = () => useContext(Motion);
 
 export function LandingMotion({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
-  const reduced = useSyncExternalStore(subscribe, snapshot, () => true);
-  const [override, setOverride] = useState<boolean | null>(null);
   const { messages: { guide: g } } = useI18n();
-  const enabled = override ?? !reduced;
-  const toggle = () => setOverride(!enabled);
+  const { enabled, reduced, toggle } = useMotionPreference();
 
   useEffect(() => {
     const videos = Array.from(root.current?.querySelectorAll<HTMLVideoElement>('video[data-ambient]') || []);
