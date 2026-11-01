@@ -259,3 +259,108 @@
   .interlude-orbit i:nth-child(3) { width:240px; height:240px; }
 }
 
+/* ===== Act III · command deck hero, chapter spine and status chips ===== */
+
+.hero-signals { display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 4px; padding:0; list-style:none; }
+.hero-signals li {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 11px;
+  border:1px solid #7fe7cf2e;
+  background:#08181f99;
+  color:#adcdd5;
+  font:.52rem var(--font-mono);
+  letter-spacing:.09em;
+  transition:border-color .25s, color .25s, background .25s;
+}
+.hero-signals li:hover { border-color:#50efac66; background:#0a2027; color:#d9fff2; }
+.hero-signals li span { color:#af90f4; font-size:.46rem; letter-spacing:.16em; }
+
+.hero-deck-hud {
+  position:relative;
+  display:flex;
+  gap:1px;
+  margin-top:10px;
+  overflow:hidden;
+  border:1px solid #7fe7cf26;
+  background:#06111a;
+}
+.hero-deck-hud b {
+  position:relative;
+  z-index:2;
+  flex:1;
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  min-width:0;
+  padding:10px 12px;
+  background:#081720;
+  color:#b9d9e0;
+  font:.55rem var(--font-mono);
+  font-weight:400;
+  letter-spacing:.09em;
+}
+.hero-deck-hud b i { flex:none; color:#af90f4; font-size:.46rem; font-style:normal; letter-spacing:.16em; }
+.hero-deck-hud .deck-scan {
+  position:absolute;
+  inset:0 0 0 auto;
+  z-index:1;
+  width:38%;
+  pointer-events:none;
+  background:linear-gradient(90deg, transparent, #50efac22);
+  animation:deck-scan 4.6s ease-in-out infinite;
+}
+@keyframes deck-scan {
+  0% { transform:translateX(130%); }
+  100% { transform:translateX(-360%); }
+}
+
+.chain-chapters { position:relative; padding-left:20px; --chapter-progress:.333; }
+.chain-chapters::before,
+.chain-chapters::after { content:''; position:absolute; left:0; width:1px; pointer-events:none; }
+.chain-chapters::before { top:0; bottom:0; background:#7fe7cf1f; }
+.chain-chapters::after {
+  top:0;
+  height:calc(var(--chapter-progress) * 100%);
+  background:linear-gradient(#50efac, #5fd3ff 55%, #af90f4);
+  box-shadow:0 0 10px #50efac77;
+  transition:height .5s var(--ease-out);
+}
+.chain-chapters li { position:relative; opacity:.5; transition:opacity .45s ease, border-color .45s ease; }
+.chain-chapters li::before {
+  content:'';
+  position:absolute;
+  left:-22px;
+  top:24px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#7fe7cf44;
+  transition:background .3s, box-shadow .3s, transform .3s;
+}
+.chain-chapters li.is-current { opacity:1; }
+.chain-chapters li.is-current::before { background:#50efac; box-shadow:0 0 12px #50efac; transform:scale(1.2); }
+.chain-chapters li.is-current .chapter-number { color:#50efac; text-shadow:0 0 16px #50efac55; }
+.chain-chapters li.is-current h3 { color:#eafff8; }
+.chain-chapters li.is-current p { color:#b9d3dd; }
+
+.matrix-landing[data-motion="off"] .hero-deck-hud .deck-scan { animation:none; }
+
+@media (max-width:800px) {
+  .hero-signals { margin-top:18px; }
+  .hero-signals li { font-size:.49rem; padding:6px 9px; }
+  .hero-deck-hud b { padding:9px 10px; font-size:.5rem; }
+}
+@media (max-width:560px) {
+  .hero-signals { gap:6px; }
+  .hero-signals li { font-size:.46rem; padding:5px 8px; gap:6px; }
+  .hero-deck-hud b { padding:8px; font-size:.46rem; gap:5px; }
+  .chain-chapters { padding-left:16px; }
+  .chain-chapters li::before { left:-18px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .hero-signals li,
+  .chain-chapters::after,
+  .chain-chapters li,
+  .chain-chapters li::before { transition:none; }
+}
+

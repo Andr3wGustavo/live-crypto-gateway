@@ -223,6 +223,9 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
         <label className="field-label" htmlFor="amount">{p.amount} {network?.currency}</label>
         <input id="amount" className="glass-input field-control" inputMode="decimal" value={amount} disabled={!!submitted || state === 'signing'} onChange={e => setAmount(e.target.value.replace(',', '.'))} autoComplete="off" aria-describedby="decimal-hint" />
         <p id="decimal-hint" className="field-hint">{p.decimalHint}</p>
+        <div className="amount-presets" role="group" aria-label={p.presets}>
+          {['0.01', '0.05', '0.1', '0.25'].map(value => <button key={value} type="button" className={amount === value ? 'is-active' : undefined} aria-pressed={amount === value} disabled={!!submitted || state === 'signing'} onClick={() => setAmount(value)}>{value} <span>{network?.currency}</span></button>)}
+        </div>
         <div className="fee-split" aria-hidden="true">
           <span className="split-creator" style={{ width: `${raw > 0n ? 100 - feeShare : 0}%` }} />
           <span className="split-fee" style={{ width: `${feeShare}%` }} />

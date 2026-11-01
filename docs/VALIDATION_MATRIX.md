@@ -1,6 +1,6 @@
 # Matrix UI acceptance checklist
 
-Status: **partially executed for the October 2026 revision.** The cinematic landing layer and the site-wide Act II motion system were reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
+Status: **partially executed for the October–November 2026 revision.** The cinematic landing layer, the site-wide Act II motion system and the Act III design pass were reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
 
 ## Setup
 
@@ -24,6 +24,11 @@ Status: **partially executed for the October 2026 revision.** The cinematic land
 | Chapter rail | The rail stays visible on desktop, follows scroll and always keeps one chapter active, including the interlude; hidden below 1100 px | Screenshots at two scroll positions |
 | Site motion toggle | Toggling in the landing or product shell updates `lc-motion-preference`, persists across reload and is shared by both surfaces | DOM/storage check |
 | Async reveals | Metrics and panels mounted after the API response still reveal; the 2.4 s failsafe shows the page if hydration is slow | DOM opacity and screenshot |
+| Chapter spine | Exactly one how-it-works chapter is current at a time, carries `aria-current="step"`, and the spine height follows the reading position | DOM check at two scroll positions |
+| Studio loading skeleton | Placeholders expose `aria-busy` and are replaced by real values; no placeholder number is announced as data | Throttled-network screenshot and DOM check |
+| Studio activity chart | Fourteen UTC buckets match confirmed ledger rows; the chart is `aria-hidden` and the ledger remains the accessible source | DOM comparison of counts |
+| Studio scroll spy | The sticky nav highlights the section at the reading line, with exactly one `aria-current` link | Scroll check |
+| Quick amounts | A chip sets the amount, updates the live fee split and is disabled during signing; keyboard focus remains visible | Screenshot and DOM check |
 | Metric counters | Real values count up; assistive technology reads the final value once; with motion off the final value renders immediately | DOM check |
 | Checkout fee split | Creator/fee bar matches the live fee basis points and amount; the timeline is visible in idle state and advances only with real payment state | Amount change and screenshot |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |

@@ -83,7 +83,7 @@ export default function LoginPage() {
     <div className="login-grid">
     <div>
       <div className="login-visual-wrap" data-reveal>
-        <div className="auth-visual" aria-hidden="true">
+        <div className="auth-visual" aria-hidden="true" data-state={error ? 'error' : status}>
           <div className="auth-rings"><i /><i /><i /></div>
           <div className="auth-core"><Image src="/brand/logo-png.png" alt="" width={124} height={124} unoptimized /></div>
           <span className="auth-node auth-node-1">Ξ</span>
@@ -99,7 +99,7 @@ export default function LoginPage() {
       </div>
       <div data-reveal data-reveal-delay="80"><LoginInstructions /><SecurityGuide /></div>
     </div>
-    <section className={`product-panel checkout-panel login-panel is-${status}`} aria-labelledby="login-title" data-reveal data-reveal-delay="120" data-glow>
+    <section className={`product-panel checkout-panel login-panel is-${status}${error ? ' has-error' : ''}`} aria-labelledby="login-title" data-reveal data-reveal-delay="120" data-glow>
       <p className="eyebrow">{c.creator}</p><h1 id="login-title">{l.title}</h1><p className="muted">{l.intro}</p>
       <div className="button-row" aria-label={l.connect}>
         {(['evm', 'solana'] as const).map(value => <button key={value} className={`brand-button ${tab === value ? 'primary' : 'secondary'}`} aria-pressed={tab === value} disabled={busy} onClick={() => { setTab(value); setError(''); }}>{value === 'evm' ? 'EVM' : 'Solana'}</button>)}

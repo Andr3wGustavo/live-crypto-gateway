@@ -13,6 +13,7 @@ import { CryptoField } from '@/components/CryptoField';
 import { LiveNetworkTicker } from '@/components/LiveNetworkTicker';
 import { CreatorGuide, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
 import { SectionRail } from '@/components/SectionRail';
+import { ScrollChapters } from '@/components/ScrollChapters';
 import { LanguageSwitcher } from '@/i18n/Provider';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, localePath } from '@/i18n/locale';
@@ -63,10 +64,11 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <p className="eyebrow"><span className="live-dot" />{h.eyebrow}</p>
           <h1 id="hero-title">{h.hero.map((line, index) => <span key={line} className={`hero-line${index === 2 ? ' hero-gradient' : ''}`} style={{ '--i': index } as CSSProperties}>{line}</span>)}</h1>
           <p className="cinema-description">{h.description}</p>
+          <ul className="hero-signals" aria-hidden="true">{fx.protocol.slice(0, 3).map((item, index) => <li key={item}><span>0{index + 1}</span>{item}</li>)}</ul>
           <div className="button-row"><Link href={login} className="brand-button primary">{h.explore}<span aria-hidden="true">↗</span></Link><a href="#experience" className="brand-button secondary"><span className="play-symbol" aria-hidden="true">▷</span>{h.watch}</a></div>
           <p className="cinema-caption">{h.caption}</p>
         </div>
-        <div className="hero-network" data-parallax="0.035" data-tilt-strong><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
+        <div className="hero-network" data-parallax="0.035" data-tilt-strong><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><div className="hero-deck-hud" aria-hidden="true"><i className="deck-scan" />{x.nodes.map((node, index) => <b key={node}><i>0{index + 1}</i>{node}</b>)}</div><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
         <div className="cinema-hero-bottom"><span>01 — {x.stage}</span><a href="#how-it-works">{h.discover} <span aria-hidden="true">↓</span></a></div>
       </section>
 
@@ -80,7 +82,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
             <p className="eyebrow">02 / {h.flowEyebrow}</p>
             <h2 id="chain-title">{g.chainTitle}</h2>
             <p className="section-copy">{g.chainIntro}</p>
-            <ol className="chain-chapters">{x.stages.map(([title, body], i) => <li key={title} data-chapter={i}><span className="chapter-number">0{i + 1}</span><div><h3>{title}</h3><p>{body}</p></div></li>)}</ol>
+            <ScrollChapters chapters={x.stages} />
           </div>
           <div className="chain-visual" data-reveal data-reveal-delay="120"><BlockchainScene /></div>
         </div>

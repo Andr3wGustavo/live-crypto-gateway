@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Brand } from '@/components/Brand';
 import { AnimatedValue } from '@/components/AnimatedValue';
+import { ActivityChart } from '@/components/ActivityChart';
 import { CreatorGuide, ObsInstructions, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
 import { LanguageSwitcher, useI18n } from '@/i18n/Provider';
 import { localePath } from '@/i18n/locale';
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const [muted, setMuted] = useState(false);
   const [origin, setOrigin] = useState('');
   const [alertNonce, setAlertNonce] = useState(0);
+  const [activeSection, setActiveSection] = useState('studio-setup');
 
   const request = useCallback(async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
     const headers = new Headers(options.headers);
@@ -94,6 +96,33 @@ export default function Dashboard() {
     const timer = window.setTimeout(() => setAlertNonce(0), 1600);
     return () => window.clearTimeout(timer);
   }, [alertNonce]);
+
+  // Scroll spy for the studio nav. The 40% reading line keeps the highlighted
+  // section stable on tall panels, and state only changes when the section does.
+  useEffect(() => {
+    if (!profile) return;
+    const ids = ['studio-setup', 'studio-wallets', 'studio-obs', 'studio-ledger'];
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const line = window.innerHeight * 0.4;
+      let current = ids[0];
+      for (const id of ids) {
+        const element = document.getElementById(id);
+        if (element && element.getBoundingClientRect().top <= line) current = id;
+      }
+      setActiveSection(previous => previous === current ? previous : current);
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, [profile]);
   async function action(id: string, url: string, body: unknown, success: string) {
     if (busy) return;
     setBusy(id); setError(''); setNotice('');
@@ -147,16 +176,32 @@ export default function Dashboard() {
     <div className="studio-heading" id="studio-account"><span className="studio-ghost" aria-hidden="true">LC</span><div><p className="eyebrow">LIVECRYPTO / COMMAND_CENTER</p><h1>{d.title}</h1><p className="muted">{d.subtitle}</p></div>{profile && <a href={payUrl} target="_blank" rel="noreferrer" className="brand-button secondary">{d.public} ↗</a>}</div>
     {error && <p className="error-notice" role="alert">{error}</p>}
     {notice && <p className="notice" role="status">{notice}</p>}
-    {loading && <p className="notice loading-notice" role="status">{c.loading}</p>}
+    {loading && <div className="studio-skeleton" role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{c.loading}</span>
+      <div className="skeleton-bar skeleton-bar-lg" aria-hidden="true" />
+      <div className="skeleton-metrics" aria-hidden="true">{Array.from({ length: 3 }, (_, index) => <span key={index} />)}</div>
+      <div className="skeleton-panels" aria-hidden="true"><span /><span /></div>
+    </div>}
     {!loading && !profile && <button className="brand-button secondary" onClick={() => window.location.reload()}>{c.retry}</button>}
     {profile && <>
-      <nav className="studio-nav" aria-label={d.title}><a href="#studio-setup">{g.openGuide}</a><a href="#studio-wallets">{d.wallets}</a><a href="#studio-obs">OBS Studio</a><a href="#studio-ledger">{d.ledger}</a></nav>
+      <nav className="studio-nav" aria-label={d.title}>{([
+        ['studio-setup', g.openGuide], ['studio-wallets', d.wallets], ['studio-obs', 'OBS Studio'], ['studio-ledger', d.ledger],
+      ] as const).map(([id, label]) => <a key={id} href={`#${id}`} className={activeSection === id ? 'is-active' : undefined} aria-current={activeSection === id ? 'true' : undefined}>{label}</a>)}</nav>
       <p className="notice environment-notice" data-reveal><span className={`status-signal${canReceive ? '' : ' is-paused'}`} aria-hidden="true" />{!anyNetworkEnabled ? g.environmentOff : canReceive ? g.environmentOn : g.environmentMissing}</p>
       <div id="studio-setup"><CreatorGuide studio walletReady={currentWallets.length > 0} /></div>
       <section className="studio-metrics" aria-label={d.title}>
         <article className="product-panel metric-panel" data-reveal data-glow><span className="metric-index" aria-hidden="true">01 / USD</span><h2>{d.revenue}</h2><strong>{analytics.estimatedTotalUSD == null ? c.unavailable : <AnimatedValue value={Number(analytics.estimatedTotalUSD)} format={currency} />}</strong><p className="field-hint">{d.estimate}</p></article>
         <article className="product-panel metric-panel" data-reveal data-reveal-delay="80" data-glow><span className="metric-index" aria-hidden="true">02 / LEDGER</span><h2>{d.donations}</h2><strong><AnimatedValue value={analytics.totalTransactions} format={value => number(Math.round(value))} /></strong></article>
-        <article className="product-panel metric-panel" data-reveal data-reveal-delay="160" data-glow><span className="metric-index" aria-hidden="true">03 / GOAL</span><h2>{d.goal}</h2><strong><AnimatedValue value={goal} format={value => number(value / 100, { style: 'percent', maximumFractionDigits: 0 })} /></strong><div className="goal-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(goal)} aria-label={d.goal}><span style={{ width: `${goal}%` }} /><i aria-hidden="true" /></div><p className="field-hint">{currency(settings.goal_current)} / {currency(settings.goal_amount)}</p></article>
+        <article className="product-panel metric-panel metric-goal" data-reveal data-reveal-delay="160" data-glow><span className="metric-index" aria-hidden="true">03 / GOAL</span><h2>{d.goal}</h2>
+          <div className="goal-readout">
+            <strong><AnimatedValue value={goal} format={value => number(value / 100, { style: 'percent', maximumFractionDigits: 0 })} /></strong>
+            <div className="goal-dial" aria-hidden="true" style={{ '--goal': goal } as React.CSSProperties}><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" /><circle cx="60" cy="60" r="52" /></svg><i>{Math.round(goal)}<small>%</small></i></div>
+          </div>
+          <div className="goal-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(goal)} aria-label={d.goal}><span style={{ width: `${goal}%` }} /><i aria-hidden="true" /></div><p className="field-hint">{currency(settings.goal_current)} / {currency(settings.goal_amount)}</p></article>
+      </section>
+      <section className="product-panel studio-activity" data-reveal data-glow>
+        <div className="activity-head"><div><p className="eyebrow">{d.activityWindow}</p><h2>{d.activity}</h2><p className="field-hint">{d.activityHint}</p></div><p className="activity-total"><small>{d.donations}</small><strong><AnimatedValue value={analytics.totalTransactions} format={value => number(Math.round(value))} /></strong></p></div>
+        <ActivityChart items={transactions} />
       </section>
       <section className="product-panel studio-share" id="studio-share" data-reveal data-glow><h2>{g.publicLink}</h2><p className="field-hint">{g.setupSteps[3][2]}</p><label><span className="sr-only">{g.publicLink}</span><input className="glass-input field-control" readOnly dir="ltr" value={payUrl} /></label><div className="button-row"><button className="brand-button primary" onClick={() => void copy(payUrl)}>{c.copy}</button><a className="brand-button secondary" href={payUrl} target="_blank" rel="noreferrer">{d.public} ↗</a></div></section>
       <section className="product-panel studio-controls" id="studio-test" data-reveal data-glow><h2>{d.controls}</h2><div className="button-row">
