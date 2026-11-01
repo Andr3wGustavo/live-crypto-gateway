@@ -33,7 +33,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     return () => { disposed = true; observer.disconnect(); document.removeEventListener('visibilitychange', visibility); videos.forEach(video => video.pause()); };
   }, [enabled]);
 
-  return <Motion.Provider value={{ enabled, reduced, toggle }}><div ref={root} className="marketing-page matrix-landing" data-motion={enabled ? 'on' : 'off'}>
+  return <Motion.Provider value={{ enabled, reduced, toggle }}><div ref={root} className="marketing-page matrix-landing gaming" data-motion={enabled ? 'on' : 'off'}>
     {children}
   </div></Motion.Provider>;
 }

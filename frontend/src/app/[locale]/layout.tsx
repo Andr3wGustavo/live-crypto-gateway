@@ -3,6 +3,7 @@ import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "../globals.css";
 import "../matrix-theme.css";
 import "../cinematic-app.css";
+import "../gaming-system.css";
 import { BackgroundLayer } from "@/components/BackgroundLayer";
 import { SiteMotion } from "@/components/SiteMotion";
 import { notFound } from 'next/navigation';

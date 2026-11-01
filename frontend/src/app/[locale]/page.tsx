@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
@@ -9,7 +8,6 @@ import { BlockchainScene } from '@/components/BlockchainScene';
 import { Brand } from '@/components/Brand';
 import { CinematicFX } from '@/components/CinematicFX';
 import { CinematicIntro } from '@/components/CinematicIntro';
-import { CryptoField } from '@/components/CryptoField';
 import { LiveNetworkTicker } from '@/components/LiveNetworkTicker';
 import { CreatorGuide, ReceivingGuide, SecurityGuide } from '@/components/CreatorGuide';
 import { SectionRail } from '@/components/SectionRail';
@@ -20,6 +18,7 @@ import { LanguageSwitcher } from '@/i18n/Provider';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, localePath } from '@/i18n/locale';
 import './landing.css';
+import './landing-gaming.css';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -54,18 +53,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     </header>
     <main id="main">
       <section className="cinema-hero" aria-labelledby="hero-title">
-        <div className="cinema-film" aria-hidden="true">
-          <video data-ambient data-src="/brand/animation.mp4" muted loop playsInline preload="none" poster={poster} tabIndex={-1} />
-          <div className="film-wash" />
-        </div>
         <div className="cinema-grid" aria-hidden="true" />
         <div className="hero-aurora" aria-hidden="true"><i /><i /><i /></div>
-        <CryptoField />
-        <div className="hero-scanlines" aria-hidden="true" />
-        <div className="matrix-rain" aria-hidden="true">{Array.from({length:16},(_,i)=><span key={i} style={{'--column':i} as CSSProperties}>01 LC 101 ↗ 0xF2 001 01 110 LC 010 01 101</span>)}</div>
-        <div className="token-floaters" aria-hidden="true">
-          {['Ξ','◎','⬡','◈'].map((symbol, index) => <span key={symbol} style={{ '--i': index } as CSSProperties}>{symbol}<small>{['EVM','SOL','BASE','P2P'][index]}</small></span>)}
-        </div>
         <div className="cinema-hero-copy">
           <p className="eyebrow"><span className="live-dot" />{h.eyebrow}</p>
           <h1 id="hero-title">{h.hero.map((line, index) => <span key={line} className={`hero-line${index === 2 ? ' hero-gradient' : ''}`} style={{ '--i': index } as CSSProperties}>{line}</span>)}</h1>
@@ -75,7 +64,28 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <MotionHint />
           <p className="cinema-caption">{h.caption}</p>
         </div>
-        <div className="hero-network" data-parallax="0.035" data-tilt-strong><div className="network-emblem"><Image src="/brand/logo-png.png" alt="" width={200} height={200} unoptimized /><span>{x.signal}<small>WALLET · CHAIN · OBS</small></span></div><BlockchainScene compact /><div className="hero-deck-hud" aria-hidden="true"><i className="deck-scan" />{x.nodes.map((node, index) => <b key={node}><i>0{index + 1}</i>{node}</b>)}</div><a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a></div>
+        <div className="hero-network" data-parallax="0.02">
+          <div className="stream-card">
+            <div className="stream-bar">
+              <span className="stream-live"><i aria-hidden="true" />{h.stream.label}</span>
+              <span className="stream-sim">{h.stream.sim}</span>
+            </div>
+            <div className="stream-screen">
+              <video data-ambient data-src="/brand/animation.mp4" muted loop playsInline preload="none" poster={poster} tabIndex={-1} aria-hidden="true" />
+              <div className="stream-overlay" aria-hidden="true">
+                <span className="stream-brand"><span className="stream-mark">◆</span>LIVECRYPTO</span>
+                <span className="stream-loop">16:9 · LOOP / 10S</span>
+              </div>
+            </div>
+            <div className="stream-alert" aria-hidden="true">
+              <span className="stream-alert-icon">Ξ</span>
+              <div><small>{h.stream.alert}</small><b>0.042 ETH <em>≈ $128.40</em></b></div>
+              <span className="stream-alert-state">{h.stream.state}</span>
+            </div>
+            <div className="hero-deck-hud" aria-hidden="true"><i className="deck-scan" />{x.nodes.map((node, index) => <b key={node}><i>0{index + 1}</i>{node}</b>)}</div>
+          </div>
+          <a href="#how-it-works" className="console-link">{g.timeline} <span aria-hidden="true">↓</span></a>
+        </div>
         <div className="cinema-hero-bottom"><span>01 — {x.stage}</span><a href="#how-it-works">{h.discover} <span aria-hidden="true">↓</span></a></div>
       </section>
 

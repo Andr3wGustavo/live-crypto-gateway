@@ -70,6 +70,10 @@ const en = {
       liveTag: 'AUTO LOOP', pausedTag: 'PAUSED', reelLabels: ['CUBE / IDENTITY', 'MESH / NETWORK'],
       reelCaptions: ['Brand loop · 10 s, silent and looping', 'Network loop · 10 s, silent and looping'],
     },
+    stream: {
+      label: 'VISUAL PREVIEW', sim: 'SIMULATED · NOT LIVE DATA',
+      alert: 'DONATION ALERT', state: 'CONFIRMED',
+    },
     pricingEyebrow: 'A MODEL THAT GROWS WITH YOU', pricing: ['More of the support', 'stays with the creator.'],
     pricingIntro: 'Our initial proposal: 2% per routed donation. Platform fees and network fees are shown separately.',
     benefits: ['Split within the payment flow', 'Net amount visible before signing', 'Pro features planned for a later phase'],
@@ -236,6 +240,10 @@ const pt: Messages = {
       liveTag: 'LOOP AUTOMÁTICO', pausedTag: 'PAUSADO', reelLabels: ['CUBO / IDENTIDADE', 'MALHA / REDE'],
       reelCaptions: ['Loop da marca · 10 s, sem som e em repetição', 'Loop da rede · 10 s, sem som e em repetição'],
     },
+    stream: {
+      label: 'PRÉVIA VISUAL', sim: 'SIMULADO · NÃO É DADO REAL',
+      alert: 'ALERTA DE DOAÇÃO', state: 'CONFIRMADO',
+    },
     pricingEyebrow: 'UM MODELO QUE CRESCE COM VOCÊ', pricing: ['Mais do apoio', 'fica com quem cria.'],
     pricingIntro: 'Nossa proposta inicial: 2% por doação roteada. Taxa da plataforma e taxa de rede apresentadas separadamente.',
     benefits: ['Divisão no próprio fluxo de pagamento', 'Valor líquido visível antes da assinatura', 'Recursos Pro planejados para uma próxima fase'],
@@ -399,6 +407,10 @@ const es: Messages = {
       intro: 'Dos bucles cortos del kit de marca de LiveCrypto: el cubo de identidad y la malla de la red. Son imágenes ilustrativas, no telemetría en vivo de la blockchain.',
       liveTag: 'BUCLE AUTOMÁTICO', pausedTag: 'EN PAUSA', reelLabels: ['CUBO / IDENTIDAD', 'MALLA / RED'],
       reelCaptions: ['Bucle de marca · 10 s, sin sonido y en repetición', 'Bucle de red · 10 s, sin sonido y en repetición'],
+    },
+    stream: {
+      label: 'VISTA PREVIA', sim: 'SIMULADO · NO ES DATO REAL',
+      alert: 'ALERTA DE DONACIÓN', state: 'CONFIRMADO',
     },
     pricingEyebrow: 'UN MODELO QUE CRECE CONTIGO', pricing: ['Más del apoyo', 'se queda con quien crea.'],
     pricingIntro: 'Nuestra propuesta inicial: 2% por donación enrutada. Comisión de plataforma y comisión de red por separado.',

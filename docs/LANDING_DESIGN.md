@@ -1,12 +1,14 @@
 # Protocol / Matrix — shared product design
 
-Current implementation: November 2026. The cinematic layer, the site-wide "Act II" motion system and the "Act III" design pass were reviewed in Chromium headless at 1440×900, 1024×800 and 390×844 against the production bundle. Real wallet/OBS journeys remain pending.
+Current implementation: November 2026. The "Act V" gaming/hybrid redesign is the current visual layer; the earlier cinematic, "Act II", "Act III" and "Act IV" passes remain documented below because their motion contracts are still in use. Reviews were run in Chromium headless at 1440×900 and 390×844 against the production bundle. Real wallet/OBS journeys remain pending.
 
 ## Direction
 
-- Logo-inspired deep blue, cyan and green, with **violet secondary surfaces**, retained at the owner's request.
+- **Act V — gaming vibrant, hybrid surface.** Marketing pages use a light `#f7f3ff` surface with saturated violet; product screens (login, Creator Studio, checkout, overlay) stay on a dark `#07040f` surface. The logo palette governs both: violet `#6d3bff`, cyan `#00c2ff`, green `#00e57d`, pink `#ff2e93`.
+- Logo-inspired blue, cyan and green, with **violet secondary surfaces**, retained at the owner's request. Green and cyan are used for surfaces, borders and dark-mode text only; on white they never carry body copy, so contrast stays readable.
+- Pill controls, 16 px panels, hard offset shadows and a thin animated gradient line under the header carry the Twitch/Kick energy without turning the product into a neon dashboard.
 - Retro terminal details, geometric panels, a readable Space Grotesk body/display and JetBrains Mono controls. Fonts are self-hosted by Next.js after build.
-- Shared `Brand` and `matrix-theme.css` across landing, login, Creator Studio and checkout.
+- Shared `Brand`, `matrix-theme.css` and `gaming-system.css` across landing, login, Creator Studio and checkout.
 - Supplied brand image/video assets from `public/brand` remain in use. OBS transparency is still controlled separately.
 - Cinematic pacing and scroll-based storytelling are design references; movement explains the product rather than representing live financial activity.
 
@@ -94,6 +96,30 @@ The Act I–III build already animated, but the movement was easy to miss: the a
 
 The same rules as Act II apply: the videos are `aria-hidden`, start only when they intersect the viewport, pause when the tab is hidden or motion is off, and never autoplay for a reduced-motion visitor. The reel posters are real frames of the clips, so the section stays complete with motion disabled.
 
+## Act V — gaming vibrant, hybrid surface
+
+The owner rejected the previous dark-only direction and asked for a **gaming vibrant (Twitch/Kick) look, a hybrid theme, and the logo palette preserved**. Act V keeps the content, the i18n catalog and the motion contract from the earlier passes and replaces the visual layer.
+
+| Piece | Role |
+|---|---|
+| `frontend/src/app/gaming-system.css` | Global hybrid tokens and the shared product refresh: tokens, pill buttons, inputs, notices, panels, Creator Studio metrics/canvas/nav and `.site-motion-control`. Imported after `cinematic-app.css` so it wins on equal specificity. |
+| `frontend/src/app/[locale]/landing-gaming.css` | The whole landing treatment, scoped to `.matrix-landing.gaming`. Imported right after `landing.css`, so it layers over the old direction instead of deleting it and the change stays reversible. |
+| `LandingMotion.tsx` | Adds the `gaming` class to the landing root. Every new rule is scoped under `.matrix-landing.gaming`. |
+| Stream card | The hero's right column is now a dark 16:9 "stream card": `PREVIEW` / simulated labels, the brand loop, a `LIVE` chip, a simulated donation alert and the wallet → blockchain → OBS deck strip. It replaces the ambient film, canvas, code rain, scanlines and token floaters, which were removed from the hero markup. |
+| `home.stream` i18n keys | New EN/PT-BR/ES copy for the stream labels, so the preview is labelled as simulated in every language. |
+
+### Layout rules
+
+- **Light landing, dark product.** The landing runs on `#f7f3ff` with violet headlines, white cards and hard offset shadows. Login, Creator Studio, checkout and the overlay keep `body.matrix-theme` on `#07040f`, so the two surfaces read as the same brand without being the same theme.
+- **Attention anchors stay dark.** The stream card, the protocol interlude, the OBS band, the pricing band and the footer are deliberately dark inserts inside the light page. That contrast is what makes the gaming direction read, and it keeps the product screens on brand.
+- **No green or cyan text on white.** Body copy on light surfaces is ink `#12082b` or ink-soft `#4a3f6b`; violet `#6d3bff` is the only light-surface accent used for text. Cyan and green appear there as borders, icons and fills where contrast is not a reading problem.
+- **Fixed header.** The landing header is `position: fixed` with a solid `#f7f3ff` surface and a soft drop shadow, so scrolling content never ghosts through it. It carries a 2 px animated gradient line, which stops under `prefers-reduced-motion`.
+- **Mobile follows the same rules.** At 560 px the hero buttons stack full width, the stream card keeps its 16:9 ratio and the proof strip wraps; `scrollWidth` equals the viewport at 390×844.
+
+### Motion
+
+The Act II–IV contract is unchanged: the same `lc-motion-preference` key, the same header switch, the same reduced-motion notice and the same video lifecycle. Only the tokenised surface changed. With motion off the hero shows the real poster frame, the stream card reports `PAUSED`, no video receives a `src`, and running animations drop to zero; the in-hero enable button restores playback.
+
 ## Creator journey
 
 | Screen | Guidance |
@@ -110,8 +136,10 @@ Studio guidance is derived from the authenticated profile and configured network
 | File | Role |
 |---|---|
 | `frontend/src/app/matrix-theme.css` | Shared identity and product layouts |
+| `frontend/src/app/gaming-system.css` | Act V global tokens and product component refresh (buttons, inputs, panels, studio, motion control) |
 | `frontend/src/app/cinematic-app.css` | Act II/III product motion: ambience, curtain, reveals, meters, skeletons, activity chart, goal dial, login/checkout motion and responsive rules |
 | `frontend/src/app/[locale]/landing.css` | Landing composition, terminal scene, command deck, chapter spine, interlude and responsive rules |
+| `frontend/src/app/[locale]/landing-gaming.css` | Act V landing layer: light gaming surface, stream card, bands, cards, footer and responsive rules |
 | `frontend/src/components/Brand.tsx` | Shared logo/header |
 | `frontend/src/components/useMotionPreference.ts` | Shared motion preference, storage and cross-component event |
 | `frontend/src/components/LandingMotion.tsx` | Landing motion provider and video lifecycle |
@@ -137,3 +165,5 @@ TypeScript, targeted product lint and six locale/catalog tests passed after Act 
 Act III passed the same static gates (TypeScript, targeted lint, six locale tests) and a second Chromium headless review of the production bundle. At 1440×900, the hero rendered three protocol chips and three command-deck cells with no clipped cell; the chapter list reported `--chapter-progress: 0.333` with one `aria-current="step"`; the dashboard rendered a five-placeholder skeleton before resolving, then 14 activity buckets (6 with confirmed data), a 42% goal dial and a sticky nav that moved from `#studio-setup` to `#studio-ledger`; the checkout quick amount switched the input to 0.25 and updated the fee split; the login core resolved the signing ring. At 390×844 the same screens reported no horizontal page overflow. Reduced motion stayed static and the explicit opt-in still worked. No console errors were recorded. This remains a design/interaction review, not a payment or OBS acceptance pass.
 
 Act IV was reviewed on the production bundle with motion enabled and with `prefers-reduced-motion: reduce`. With motion allowed, the header switch reported `aria-pressed="true"`, the hero film played at 0.38 opacity, both brand reels autoplayed at 1280×720 with advancing `currentTime` and showed `AUTO LOOP`, and a frame diff measured 25.4% changed pixels over 1.3 s across the reel band. Pausing stored `lc-motion-preference=off`, stopped every video and reduced running animations to zero; resuming restarted both reels. Under reduced motion the page reported zero running animations, no reel `src`, `PAUSADO` tags on the posters, and the hero notice with an enable button that started playback when clicked. The fixed chapter rail no longer overlaps the reel grid, and `scrollWidth` still equals the viewport at 1440×900 and 390×844.
+
+Act V passed the same static gates: `tsc --noEmit`, `lint:product`, six locale/catalog tests and the production build (Next.js 16.3.6, 14 pages). Two Chromium headless passes against the production bundle confirmed the redesign at 1440×900 and 390×844. At 1440×900 the header resolved to `position: fixed` at top 0 with an 85 px height, the landing background measured `rgb(247,243,255)`, the hero `h1` measured ink `rgb(18,8,43)` at 80.64 px, the stream card measured 591×494 with its video playing at 1280×720, the ticker band measured `rgb(10,6,24)` and the marquee resolved to the violet gradient. `scrollWidth` equalled the viewport in every section, and no console errors were recorded. At 390×844 the hero buttons stacked to 351 px each, the stream card kept its ratio and no band overflowed. Under reduced motion the page reported `motion=off`, zero running animations, no stream `src` and the real `reel-cube.jpg` poster, and the in-hero notice enabled playback when clicked. The login screen was re-checked after the global layer: dark `rgb(7,4,15)` body, green→cyan primary gradient and 999 px pill radius, with no overflow. This is a visual and interaction review, not a payment, wallet or OBS acceptance pass. See [VALIDATION_MATRIX.md](VALIDATION_MATRIX.md).

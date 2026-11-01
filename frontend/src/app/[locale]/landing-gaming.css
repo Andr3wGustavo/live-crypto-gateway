@@ -1,0 +1,1058 @@
+/* ============================================================
+   Gaming landing layer — light marketing surface with saturated
+   violet, cyan and green energy. Dark inserts are deliberate: the
+   stream card, product screens and the closing band stay dark.
+
+   Scoped to .matrix-landing.gaming. Imported immediately after
+   landing.css, so these rules layer over the previous direction
+   without deleting it (easy to revert).
+   ============================================================ */
+
+.matrix-landing.gaming {
+  --ink: #12082b;
+  --ink-2: #4a3f6b;
+  --paper: #f7f3ff;
+  --paper-2: #efe8ff;
+  --violet: #6d3bff;
+  --violet-deep: #4a1fd6;
+  --cyan: #00b8f5;
+  --green: #00b368;
+  --pink: #ff2e93;
+  --line: rgba(18, 8, 43, .12);
+  --text-muted: #4a3f6b;
+  --foreground: #12082b;
+
+  position: relative;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(ellipse 70% 50% at 90% -6%, rgba(109, 59, 255, .16), transparent 62%),
+    radial-gradient(ellipse 55% 45% at 4% 6%, rgba(0, 194, 255, .14), transparent 60%),
+    var(--paper);
+}
+
+.matrix-landing.gaming .section-wrap h2 {
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: -.055em;
+}
+
+.matrix-landing.gaming .section-wrap h2 > span:not(.muted) { color: var(--violet); }
+.matrix-landing.gaming .section-copy { color: var(--ink-2); }
+.matrix-landing.gaming .muted { color: var(--ink-2); }
+
+/* Eyebrows read as a small technical stamp on light paper. */
+.matrix-landing.gaming .eyebrow {
+  color: var(--violet-deep);
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+/* ---------- Header ---------- */
+
+.matrix-landing.gaming .cinema-header {
+  position: fixed;
+  inset: 0 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 11px clamp(18px, 4vw, 56px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  z-index: 60;
+  border-bottom: 1px solid rgba(18, 8, 43, .1);
+  background: #f7f3ff;
+  box-shadow: 0 10px 24px rgba(18, 8, 43, .04);
+}
+
+.matrix-landing.gaming .cinema-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--violet), var(--cyan), var(--green), var(--pink), var(--violet));
+  background-size: 200% 100%;
+  opacity: .9;
+  animation: gaming-line 9s linear infinite;
+}
+
+@keyframes gaming-line { to { background-position: 200% 0; } }
+
+.matrix-landing.gaming .lc-brand > span:last-child { color: var(--ink); }
+.matrix-landing.gaming .lc-brand > span:last-child > span { color: var(--violet); }
+.matrix-landing.gaming .lc-brand small { color: var(--ink-2); }
+
+.matrix-landing.gaming .cinema-header nav {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  gap: 24px;
+  color: var(--ink-2);
+}
+
+.matrix-landing.gaming .cinema-header nav a {
+  position: relative;
+  padding-block: 6px;
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: .05em;
+  transition: color .2s;
+}
+
+.matrix-landing.gaming .cinema-header nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--violet);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform .25s var(--ease-out);
+}
+
+.matrix-landing.gaming .cinema-header nav a:hover,
+.matrix-landing.gaming .cinema-header nav a:focus-visible { color: var(--violet-deep); }
+
+.matrix-landing.gaming .cinema-header nav a:hover::after,
+.matrix-landing.gaming .cinema-header nav a:focus-visible::after { transform: scaleX(1); }
+
+/* ---------- Shared controls ---------- */
+
+.matrix-landing.gaming .brand-button {
+  min-height: 54px;
+  padding: 15px 26px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-weight: 700;
+  letter-spacing: 0;
+  transition: transform .18s var(--ease-out), box-shadow .18s, background .18s, border-color .18s, color .18s;
+}
+
+.matrix-landing.gaming .brand-button.primary {
+  color: #fff;
+  background: linear-gradient(120deg, #6d3bff, #8a4bff 55%, #5a27ff);
+  border-color: #5a27ff;
+  box-shadow: 0 5px 0 #3a1bb0, 0 16px 32px rgba(90, 39, 255, .26);
+}
+
+.matrix-landing.gaming .brand-button.primary:hover:not(:disabled) {
+  background: linear-gradient(120deg, #7d4dff, #9a5dff 55%, #6a37ff);
+  box-shadow: 0 7px 0 #3a1bb0, 0 20px 40px rgba(90, 39, 255, .32);
+  transform: translateY(-2px);
+}
+
+.matrix-landing.gaming .brand-button.secondary {
+  color: var(--ink);
+  background: #fff;
+  border: 1.5px solid rgba(18, 8, 43, .18);
+  box-shadow: 0 5px 0 rgba(18, 8, 43, .1);
+}
+
+.matrix-landing.gaming .brand-button.secondary:hover:not(:disabled) {
+  color: var(--violet-deep);
+  border-color: rgba(109, 59, 255, .5);
+  background: #fff;
+  box-shadow: 0 7px 0 rgba(109, 59, 255, .16);
+  transform: translateY(-2px);
+}
+
+.matrix-landing.gaming .brand-button.small {
+  min-height: 42px;
+  padding: 10px 17px;
+  font-size: .68rem;
+}
+
+.matrix-landing.gaming .brand-button.small.primary { box-shadow: 0 3px 0 #3a1bb0; }
+.matrix-landing.gaming .brand-button.small.secondary { box-shadow: 0 3px 0 rgba(18, 8, 43, .1); }
+
+.matrix-landing.gaming .language-switcher select {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1.5px solid rgba(18, 8, 43, .14);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 2px 0 rgba(18, 8, 43, .07);
+  font-family: var(--font-mono);
+  font-size: .64rem;
+}
+
+.matrix-landing.gaming .motion-toggle {
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(18, 8, 43, .14);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 2px 0 rgba(18, 8, 43, .07);
+}
+
+.matrix-landing.gaming .motion-toggle:hover {
+  border-color: rgba(109, 59, 255, .45);
+  background: #fff;
+  color: var(--violet-deep);
+}
+
+.matrix-landing.gaming .motion-toggle span { color: var(--violet); }
+.matrix-landing.gaming .motion-toggle span.is-live { color: #009e5c; text-shadow: none; }
+
+.matrix-landing.gaming .motion-hint {
+  border: 1.5px solid rgba(109, 59, 255, .24);
+  border-left: 4px solid var(--violet);
+  border-radius: 12px;
+  background: rgba(109, 59, 255, .08);
+  color: var(--ink);
+}
+
+/* ---------- Hero ---------- */
+
+.matrix-landing.gaming .cinema-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(700px, 86svh, 940px);
+  max-width: 1560px;
+  margin-inline: auto;
+  padding: clamp(122px, 12vw, 172px) clamp(20px, 5vw, 72px) clamp(52px, 7vw, 96px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+  align-items: center;
+  gap: clamp(30px, 4.5vw, 72px);
+}
+
+/* The old full-bleed film, code rain and canvas belong to the previous
+   direction; the motion now lives inside the stream card. */
+.matrix-landing.gaming .cinema-film,
+.matrix-landing.gaming .matrix-rain,
+.matrix-landing.gaming .hero-scanlines,
+.matrix-landing.gaming .crypto-field,
+.matrix-landing.gaming .token-floaters { display: none; }
+
+.matrix-landing.gaming .cinema-grid {
+  z-index: -2;
+  opacity: 1;
+  background-image: radial-gradient(rgba(18, 8, 43, .1) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 72% 68% at 50% 42%, #000 38%, transparent 78%);
+}
+
+.matrix-landing.gaming .hero-aurora {
+  inset: -14%;
+  opacity: .55;
+  filter: blur(80px);
+}
+
+.matrix-landing.gaming .hero-aurora i { background: radial-gradient(circle, rgba(109, 59, 255, .34), transparent 68%); }
+.matrix-landing.gaming .hero-aurora i:nth-child(2) { background: radial-gradient(circle, rgba(0, 194, 255, .3), transparent 68%); }
+.matrix-landing.gaming .hero-aurora i:nth-child(3) { background: radial-gradient(circle, rgba(255, 46, 147, .22), transparent 68%); }
+
+.matrix-landing.gaming .cinema-hero::after {
+  background: radial-gradient(520px circle at var(--pointer-x) var(--pointer-y), rgba(109, 59, 255, .1), transparent 68%);
+}
+
+.matrix-landing.gaming .cinema-hero h1 {
+  color: var(--ink);
+  font-size: clamp(2.9rem, 5.6vw, 5.6rem);
+  font-weight: 800;
+  line-height: .98;
+  letter-spacing: -.06em;
+}
+
+.matrix-landing.gaming .cinema-hero h1 > .hero-gradient {
+  color: transparent;
+  background: linear-gradient(100deg, #5a27ff 0%, #0b6bff 46%, #00915a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.matrix-landing.gaming .cinema-hero .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 24px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(18, 8, 43, .14);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: 700 .57rem var(--font-mono);
+  letter-spacing: .14em;
+  box-shadow: 0 2px 0 rgba(18, 8, 43, .07);
+}
+
+.matrix-landing.gaming .cinema-hero .live-dot {
+  width: 7px;
+  height: 7px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 0 3px rgba(255, 46, 147, .18);
+  animation: gaming-dot 2s ease-in-out infinite;
+}
+
+@keyframes gaming-dot {
+  50% { box-shadow: 0 0 0 6px rgba(255, 46, 147, .08); transform: scale(.86); }
+}
+
+.matrix-landing.gaming .cinema-description {
+  max-width: 48ch;
+  margin-top: 24px;
+  color: var(--ink-2);
+  font-size: clamp(.95rem, 1.15vw, 1.05rem);
+  line-height: 1.75;
+}
+
+.matrix-landing.gaming .cinema-caption { color: #6a5f8a; }
+
+.matrix-landing.gaming .hero-signals li {
+  padding: 8px 13px;
+  border: 1.5px solid rgba(18, 8, 43, .12);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 2px 0 rgba(18, 8, 43, .06);
+}
+
+.matrix-landing.gaming .hero-signals li:hover { border-color: rgba(109, 59, 255, .4); background: #fff; color: var(--ink); }
+.matrix-landing.gaming .hero-signals li span { color: var(--violet); }
+.matrix-landing.gaming .hero-signals li:nth-child(2) span { color: #0a86cc; }
+.matrix-landing.gaming .hero-signals li:nth-child(3) span { color: #00915a; }
+
+/* ---------- Stream card (hero right) ---------- */
+
+.matrix-landing.gaming .hero-network {
+  min-width: 0;
+  transform: none;
+}
+
+.matrix-landing.gaming .stream-card {
+  position: relative;
+  padding: 10px;
+  border: 1.5px solid #2a1d52;
+  border-radius: 26px;
+  background: linear-gradient(160deg, #170e33, #07040f 58%, #12082b);
+  color: #f2edff;
+  box-shadow: 0 14px 0 -4px rgba(74, 31, 214, .18), 0 34px 70px rgba(74, 31, 214, .28);
+}
+
+.matrix-landing.gaming .stream-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px 12px;
+  font: 600 .5rem var(--font-mono);
+  letter-spacing: .12em;
+  color: #b9a9e8;
+}
+
+.matrix-landing.gaming .stream-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--pink);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .14em;
+  box-shadow: 0 0 20px rgba(255, 46, 147, .4);
+}
+
+.matrix-landing.gaming .stream-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: stream-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes stream-pulse {
+  50% { opacity: .35; transform: scale(.7); }
+}
+
+.matrix-landing.gaming .stream-sim { text-align: right; color: #8f7cc0; }
+
+.matrix-landing.gaming .stream-screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 17px;
+  background: #07040f;
+}
+
+.matrix-landing.gaming .stream-screen video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.matrix-landing.gaming .stream-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 48%, rgba(7, 4, 15, .88));
+}
+
+.matrix-landing.gaming .stream-overlay {
+  position: absolute;
+  inset: auto 14px 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.matrix-landing.gaming .stream-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #fff;
+  font: 700 .6rem var(--font-mono);
+  letter-spacing: .12em;
+}
+
+.matrix-landing.gaming .stream-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
+  color: #07040f;
+  font-size: .8rem;
+  line-height: 1;
+}
+
+.matrix-landing.gaming .stream-loop {
+  padding: 4px 9px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 999px;
+  background: rgba(7, 4, 15, .6);
+  color: #d7ccff;
+  font: .45rem var(--font-mono);
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+.matrix-landing.gaming .stream-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #2a1d52;
+  border-radius: 15px;
+  background: linear-gradient(120deg, #150c30, #0b0619);
+}
+
+.matrix-landing.gaming .stream-alert-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(0, 229, 125, .14);
+  color: #63ffb4;
+  font-size: 1.1rem;
+}
+
+.matrix-landing.gaming .stream-alert div { min-width: 0; }
+
+.matrix-landing.gaming .stream-alert small {
+  display: block;
+  color: #9382c2;
+  font: .43rem var(--font-mono);
+  letter-spacing: .13em;
+}
+
+.matrix-landing.gaming .stream-alert b {
+  display: block;
+  margin-top: 3px;
+  color: #fff;
+  font: 700 .95rem var(--font-mono);
+  letter-spacing: -.02em;
+}
+
+.matrix-landing.gaming .stream-alert b em {
+  margin-left: 6px;
+  color: #8f7cc0;
+  font-style: normal;
+  font-size: .6rem;
+}
+
+.matrix-landing.gaming .stream-alert-state {
+  margin-left: auto;
+  padding: 4px 9px;
+  border: 1px solid rgba(0, 229, 125, .35);
+  border-radius: 999px;
+  background: rgba(0, 229, 125, .14);
+  color: #63ffb4;
+  font: .44rem var(--font-mono);
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+
+.matrix-landing.gaming .hero-deck-hud {
+  margin-top: 10px;
+  border: 1px solid #2a1d52;
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.matrix-landing.gaming .hero-deck-hud b { background: #12082b; color: #cbbcff; font-size: .48rem; }
+.matrix-landing.gaming .hero-deck-hud b i { color: #63ffb4; }
+
+.matrix-landing.gaming .console-link {
+  padding: 15px 4px 0;
+  color: var(--ink);
+  border-bottom: 0;
+  font-weight: 600;
+  transition: color .2s;
+}
+
+.matrix-landing.gaming .console-link:hover { color: var(--violet-deep); }
+
+.matrix-landing.gaming .cinema-hero-bottom {
+  position: static;
+  grid-column: 1 / -1;
+  margin-top: clamp(28px, 4vw, 52px);
+  padding: 18px 0 0;
+  border-top: 1px solid rgba(18, 8, 43, .12);
+  color: var(--ink-2);
+  font-size: .55rem;
+}
+
+.matrix-landing.gaming .cinema-hero-bottom a { color: var(--violet-deep); font-weight: 600; }
+
+/* ---------- Proof strip and dark ticker band ---------- */
+
+.matrix-landing.gaming .cinema-proof {
+  justify-content: space-between;
+  gap: 16px 34px;
+  padding: 22px clamp(20px, 5vw, 72px);
+  border-block: 1px solid rgba(18, 8, 43, .12);
+  background: transparent;
+}
+
+.matrix-landing.gaming .cinema-proof > span { color: var(--ink); font-weight: 600; font-size: .6rem; }
+
+.matrix-landing.gaming .cinema-proof b {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(109, 59, 255, .1);
+  color: var(--violet);
+  font-size: .8rem;
+}
+
+.matrix-landing.gaming .network-ticker {
+  border-block: 1px solid #2a1d52;
+  background: #0a0618;
+}
+
+.matrix-landing.gaming .ticker-live { color: #63ffb4; }
+.matrix-landing.gaming .network-ticker dt { color: #8f7cc0; }
+.matrix-landing.gaming .network-ticker dd { color: #f2edff; }
+.matrix-landing.gaming .ticker-note { color: #8f7cc0; }
+
+.matrix-landing.gaming .kinetic-marquee {
+  border-bottom: 0;
+  background: linear-gradient(90deg, #5a27ff, #6d3bff 50%, #4a1fd6);
+}
+
+.matrix-landing.gaming .kinetic-marquee span { -webkit-text-stroke: 1.5px rgba(255, 255, 255, .78); }
+.matrix-landing.gaming .kinetic-marquee span:nth-child(3n) { -webkit-text-stroke-color: rgba(0, 229, 125, .9); }
+.matrix-landing.gaming .kinetic-marquee span i { color: #8dffce; -webkit-text-stroke: 0; }
+
+/* ---------- Brand reels ---------- */
+
+.matrix-landing.gaming .motion-reel { border-top: 0; }
+.matrix-landing.gaming .reel-heading h2 { color: var(--ink); font-weight: 800; }
+.matrix-landing.gaming .reel-heading h2 > span { color: var(--violet); }
+.matrix-landing.gaming .reel-heading > p { color: var(--ink-2); }
+
+.matrix-landing.gaming .reel-frame {
+  border: 2px solid #12082b;
+  border-radius: 20px;
+  background: #07040f;
+  box-shadow: 0 10px 0 -2px rgba(18, 8, 43, .14), 0 26px 50px rgba(74, 31, 214, .18);
+}
+
+.matrix-landing.gaming .reel-frame video { border-radius: 17px; }
+
+.matrix-landing.gaming .reel-tag {
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: rgba(7, 4, 15, .72);
+  color: #d8ffe9;
+}
+
+.matrix-landing.gaming .reel-tag i { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.matrix-landing.gaming .reel-label { color: #fff; }
+.matrix-landing.gaming .reel-index { color: #b79bff; }
+.matrix-landing.gaming .reel figcaption { color: #6a5f8a; }
+
+/* ---------- How it works ---------- */
+
+.matrix-landing.gaming .chain-sequence {
+  background: radial-gradient(ellipse at 88% 42%, rgba(109, 59, 255, .12), transparent 62%);
+}
+
+.matrix-landing.gaming .chain-copy h2 { color: var(--ink); }
+.matrix-landing.gaming .chain-chapters::before { background: rgba(18, 8, 43, .14); }
+.matrix-landing.gaming .chain-chapters::after {
+  background: linear-gradient(#6d3bff, #00c2ff 55%, #00e57d);
+  box-shadow: 0 0 12px rgba(109, 59, 255, .5);
+}
+
+.matrix-landing.gaming .chain-chapters li { border-top-color: rgba(18, 8, 43, .1); opacity: .55; }
+.matrix-landing.gaming .chain-chapters li::before { background: rgba(18, 8, 43, .2); }
+.matrix-landing.gaming .chain-chapters li.is-current { opacity: 1; }
+.matrix-landing.gaming .chain-chapters li.is-current::before { background: var(--violet); box-shadow: 0 0 0 4px rgba(109, 59, 255, .16); }
+.matrix-landing.gaming .chapter-number { color: var(--violet); }
+.matrix-landing.gaming .chain-chapters h3 { color: var(--ink); }
+.matrix-landing.gaming .chain-chapters p { color: var(--ink-2); }
+.matrix-landing.gaming .chain-chapters li.is-current .chapter-number { color: var(--violet-deep); text-shadow: none; }
+.matrix-landing.gaming .chain-chapters li.is-current h3 { color: var(--ink); }
+.matrix-landing.gaming .chain-chapters li.is-current p { color: var(--ink-2); }
+
+.matrix-landing.gaming .chain-visual {
+  padding: 10px;
+  border: 1.5px solid #2a1d52;
+  border-radius: 24px;
+  background: linear-gradient(160deg, #170e33, #07040f);
+  box-shadow: 0 14px 0 -4px rgba(74, 31, 214, .16), 0 30px 60px rgba(74, 31, 214, .2);
+}
+
+.matrix-landing.gaming .chain-visual .blockchain-console {
+  border-radius: 15px;
+  border-color: #2a1d52;
+  animation: none;
+  box-shadow: none;
+}
+
+/* ---------- Protocol interlude (dark) ---------- */
+
+.matrix-landing.gaming .signal-interlude {
+  max-width: none;
+  margin-inline: 0;
+  border-block: 0;
+  color: #f2edff;
+  background:
+    radial-gradient(ellipse at 78% 28%, rgba(109, 59, 255, .42), transparent 60%),
+    radial-gradient(ellipse at 8% 92%, rgba(0, 194, 255, .22), transparent 60%),
+    #07040f;
+}
+
+.matrix-landing.gaming .signal-interlude::before {
+  background-image: radial-gradient(rgba(255, 255, 255, .12) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(90deg, transparent, #000 58%, transparent);
+}
+
+.matrix-landing.gaming .interlude-copy h2 { color: #fff; }
+
+.matrix-landing.gaming .interlude-copy h2 > span {
+  color: transparent;
+  background: linear-gradient(100deg, #b79bff, #4fd8ff 55%, #63ffb4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.matrix-landing.gaming .interlude-copy .section-copy { color: #b9a9e8; }
+.matrix-landing.gaming .interlude-copy .eyebrow { color: #b79bff; }
+.matrix-landing.gaming .interlude-orbit i { border-color: rgba(183, 155, 255, .3); }
+.matrix-landing.gaming .interlude-orbit span { -webkit-text-stroke: 1px rgba(255, 255, 255, .18); }
+
+.matrix-landing.gaming .interlude-protocol { border-color: #2a1d52; background: #2a1d52; }
+.matrix-landing.gaming .interlude-protocol li { background: #100a24; color: #e6dcff; }
+.matrix-landing.gaming .interlude-protocol li span { color: #63ffb4; }
+
+/* ---------- Creator setup (dark product card) ---------- */
+
+.matrix-landing.gaming .creator-guide {
+  padding: clamp(22px, 3.4vw, 40px);
+  border: 2px solid #12082b;
+  border-radius: 24px;
+  color: #f2edff;
+  background: linear-gradient(150deg, #170e33, #07040f 72%);
+  box-shadow: 0 14px 0 -4px rgba(18, 8, 43, .14), 0 32px 60px rgba(74, 31, 214, .16);
+}
+
+.matrix-landing.gaming .creator-guide .guide-heading h2 { color: #fff; }
+.matrix-landing.gaming .creator-guide .guide-heading > p:last-child { color: #b9a9e8; }
+.matrix-landing.gaming .creator-guide .eyebrow { color: #b79bff; }
+.matrix-landing.gaming .setup-grid { border-color: #2a1d52; background: #2a1d52; }
+.matrix-landing.gaming .setup-grid li { background: #100a24; }
+.matrix-landing.gaming .setup-grid h3 { color: #fff; }
+.matrix-landing.gaming .setup-grid p { color: #a99ec9; }
+.matrix-landing.gaming .setup-grid li:hover { background: #170e33; }
+.matrix-landing.gaming .setup-code { color: #63ffb4; }
+.matrix-landing.gaming .setup-grid a { color: #8ff5cf; }
+
+/* ---------- OBS band (dark product window) ---------- */
+
+.matrix-landing.gaming .obs-experience {
+  background: radial-gradient(ellipse at 50% 52%, rgba(109, 59, 255, .1), transparent 64%);
+}
+
+.matrix-landing.gaming .obs-experience .section-heading > p { color: var(--ink-2); }
+
+.matrix-landing.gaming .obs-window {
+  border: 2px solid #12082b;
+  border-radius: 24px;
+  color: #f2edff;
+  box-shadow: 0 14px 0 -4px rgba(18, 8, 43, .14), 0 32px 60px rgba(74, 31, 214, .18);
+}
+
+.matrix-landing.gaming .obs-window-bar {
+  border-bottom: 1px solid #2a1d52;
+  background: #150c30;
+  color: #cbbcf0;
+}
+
+.matrix-landing.gaming .obs-window .eyebrow { color: #b79bff; }
+.matrix-landing.gaming .demo-studio { background: #0b0619; }
+.matrix-landing.gaming .demo-canvas { background: #0a0518; }
+.matrix-landing.gaming .demo-controls { background: #0d0720; }
+.matrix-landing.gaming .demo-controls h3 { color: #fff; }
+.matrix-landing.gaming .demo-controls > p:not(.eyebrow) { color: #a99ec9; }
+.matrix-landing.gaming .demo-controls legend { color: #cbbcf0; }
+.matrix-landing.gaming .sound-toggle { color: #cbbcf0; }
+
+.matrix-landing.gaming .obs-setup li > span { color: var(--violet); }
+.matrix-landing.gaming .obs-setup h3 { color: var(--ink); }
+.matrix-landing.gaming .obs-setup p { color: var(--ink-2); }
+
+.matrix-landing.gaming .obs-studio-link {
+  color: var(--violet-deep);
+  border-bottom-color: rgba(109, 59, 255, .4);
+}
+
+/* ---------- Manifesto (white cards) ---------- */
+
+.matrix-landing.gaming .cinema-manifesto { border-top: 1px solid rgba(18, 8, 43, .1); }
+.matrix-landing.gaming .cinema-manifesto h2 { color: var(--ink); }
+.matrix-landing.gaming .cinema-manifesto h2 > span { color: var(--violet); }
+
+.matrix-landing.gaming .cinema-principles article {
+  border: 2px solid rgba(18, 8, 43, .12);
+  border-radius: 22px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 8px 0 -2px rgba(18, 8, 43, .07);
+  transition: transform .25s var(--ease-out), border-color .25s, box-shadow .25s;
+}
+
+.matrix-landing.gaming .cinema-principles article:hover {
+  transform: translateY(-4px);
+  border-color: rgba(109, 59, 255, .45);
+  box-shadow: 0 12px 0 -2px rgba(109, 59, 255, .14), 0 24px 40px rgba(74, 31, 214, .14);
+}
+
+.matrix-landing.gaming .cinema-principles h3 { color: var(--ink); }
+.matrix-landing.gaming .cinema-principles p { color: var(--ink-2); }
+.matrix-landing.gaming .index-number { color: var(--violet); }
+.matrix-landing.gaming .principle-art,
+.matrix-landing.gaming .principle-art > span { color: var(--violet); }
+.matrix-landing.gaming .principle-art svg { stroke: var(--violet); }
+.matrix-landing.gaming .principle-art-1 { color: #0b8fd6; }
+.matrix-landing.gaming .principle-art-2 { color: #009e5c; }
+
+/* ---------- Education (dark cards) ---------- */
+
+.matrix-landing.gaming .receiving-guide,
+.matrix-landing.gaming .security-guide {
+  border: 2px solid #12082b;
+  border-radius: 22px;
+  color: #f2edff;
+  background: linear-gradient(150deg, #170e33, #07040f);
+  box-shadow: 0 12px 0 -4px rgba(18, 8, 43, .12);
+}
+
+.matrix-landing.gaming .receiving-guide { border-top: 3px solid #00c2ff; }
+.matrix-landing.gaming .security-guide { border-top: 3px solid #6d3bff; }
+.matrix-landing.gaming .receiving-guide h2,
+.matrix-landing.gaming .security-guide h2 { color: #fff; }
+.matrix-landing.gaming .receiving-guide > p:not(.eyebrow) { color: #b9a9e8; }
+.matrix-landing.gaming .receiving-guide .eyebrow,
+.matrix-landing.gaming .security-guide .eyebrow { color: #b79bff; }
+.matrix-landing.gaming .guide-list li { color: #cbbcf0; border-top-color: #2a1d52; }
+.matrix-landing.gaming .guide-list li::before { color: #63ffb4; }
+.matrix-landing.gaming .instruction-list li { color: #cbbcf0; }
+.matrix-landing.gaming .instruction-list li::marker { color: #63ffb4; }
+.matrix-landing.gaming .security-note {
+  background: rgba(109, 59, 255, .14);
+  border-left: 3px solid #b79bff;
+  color: #dcd2ff;
+}
+
+/* ---------- Pricing (dark band) ---------- */
+
+.matrix-landing.gaming .pricing-section {
+  max-width: none;
+  margin-inline: 0;
+  border-block: 0;
+  padding: clamp(68px, 8.5vw, 118px) clamp(20px, 5.5vw, 90px);
+  color: #f2edff;
+  background:
+    radial-gradient(ellipse at 82% 18%, rgba(109, 59, 255, .36), transparent 55%),
+    radial-gradient(ellipse at 6% 92%, rgba(0, 194, 255, .16), transparent 55%),
+    #07040f;
+}
+
+.matrix-landing.gaming .pricing-section h2 { color: #fff; }
+
+.matrix-landing.gaming .pricing-section h2 > span {
+  color: transparent;
+  background: linear-gradient(100deg, #b79bff, #4fd8ff 55%, #63ffb4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.matrix-landing.gaming .pricing-section .eyebrow { color: #b79bff; }
+.matrix-landing.gaming .pricing-section .section-copy { color: #b9a9e8; }
+.matrix-landing.gaming .pricing-section .plain-list { color: #e6dcff; }
+.matrix-landing.gaming .pricing-section .plain-list li::before { color: #63ffb4; }
+.matrix-landing.gaming .pricing-section .field-hint { color: #8f7cc0; }
+
+.matrix-landing.gaming .fee-calculator {
+  border: 1.5px solid #2a1d52;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #170e33, #0b0619);
+}
+
+.matrix-landing.gaming .fee-calculator .calculator-top { color: #cbbcf0; }
+.matrix-landing.gaming .pricing-section .calculator-total { color: #fff; }
+.matrix-landing.gaming .fee-calculator label { color: #cbbcf0; }
+.matrix-landing.gaming .range-labels { color: #8f7cc0; }
+.matrix-landing.gaming .fee-bar span:first-child { background: linear-gradient(90deg, #00e57d, #00c2ff); }
+.matrix-landing.gaming .fee-bar span:last-child { background: #6d3bff; }
+
+/* ---------- Networks (white cards) ---------- */
+
+.matrix-landing.gaming .network-section h2 { color: var(--ink); }
+
+.matrix-landing.gaming .network-grid article {
+  border: 2px solid rgba(18, 8, 43, .12);
+  border-radius: 22px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 8px 0 -2px rgba(18, 8, 43, .07);
+}
+
+.matrix-landing.gaming .network-grid article:hover {
+  border-color: rgba(109, 59, 255, .4);
+  box-shadow: 0 12px 0 -2px rgba(109, 59, 255, .12), 0 24px 40px rgba(74, 31, 214, .12);
+}
+
+.matrix-landing.gaming .network-grid h3 { color: var(--ink); }
+.matrix-landing.gaming .network-grid p { color: var(--ink-2); }
+.matrix-landing.gaming .network-symbol { color: var(--violet); }
+.matrix-landing.gaming .network-grid article:nth-child(2) .network-symbol { color: #0b8fd6; }
+.matrix-landing.gaming .network-grid article:nth-child(3) .network-symbol { color: #009e5c; }
+
+.matrix-landing.gaming .phase-tag {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(109, 59, 255, .1);
+  color: var(--violet-deep);
+}
+
+.matrix-landing.gaming .network-grid .future-network {
+  border: 2px dashed rgba(18, 8, 43, .22);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- FAQ (white cards) ---------- */
+
+.matrix-landing.gaming .faq-section h2 { color: var(--ink); }
+.matrix-landing.gaming .faq-list { display: grid; gap: 10px; }
+
+.matrix-landing.gaming .faq-list details {
+  padding: 18px 20px;
+  border: 1.5px solid rgba(18, 8, 43, .12);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 0 rgba(18, 8, 43, .05);
+}
+
+.matrix-landing.gaming .faq-list details:first-child { border-top: 1.5px solid rgba(18, 8, 43, .12); }
+.matrix-landing.gaming .faq-list details[open] { border-color: rgba(109, 59, 255, .42); }
+.matrix-landing.gaming .faq-list summary { color: var(--ink); font-weight: 600; }
+.matrix-landing.gaming .faq-list summary span { color: var(--violet); }
+.matrix-landing.gaming .faq-list details p { color: var(--ink-2); }
+
+/* ---------- Closing and footer ---------- */
+
+.matrix-landing.gaming .closing-section {
+  max-width: none;
+  border-top: 0;
+  padding-block: clamp(80px, 10vw, 132px);
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(0, 229, 125, .28), transparent 55%),
+    radial-gradient(ellipse at 18% 0%, rgba(0, 194, 255, .26), transparent 55%),
+    linear-gradient(150deg, #3a12c9, #160a3a 62%, #07040f);
+}
+
+.matrix-landing.gaming .closing-section h2 { color: #fff; }
+
+.matrix-landing.gaming .closing-section h2 > span {
+  color: transparent;
+  background: linear-gradient(100deg, #63ffb4, #4fd8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.matrix-landing.gaming .closing-section .eyebrow { color: #cbbcf0; }
+.matrix-landing.gaming .closing-section > p:last-child { color: #b9a9e8; }
+
+.matrix-landing.gaming .closing-section .brand-button.primary {
+  color: var(--ink);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .35);
+}
+
+.matrix-landing.gaming .closing-section .brand-button.primary:hover:not(:disabled) {
+  background: #f0e9ff;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .35);
+}
+
+.matrix-landing.gaming .closing-orb {
+  border-color: rgba(99, 255, 180, .28);
+  box-shadow: inset 0 0 90px rgba(109, 59, 255, .4);
+}
+
+.matrix-landing.gaming .site-footer {
+  max-width: none;
+  padding: 26px clamp(20px, 5.5vw, 90px);
+  border-top: 1px solid #2a1d52;
+  background: #07040f;
+}
+
+.matrix-landing.gaming .site-footer .lc-brand > span:last-child { color: #f2edff; }
+.matrix-landing.gaming .site-footer .lc-brand > span:last-child > span { color: #63ffb4; }
+.matrix-landing.gaming .site-footer .lc-brand small { color: #8f7cc0; }
+.matrix-landing.gaming .site-footer p,
+.matrix-landing.gaming .site-footer > a:last-child { color: #b9a9e8; }
+.matrix-landing.gaming .site-footer a:hover { color: #63ffb4; }
+
+/* ---------- Page chrome ---------- */
+
+.matrix-landing.gaming .section-rail a { color: #8a7fb0; }
+.matrix-landing.gaming .section-rail a i { background: rgba(18, 8, 43, .18); }
+.matrix-landing.gaming .section-rail a.is-active { color: var(--ink); }
+.matrix-landing.gaming .section-rail a.is-active span { color: var(--violet); }
+.matrix-landing.gaming .section-rail a.is-active i { background: var(--violet); box-shadow: 0 0 10px rgba(109, 59, 255, .6); }
+
+.matrix-landing.gaming .section-rail a::after {
+  border: 1.5px solid rgba(18, 8, 43, .14);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(18, 8, 43, .14);
+}
+
+.matrix-landing.gaming .scroll-progress { height: 3px; background: rgba(18, 8, 43, .08); }
+.matrix-landing.gaming .scroll-progress span {
+  background: linear-gradient(90deg, #6d3bff, #00c2ff 52%, #00e57d);
+  box-shadow: 0 0 12px rgba(109, 59, 255, .5);
+}
+
+.matrix-landing.gaming .cursor-aura {
+  background: radial-gradient(circle, rgba(109, 59, 255, .16), transparent 68%);
+  mix-blend-mode: multiply;
+}
+
+/* ---------- Boot intro, retinted ---------- */
+
+.matrix-landing.gaming .cinematic-intro {
+  background: radial-gradient(ellipse at 50% 40%, #2a1166, #07040f 66%);
+}
+
+.matrix-landing.gaming .intro-frame {
+  border-color: #2a1d52;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #170e33, #0b0619);
+}
+
+.matrix-landing.gaming .intro-frame::before,
+.matrix-landing.gaming .intro-frame::after { border-color: #6d3bff; }
+.matrix-landing.gaming .intro-brand b { color: #63ffb4; }
+.matrix-landing.gaming .intro-lines li span { color: #b79bff; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1100px) {
+  .matrix-landing.gaming .cinema-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    gap: 34px;
+    padding-top: clamp(116px, 15vw, 148px);
+  }
+
+  .matrix-landing.gaming .cinema-hero h1 { font-size: clamp(2.7rem, 7.2vw, 4.4rem); }
+  .matrix-landing.gaming .hero-network { max-width: 640px; width: 100%; margin-inline: auto; }
+  .matrix-landing.gaming .cinema-header { padding: 11px 5%; }
+}
+
+@media (max-width: 800px) {
+  .matrix-landing.gaming .cinema-hero {
+    padding-top: 112px;
+    padding-bottom: 56px;
+  }
+
+  .matrix-landing.gaming .stream-card { border-radius: 22px; }
+  .matrix-landing.gaming .cinema-proof { justify-content: flex-start; gap: 12px 22px; }
+  .matrix-landing.gaming .cinema-proof > span { width: 100%; }
+  .matrix-landing.gaming .faq-list details { padding: 16px 17px; }
+}
+
+@media (max-width: 560px) {
+  .matrix-landing.gaming .cinema-header { padding: 10px 4.5%; gap: 8px; }
+  .matrix-landing.gaming .cinema-hero { padding-top: 104px; padding-inline: 5%; }
+  .matrix-landing.gaming .cinema-hero h1 { font-size: clamp(2.5rem, 10.4vw, 3.5rem); }
+  .matrix-landing.gaming .cinema-hero .eyebrow { font-size: .5rem; padding: 7px 11px; letter-spacing: .1em; }
+  .matrix-landing.gaming .stream-bar { font-size: .44rem; letter-spacing: .08em; }
+  .matrix-landing.gaming .stream-live { padding: 4px 9px; }
+  .matrix-landing.gaming .stream-sim { font-size: .42rem; }
+  .matrix-landing.gaming .stream-alert small { font-size: .4rem; }
+  .matrix-landing.gaming .stream-alert b { font-size: .82rem; }
+  .matrix-landing.gaming .stream-alert-state { font-size: .4rem; padding: 3px 7px; }
+  .matrix-landing.gaming .hero-deck-hud b { font-size: .44rem; }
+  .matrix-landing.gaming .cinema-hero .button-row { flex-direction: column; align-items: stretch; }
+  .matrix-landing.gaming .cinema-hero .button-row .brand-button { width: 100%; justify-content: space-between; }
+  .matrix-landing.gaming .creator-guide,
+  .matrix-landing.gaming .receiving-guide,
+  .matrix-landing.gaming .security-guide { border-radius: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matrix-landing.gaming .cinema-header::after,
+  .matrix-landing.gaming .cinema-hero .live-dot,
+  .matrix-landing.gaming .stream-live i { animation: none; }
+
+  .matrix-landing.gaming .cinema-principles article:hover,
+  .matrix-landing.gaming .network-grid article:hover { transform: none; }
+}
