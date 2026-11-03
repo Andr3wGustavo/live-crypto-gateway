@@ -165,33 +165,6 @@
   100% { opacity: 0; transform: translateY(-102%); visibility: hidden; }
 }
 
-/* ---------- Motion control (product pages) ---------- */
-
-.site-motion-control {
-  position: fixed;
-  left: 18px;
-  bottom: 18px;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 9px 13px;
-  border: 1px solid #7ea8b44a;
-  border-radius: 3px;
-  background: #07131cf0;
-  color: #b8ddda;
-  box-shadow: 0 10px 30px #0007;
-  font: .6rem var(--font-mono);
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  transition: border-color .2s, color .2s, transform .2s, background .2s;
-}
-
-.site-motion-control:hover { border-color: #22e6ff77; color: #d7f7ff; transform: translateY(-2px); }
-.site-motion-control span { color: #22e6ff; font-size: .88rem; line-height: 1; }
-.site-motion-control b { font-weight: 500; }
-
 /* ---------- Reveal choreography ---------- */
 
 html[data-site-motion="on"].site-motion-ready .product-shell [data-reveal],
@@ -735,16 +708,6 @@ html[data-site-motion="off"] .route-curtain { display: none; }
 }
 
 @media (max-width: 560px) {
-  .site-motion-control {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    justify-content: center;
-    left: 12px;
-    bottom: 12px;
-  }
-  .site-motion-control b { display: none; }
-  .site-motion-control span { font-size: 1rem; }
   .app-cursor-glow { display: none; }
   .amb-orb { min-width: 300px; filter: blur(60px); }
   .studio-ghost { display: none; }
@@ -1049,10 +1012,3 @@ html[data-site-motion="off"] .login-panel.has-error { animation: none !important
   .amount-presets button { flex: 1 1 calc(50% - 8px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .studio-nav a::after,
-  .goal-dial circle:nth-child(2),
-  .activity-bars > span i,
-  .product-shell .product-panel,
-  .amount-presets button { transition: none; }
-}

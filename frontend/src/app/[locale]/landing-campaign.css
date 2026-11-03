@@ -24,6 +24,13 @@
   --line-soft: rgba(160, 226, 245, .08);
   --grad: linear-gradient(96deg, #6ff6ff 0%, #22e6ff 44%, #2b9dff 100%);
 
+  /* One shell for the whole page. The hero and every section share the same
+     max width and gutter, so headline, copy and full-bleed bands line up on
+     the same vertical guides instead of drifting a few pixels apart. */
+  --shell-max: 1500px;
+  --shell-gutter: clamp(22px, 5.5vw, 90px);
+  --shell-pad: max(var(--shell-gutter), calc((100% - var(--shell-max)) / 2 + var(--shell-gutter)));
+
   position: relative;
   overflow: clip;
   background: var(--ink);
@@ -32,8 +39,8 @@
 }
 
 .matrix-landing.campaign .section-wrap {
-  max-width: 1560px;
-  padding-inline: clamp(18px, 4.6vw, 72px);
+  max-width: var(--shell-max);
+  padding-inline: var(--shell-gutter);
 }
 
 /* Section display type: condensed, uppercase, tightly leaded. */
@@ -119,7 +126,7 @@
   transition: width .48s cubic-bezier(.16, 1, .3, 1), padding .48s cubic-bezier(.16, 1, .3, 1);
 }
 
-.side-nav.is-open { width: 268px; padding: 18px 16px; }
+.side-nav.is-open { width: 268px; padding: 16px 12px; }
 
 .side-nav-head {
   display: flex;
@@ -135,6 +142,7 @@
 .side-nav .lc-brand small { display: none; }
 .side-nav:not(.is-open) .side-nav-head { justify-content: center; }
 .side-nav:not(.is-open) .lc-brand > span:last-child { display: none; }
+.side-nav:not(.is-open) .side-nav-status { display: none; }
 
 .side-nav-status {
   display: inline-flex;
@@ -144,7 +152,7 @@
   opacity: 0;
   color: #9fd9e6;
   font-family: var(--font-mono);
-  font-size: .43rem;
+  font-size: .56rem;
   font-weight: 500;
   letter-spacing: .14em;
   transition: opacity .3s;
@@ -156,6 +164,7 @@
 .side-nav-links { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 
 .side-nav-links a {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -174,6 +183,39 @@
   background: rgba(34, 230, 255, .08);
   border-color: rgba(34, 230, 255, .2);
   transform: translateX(2px);
+}
+
+.side-nav-links a:focus-visible {
+  outline: 2px solid rgba(111, 246, 255, .9);
+  outline-offset: 3px;
+}
+
+/* Current chapter: a cyan marker on the rail plus a lit icon. The marker is
+   hidden when the rail is collapsed so the icon column stays clean. */
+.side-nav-links a.is-active {
+  color: #eaf7fb;
+  background: rgba(34, 230, 255, .1);
+  border-color: rgba(34, 230, 255, .26);
+}
+
+.side-nav-links a.is-active .side-nav-icon {
+  color: var(--cyan);
+  border-color: rgba(34, 230, 255, .38);
+  background: rgba(34, 230, 255, .13);
+  box-shadow: 0 0 16px rgba(34, 230, 255, .18);
+}
+
+.side-nav.is-open .side-nav-links a.is-active::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 2px;
+  height: 20px;
+  translate: 0 -50%;
+  border-radius: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
 }
 
 .side-nav-icon {
@@ -203,13 +245,14 @@
   transition: max-width .42s var(--ease-out), opacity .28s, transform .3s;
 }
 
-.side-nav.is-open .side-nav-label { max-width: 190px; opacity: 1; transform: none; }
+.side-nav.is-open .side-nav-label { max-width: 168px; opacity: 1; transform: none; }
 .side-nav:not(.is-open) .side-nav-links a { justify-content: center; padding: 0; }
 
 .side-nav-foot { display: flex; flex-direction: column; gap: 9px; margin-top: auto; }
 
 .side-nav-tools { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .side-nav:not(.is-open) .side-nav-tools { flex-direction: column; }
+.side-nav.is-open .side-nav-tools { justify-content: flex-start; padding-left: 10px; }
 
 .side-nav-cta {
   width: 100%;
@@ -256,12 +299,14 @@
   /* The rail is a real side navigation, not an overlay: expanding it pushes
      the editorial layout instead of covering the headline. */
   .matrix-landing.campaign:has(.side-nav.is-open) { padding-left: 300px; }
+  /* Desktop expands on hover/focus, so the explicit close button is mobile-only. */
+  .side-nav-toggle { display: none; }
 }
 
 /* Keep the dock fully usable on short laptop screens. */
 @media (min-width: 981px) and (max-height: 760px) {
   .side-nav { gap: 9px; padding: 11px 10px; }
-  .side-nav.is-open { padding: 14px 14px; }
+  .side-nav.is-open { padding: 12px; }
   .side-nav-links { gap: 4px; }
   .side-nav-links a { min-height: 42px; }
   .side-nav-icon { width: 32px; height: 32px; flex-basis: 32px; }
@@ -337,49 +382,14 @@
   cursor: pointer;
 }
 
-.matrix-landing.campaign .motion-toggle {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 1px solid rgba(160, 226, 245, .16);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .04);
-  color: #b9d3dd;
-}
-
-.matrix-landing.campaign .motion-toggle b {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.matrix-landing.campaign .motion-toggle span { color: var(--cyan); font-size: .9rem; }
-.matrix-landing.campaign .motion-toggle span.is-live { color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
-.matrix-landing.campaign .motion-toggle:hover { border-color: rgba(34, 230, 255, .55); background: rgba(34, 230, 255, .1); color: #fff; }
-
-.matrix-landing.campaign .motion-hint {
-  border: 1px solid rgba(34, 230, 255, .26);
-  border-left: 2px solid var(--cyan);
-  border-radius: 2px;
-  background: rgba(34, 230, 255, .06);
-  color: #ccf6ff;
-}
-
 /* ---------- Hero scene ---------- */
 
 .matrix-landing.campaign .cinema-hero {
   position: relative;
   isolation: isolate;
-  max-width: 1680px;
+  max-width: var(--shell-max);
   margin-inline: auto;
-  padding: clamp(104px, 13vh, 150px) clamp(18px, 4.6vw, 72px) clamp(56px, 8vh, 96px);
+  padding: clamp(104px, 13vh, 150px) var(--shell-gutter) clamp(56px, 8vh, 96px);
   display: block;
 }
 
@@ -690,7 +700,7 @@
   border-left: 1px solid rgba(160, 226, 245, .16);
   color: var(--text-3);
   font-family: var(--font-mono);
-  font-size: .46rem;
+  font-size: .58rem;
   font-style: normal;
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -746,7 +756,7 @@
   box-shadow: none;
   color: #a9c4cf;
   font-family: var(--font-mono);
-  font-size: .54rem;
+  font-size: .6rem;
   font-weight: 500;
   letter-spacing: .16em;
   text-transform: uppercase;
@@ -754,7 +764,7 @@
 
 .matrix-landing.campaign .hero-signals li:first-child { padding-left: 0; border-left: 0; }
 .matrix-landing.campaign .hero-signals li:hover { background: none; color: #e6f9ff; }
-.matrix-landing.campaign .hero-signals li span { color: var(--cyan); font-size: .48rem; }
+.matrix-landing.campaign .hero-signals li span { color: var(--cyan); font-size: .56rem; }
 .matrix-landing.campaign .hero-signals li:nth-child(2) span { color: #2b9dff; }
 .matrix-landing.campaign .hero-signals li:nth-child(3) span { color: var(--ice); }
 
@@ -882,13 +892,13 @@
   gap: 5px;
   padding-right: 8px;
   color: var(--text-3);
-  font-size: .44rem;
+  font-size: .56rem;
   letter-spacing: .12em;
   text-transform: uppercase;
   transition: color .35s;
 }
 
-.theatre-track li span { font-size: .4rem; opacity: .7; }
+.theatre-track li span { font-size: .5rem; opacity: .7; }
 .theatre-track li.is-done { color: #d9f7ff; }
 .theatre-track li.is-done span { color: var(--cyan); opacity: 1; }
 
@@ -1099,7 +1109,9 @@
   isolation: isolate;
   max-width: none;
   margin: 0;
-  padding: clamp(70px, 10vw, 132px) clamp(18px, 4.6vw, 72px);
+  /* The film is full-bleed; the inner .section-wrap owns the horizontal gutter,
+     so the copy aligns with the hero instead of being padded twice. */
+  padding: clamp(70px, 10vw, 132px) 0;
   overflow: hidden;
   border-top: 1px solid var(--line-soft);
   border-bottom: 1px solid var(--line-soft);
@@ -1275,7 +1287,7 @@
   position: relative;
   max-width: none;
   margin: 0;
-  padding: clamp(64px, 9vw, 130px) clamp(18px, 4.6vw, 72px);
+  padding: clamp(64px, 9vw, 130px) var(--shell-pad);
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr);
   align-items: center;
@@ -1322,7 +1334,7 @@
   background: transparent;
   border-right: 1px solid rgba(4, 18, 26, .18);
   color: #04121a;
-  font-size: .54rem;
+  font-size: .62rem;
   letter-spacing: .14em;
 }
 
@@ -1625,7 +1637,7 @@
   max-width: none;
   margin: 0;
   border: 0;
-  padding: clamp(78px, 11vw, 150px) clamp(18px, 4.6vw, 72px);
+  padding: clamp(78px, 11vw, 150px) var(--shell-pad);
   color: #04121a;
   background: var(--grad);
   overflow: hidden;
@@ -1674,7 +1686,7 @@
 
 .matrix-landing.campaign .site-footer {
   max-width: none;
-  padding: 28px clamp(18px, 4.6vw, 72px);
+  padding: 28px var(--shell-pad);
   border-top: 1px solid var(--line-soft);
   background: #04090d;
 }
@@ -1823,7 +1835,7 @@
     position: fixed;
     inset: 0 0 auto;
     z-index: 75;
-    padding: 9px 16px;
+    padding: 9px 5.5%;
     border-bottom: 1px solid rgba(160, 226, 245, .12);
     background: rgba(4, 9, 13, .8);
     backdrop-filter: blur(20px) saturate(1.4);
@@ -1902,6 +1914,7 @@
   }
 
   .side-nav.is-open { width: min(316px, 86vw); transform: translateX(0); padding: 18px 16px; }
+  .side-nav.is-open .side-nav-tools { padding-left: 0; }
   .side-nav .side-nav-label { max-width: 190px; opacity: 1; transform: none; }
   .side-nav:not(.is-open) .lc-brand > span:last-child { display: block; }
   .side-nav:not(.is-open) .side-nav-links a { justify-content: flex-start; padding: 0 10px; }
@@ -1944,9 +1957,13 @@
 }
 
 @media (max-width: 620px) {
-  .matrix-landing.campaign .cinema-hero { padding: 92px 5% 48px; }
+  /* Phones use one percentage gutter everywhere so the top bar, hero and every
+     section share the same left guide to the pixel. */
+  .matrix-landing.campaign { --shell-gutter: 5.5%; --shell-pad: 5.5%; }
+  .mobile-nav { padding-inline: 5.5%; }
+  .matrix-landing.campaign .cinema-hero { padding: 92px 5.5% 48px; }
   .matrix-landing.campaign .cinema-hero h1 { font-size: clamp(2.5rem, 10.6vw, 3.4rem); line-height: .9; }
-  .matrix-landing.campaign .hero-kicker { font-size: .48rem; letter-spacing: .14em; }
+  .matrix-landing.campaign .hero-kicker { font-size: .56rem; letter-spacing: .14em; }
   .matrix-landing.campaign .cinema-description { font-size: .94rem; }
 
   .matrix-landing.campaign .hero-tokens { display: none; }
@@ -1955,16 +1972,16 @@
   .matrix-landing.campaign .hero-rails { gap: 6px; margin-top: 18px; }
   .matrix-landing.campaign .hero-rails li { min-height: 34px; padding: 5px 10px 5px 6px; font-size: .72rem; gap: 6px; }
   .matrix-landing.campaign .hero-rails b { width: 22px; height: 22px; font-size: .7rem; }
-  .matrix-landing.campaign .hero-rails em { padding-left: 6px; font-size: .4rem; }
+  .matrix-landing.campaign .hero-rails em { padding-left: 6px; font-size: .55rem; }
 
   .matrix-landing.campaign .cinema-hero .button-row { flex-direction: column; align-items: stretch; }
   .matrix-landing.campaign .cinema-hero .button-row .brand-button { width: 100%; justify-content: space-between; }
 
   .matrix-landing.campaign .hero-signals { gap: 10px 0; }
-  .matrix-landing.campaign .hero-signals li { font-size: .48rem; padding: 0 10px; }
+  .matrix-landing.campaign .hero-signals li { font-size: .56rem; padding: 0 10px; }
   .matrix-landing.campaign .hero-signals li:nth-child(3) { padding-left: 0; border-left: 0; }
 
-  .theatre-track li { font-size: .4rem; letter-spacing: .08em; }
+  .theatre-track li { font-size: .55rem; letter-spacing: .08em; }
 
   .matrix-landing.campaign .kinetic-marquee span { font-size: clamp(1.9rem, 9vw, 2.8rem); }
 
@@ -1976,25 +1993,5 @@
   .matrix-landing.campaign .closing-section::before { font-size: 7rem; }
 }
 
-/* ---------- Reduced motion ---------- */
+/* Motion is always on: no reduced-motion suppression and no off state. */
 
-.matrix-landing.campaign[data-motion="off"] .kinetic-marquee > div,
-.matrix-landing.campaign[data-motion="off"] .hero-glow,
-.matrix-landing.campaign[data-motion="off"] .hero-rings,
-.matrix-landing.campaign[data-motion="off"] .hero-film,
-.matrix-landing.campaign[data-motion="off"] .hero-tokens span,
-.matrix-landing.campaign[data-motion="off"] .reel-film video,
-.matrix-landing.campaign[data-motion="off"] .ticker-wave i,
-.matrix-landing.campaign[data-motion="off"] .reel-tag i,
-.matrix-landing.campaign[data-motion="off"] .interlude-orbit i,
-.matrix-landing.campaign[data-motion="off"] .live-dot,
-.matrix-landing.campaign[data-motion="off"] .theatre-sim i {
-  animation: none;
-}
-
-.matrix-landing.campaign[data-motion="off"] .closing-orb { animation: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  .matrix-landing.campaign .cinema-hero h1 .hero-line { animation: none; }
-  .matrix-landing.campaign .hero-floor { transform: perspective(560px) rotateX(64deg); }
-}

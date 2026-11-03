@@ -274,27 +274,6 @@
 
 .matrix-theme .login-core { border-color: rgba(34, 230, 255, .3); }
 
-/* ---------- Site motion control ---------- */
-
-.matrix-theme .site-motion-control {
-  border: 1px solid rgba(160, 226, 245, .24);
-  background: rgba(4, 9, 13, .92);
-  color: #d6eef6;
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  font-size: .56rem;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
-}
-
-.matrix-theme .site-motion-control:hover {
-  border-color: rgba(34, 230, 255, .7);
-  color: #fff;
-}
-
-.matrix-theme .site-motion-control span { color: var(--cyan); }
-
 /* ---------- Selection and focus ---------- */
 
 .matrix-theme ::selection { background: var(--cyan); color: #04121a; }

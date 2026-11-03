@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { stripLocale } from '@/i18n/locale';
-import { useI18n } from '@/i18n/Provider';
 import { useMotionPreference } from './useMotionPreference';
 
 /**
@@ -11,15 +10,14 @@ import { useMotionPreference } from './useMotionPreference';
  * progress, reveal choreography and pointer light for the product pages.
  *
  * The layer is decorative. Every value shown elsewhere comes from real page
- * state. Motion can always be disabled and the page remains fully readable.
+ * state. Motion is always on, so the shell has no pause control.
  */
 export function SiteMotion() {
   const pathname = stripLocale(usePathname());
   const isOverlay = pathname?.startsWith('/overlay') ?? false;
   const isLanding = pathname === '/';
   const inactive = isLanding || isOverlay;
-  const { messages: { guide: g } } = useI18n();
-  const { enabled, toggle } = useMotionPreference();
+  const { enabled } = useMotionPreference();
   const progressRef = useRef<HTMLSpanElement>(null);
   const previousPath = useRef(pathname);
   const [curtain, setCurtain] = useState(0);
@@ -207,15 +205,5 @@ export function SiteMotion() {
     {curtain > 0 && <div key={curtain} className="route-curtain" aria-hidden="true">
       <span /><b>LC</b><small>SYNC</small>
     </div>}
-    <button
-      type="button"
-      className="site-motion-control"
-      aria-pressed={enabled}
-      aria-label={enabled ? g.pause : g.enable}
-      onClick={toggle}
-    >
-      <span aria-hidden="true">{enabled ? 'Ⅱ' : '▷'}</span>
-      <b>{enabled ? g.pause : g.enable}</b>
-    </button>
   </>;
 }

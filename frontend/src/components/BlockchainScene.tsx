@@ -10,7 +10,7 @@ const blocks = Array.from({ length:6 }, (_, i) => ({ x:246 + i % 3 * 76, y:102 +
 /** Visible animation on every viewport: SVG attributes, not CSS media-query effects. */
 export function BlockchainScene({ compact = false }: { compact?: boolean }) {
   const { messages: { guide:g, home:h } } = useI18n();
-  const { enabled, reduced, toggle } = useLandingMotion();
+  const { enabled } = useLandingMotion();
   const [mode, setMode] = useState<'auto' | 'scroll' | 'manual'>('auto');
   const [stage, setStage] = useState(0);
   const root = useRef<HTMLDivElement>(null);
@@ -96,9 +96,8 @@ export function BlockchainScene({ compact = false }: { compact?: boolean }) {
     <div className="chain-status"><span className="terminal-cursor" aria-hidden="true">▸</span><span>{g.states[stage]}</span><span className="chain-step">0{stage+1}/04</span></div>
     <div className="chain-progress"><span data-meter /></div>
     {!compact && <>
-      <div className="chain-controls"><button type="button" aria-pressed={enabled} onClick={toggle}>{enabled ? g.pause : g.enable}</button><button type="button" aria-pressed={mode==='auto'} onClick={()=>{setMode('auto'); if(!enabled) toggle();}}>{g.auto}</button><button type="button" aria-pressed={mode==='scroll'} onClick={()=>{setMode('scroll'); if(!enabled) toggle();}}>{g.scroll}</button><button type="button" onClick={()=>{phase.current=0;paint.current(0);setMode('auto');if(!enabled)toggle();}}>{g.replay} ↺</button></div>
+      <div className="chain-controls"><button type="button" aria-pressed={mode==='auto'} onClick={()=>setMode('auto')}>{g.auto}</button><button type="button" aria-pressed={mode==='scroll'} onClick={()=>setMode('scroll')}>{g.scroll}</button><button type="button" onClick={()=>{phase.current=0;paint.current(0);setMode('auto');}}>{g.replay} ↺</button></div>
       <label className="chain-scrubber">{g.timeline}<input type="range" min="0" max="100" defaultValue="0" onChange={event=>seek(Number(event.target.value)/100)} /></label>
-      {reduced && !enabled && <p className="field-hint">{g.reduced}</p>}
     </>}
     <p className="chain-disclaimer">{g.preview}</p>
   </div>;

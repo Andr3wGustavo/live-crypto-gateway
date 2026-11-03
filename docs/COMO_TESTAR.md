@@ -23,11 +23,11 @@ Espere a mensagem `READY`. A primeira compilação pode demorar alguns minutos. 
 
 | Antes: Afterglow | Agora: Protocol / Matrix |
 |---|---|
-| Roxo e laranja dominantes | Azul, ciano e verde da logo, preservando roxo como apoio |
-| Tipografia mais arredondada/editorial | Space Grotesk e JetBrains Mono, detalhes de terminal e painéis geométricos |
-| Montagem de blocos vinculada ao scroll, estática em algumas telas | Cena SVG com modos automático/rolagem, pausa, repetição e exploração por etapas |
-| Movimento reduzido bloqueava ativação | Preferência respeitada inicialmente; ativação manual explícita disponível |
-| Landing mais isolada das telas internas | Marca e tema compartilhados com login, painel e checkout |
+| Roxo e laranja dominantes | Campanha ciano sobre aço quase preto, com roxo removido |
+| Tipografia mais arredondada/editorial | Anton nos títulos, Inter Tight no corpo e JetBrains Mono na telemetria |
+| Montagem de blocos vinculada ao scroll, estática em algumas telas | Cena SVG com modos automático/rolagem, repetição e exploração por etapas, sem pausa |
+| Movimento reduzido bloqueava ativação | Movimento é regra: não há pausa nem opt-in em nenhuma tela |
+| Landing mais isolada das telas internas | Marca e tema compartilhados com login, painel, checkout e overlay |
 | Explicações dispersas | Guia do criador, recebimento, segurança e instalação no OBS nas telas |
 
 Essa revisão visual está implementada, mas a homologação em navegador/dispositivos continua pendente. Os testes visuais da versão anterior não aprovam automaticamente o Matrix. Na rodada de backend, a mudança de interface adicional foi o aviso **“salvo, mas sincronização indisponível”**.
@@ -37,8 +37,8 @@ Essa revisão visual está implementada, mas a homologação em navegador/dispos
 | Ordem | Ação | O que observar |
 |---|---|---|
 | 1 | Abra a landing e troque PT/EN/ES | Logo, cores, textos e links consistentes; nenhuma rolagem horizontal indevida |
-| 2 | Veja a animação e use pausa/repetir/rolagem/range | Blocos e marcador devem se mover quando permitido; controles também devem funcionar no celular |
-| 3 | Se estiver estática, confira a preferência de movimento e pressione ativar | Não aumentar animação do sistema à força; usar a opção explícita da demonstração |
+| 2 | Veja a animação e use repetir/rolagem/range | Blocos e marcador devem se mover; os controles também devem funcionar no celular |
+| 3 | Passe o mouse sobre o trilho lateral e depois afaste-o | O trilho abre no hover, empurra o conteúdo e recolhe ao sair; não há botão no desktop |
 | 4 | Dispare o alerta da landing | Deve ser claramente uma demonstração; som apenas se você habilitar |
 | 5 | Entre no estúdio com carteira de teste | Primeiro conectar, depois assinar o login; não informar seed phrase ou chave privada |
 | 6 | Confira o destino cadastrado | Rede e endereço corretos; mensagem de pagamentos desativados continua visível na prévia |

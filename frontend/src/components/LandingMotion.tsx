@@ -3,12 +3,12 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { useMotionPreference } from './useMotionPreference';
 
-const Motion = createContext({ enabled:false, reduced:true, toggle:() => {} });
+const Motion = createContext({ enabled: true });
 export const useLandingMotion = () => useContext(Motion);
 
 export function LandingMotion({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
-  const { enabled, reduced, toggle } = useMotionPreference();
+  const { enabled } = useMotionPreference();
 
   useEffect(() => {
     const videos = Array.from(root.current?.querySelectorAll<HTMLVideoElement>('video[data-ambient]') || []);
@@ -33,7 +33,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     return () => { disposed = true; observer.disconnect(); document.removeEventListener('visibilitychange', visibility); videos.forEach(video => video.pause()); };
   }, [enabled]);
 
-  return <Motion.Provider value={{ enabled, reduced, toggle }}><div ref={root} className="marketing-page matrix-landing campaign" data-motion={enabled ? 'on' : 'off'}>
+  return <Motion.Provider value={{ enabled }}><div ref={root} className="marketing-page matrix-landing campaign" data-motion={enabled ? 'on' : 'off'}>
     {children}
   </div></Motion.Provider>;
 }

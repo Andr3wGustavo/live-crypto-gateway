@@ -1,10 +1,9 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { LanguageSwitcher, useI18n } from '@/i18n/Provider';
 import { Brand } from './Brand';
-import { MotionToggle } from './MotionToggle';
 
 export type SideNavIcon = 'layers' | 'monitor' | 'shield' | 'tag' | 'help';
 export type SideNavLink = { href: string; label: string; icon: SideNavIcon };
@@ -17,36 +16,8 @@ const ICONS: Record<SideNavIcon, ReactNode> = {
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.9.6-1.4 1.1-1.4 2.1" /><path d="M12 17h.01" /></>,
 };
 
-const STORAGE_KEY = 'lc-sidenav-open';
 const MOBILE_QUERY = '(max-width: 980px)';
-
-// The desktop preference lives outside React so the rail can hydrate from
-// localStorage without a state-setting effect. The server snapshot is always
-// "open"; after hydration useSyncExternalStore re-reads the stored value.
-const desktopListeners = new Set<() => void>();
-let desktopPreference: boolean | null = null;
-
-function readDesktopPreference() {
-  if (desktopPreference === null) {
-    try {
-      desktopPreference = window.localStorage.getItem(STORAGE_KEY) !== '0';
-    } catch {
-      desktopPreference = true;
-    }
-  }
-  return desktopPreference;
-}
-
-function subscribeDesktop(listener: () => void) {
-  desktopListeners.add(listener);
-  return () => { desktopListeners.delete(listener); };
-}
-
-function writeDesktopPreference(next: boolean) {
-  desktopPreference = next;
-  try { window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0'); } catch { /* Storage can be unavailable. */ }
-  desktopListeners.forEach(listener => listener());
-}
+const FOCUSABLE = 'a[href], button:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function subscribeMobile(listener: () => void) {
   const query = window.matchMedia(MOBILE_QUERY);
@@ -61,10 +32,17 @@ function readMobile() {
 const serverMobile = () => false;
 
 /**
- * A floating side rail replaces the old fixed top header. It is a glass dock
- * that expands on demand, collapses to its icon column and becomes a
- * full-height drawer on small screens. The wordmark stays visible on the
- * rail's head; the cube mark alone remains when it is collapsed.
+ * A floating glass dock replaces the old top bar. On desktop it stays as a
+ * compact icon column and unfolds when the pointer enters or keyboard focus
+ * lands inside, pushing the editorial layout instead of covering it. There is
+ * no toggle: leaving the rail collapses it again.
+ *
+ * Under 980 px the same component becomes a full-height modal drawer with a
+ * scrim: the hamburger opens it, focus is trapped, the page behind is inert,
+ * Escape closes it and focus returns to the trigger.
+ *
+ * The rail also tracks the section under the reading line so the current
+ * chapter stays highlighted without replacing the native anchors.
  */
 export function SideNav({
   homeHref, brandLabel, loginHref, creatorLabel, navLabel, links,
@@ -78,29 +56,94 @@ export function SideNav({
 }) {
   const { messages } = useI18n();
   const c = messages.common;
-  const desktopOpen = useSyncExternalStore(subscribeDesktop, readDesktopPreference, () => true);
   const mobile = useSyncExternalStore(subscribeMobile, readMobile, serverMobile);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const open = mobile ? mobileOpen : desktopOpen;
+  const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const [activeHref, setActiveHref] = useState<string | null>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const open = mobile ? mobileOpen : hovered || focusWithin;
 
   // Marks the rail as hydrated so the mobile drawer cannot paint open from the
   // desktop server snapshot before the media query resolves.
   useEffect(() => { document.documentElement.dataset.navReady = 'true'; }, []);
 
+  // Modal drawer behavior: focus enters the rail, Tab cycles inside it, the
+  // page behind becomes inert, and closing restores the trigger.
   useEffect(() => {
-    if (!mobile) return;
-    document.body.style.overflow = mobileOpen ? 'hidden' : '';
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey); };
+    if (!mobile || !mobileOpen) return;
+    const aside = asideRef.current;
+    if (!aside) return;
+    const restore = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const focusable = () => Array.from(aside.querySelectorAll<HTMLElement>(FOCUSABLE))
+      .filter(element => element.offsetWidth > 0 || element.offsetHeight > 0);
+
+    const initial = focusable()[0];
+    initial?.focus({ preventScroll: true });
+
+    const behind = Array.from(document.querySelectorAll<HTMLElement>('main, footer, .section-rail, .skip-link'));
+    behind.forEach(element => { element.inert = true; });
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMobileOpen(false); return; }
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      behind.forEach(element => { element.inert = false; });
+      restore?.focus({ preventScroll: true });
+    };
   }, [mobile, mobileOpen]);
 
-  const toggle = useCallback(() => {
-    if (window.matchMedia(MOBILE_QUERY).matches) setMobileOpen(current => !current);
-    else writeDesktopPreference(!readDesktopPreference());
-  }, []);
+  // Section spy: the last anchor whose target crossed the reading line wins.
+  // rAF throttling keeps this cheap, and the state only changes when the
+  // chapter actually changes.
+  useEffect(() => {
+    const targets = links
+      .filter(link => link.href.startsWith('#'))
+      .map(link => ({ href: link.href, id: link.href.slice(1) }));
+    if (!targets.length) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const line = window.innerHeight * 0.42;
+      let current: string | null = null;
+      for (const target of targets) {
+        const element = document.getElementById(target.id);
+        if (element && element.getBoundingClientRect().top <= line) current = target.href;
+      }
+      setActiveHref(previous => previous === current ? previous : current);
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update); };
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, [links]);
 
-  const closeOnMobile = useCallback(() => {
+  const toggle = useCallback(() => { setMobileOpen(current => !current); }, []);
+
+  const closeMobile = useCallback(() => {
     if (window.matchMedia(MOBILE_QUERY).matches) setMobileOpen(false);
   }, []);
 
@@ -122,43 +165,73 @@ export function SideNav({
 
     <button
       type="button"
-      className={`side-scrim${open ? ' is-open' : ''}`}
+      className={`side-scrim${mobileOpen ? ' is-open' : ''}`}
       onClick={() => setMobileOpen(false)}
       aria-label={c.navClose}
-      tabIndex={open ? 0 : -1}
+      tabIndex={-1}
     />
 
-    <aside id="side-nav" className={`side-nav${open ? ' is-open' : ''}`} aria-label={navLabel}>
+    <aside
+      id="side-nav"
+      ref={asideRef}
+      className={`side-nav${open ? ' is-open' : ''}`}
+      aria-label={navLabel}
+      role={mobile && mobileOpen ? 'dialog' : undefined}
+      aria-modal={mobile && mobileOpen ? true : undefined}
+      aria-hidden={mobile && !mobileOpen ? true : undefined}
+      inert={mobile && !mobileOpen ? true : undefined}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => setFocusWithin(true)}
+      onBlur={event => {
+        const next = event.relatedTarget as Node | null;
+        if (!event.currentTarget.contains(next)) setFocusWithin(false);
+      }}
+    >
       <div className="side-nav-head">
         <Brand href={homeHref} label={brandLabel} />
         <span className="side-nav-status" aria-hidden="true"><i />LIVE</span>
       </div>
 
       <nav className="side-nav-links" aria-label={navLabel}>
-        {links.map(link => <a key={link.href} href={link.href} onClick={closeOnMobile} title={link.label}>
-          <span className="side-nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{ICONS[link.icon]}</svg>
-          </span>
-          <span className="side-nav-label">{link.label}</span>
-        </a>)}
+        {links.map(link => {
+          const active = activeHref === link.href;
+          return <a
+            key={link.href}
+            href={link.href}
+            onClick={event => {
+              closeMobile();
+              if (!mobile) {
+                setFocusWithin(false);
+                event.currentTarget.blur();
+              }
+            }}
+            title={link.label}
+            className={active ? 'is-active' : undefined}
+            aria-current={active ? 'location' : undefined}
+          >
+            <span className="side-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{ICONS[link.icon]}</svg>
+            </span>
+            <span className="side-nav-label">{link.label}</span>
+          </a>;
+        })}
       </nav>
 
       <div className="side-nav-foot">
         <div className="side-nav-tools">
           <LanguageSwitcher />
-          <MotionToggle />
         </div>
-        <Link href={loginHref} className="brand-button primary side-nav-cta" onClick={closeOnMobile}>
+        <Link href={loginHref} className="brand-button primary side-nav-cta" onClick={closeMobile}>
           {creatorLabel}<span aria-hidden="true">↗</span>
         </Link>
         <button
           type="button"
           className="side-nav-toggle"
           onClick={toggle}
-          aria-label={open ? c.navClose : c.navOpen}
-          aria-expanded={open}
+          aria-label={c.navClose}
           aria-controls="side-nav"
-          title={open ? c.navClose : c.navOpen}
+          title={c.navClose}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>
           <span className="side-nav-label">{c.navClose}</span>

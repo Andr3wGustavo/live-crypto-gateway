@@ -16,7 +16,6 @@ import { CreatorGuide, ReceivingGuide, SecurityGuide } from '@/components/Creato
 import { SectionRail } from '@/components/SectionRail';
 import { SideNav } from '@/components/SideNav';
 import { ScrollChapters } from '@/components/ScrollChapters';
-import { MotionHint } from '@/components/MotionToggle';
 import { MotionReelTag } from '@/components/MotionReelTag';
 import { dictionaries } from '@/i18n/messages';
 import { isLocale, localePath } from '@/i18n/locale';
@@ -51,22 +50,22 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     <SectionRail label={fx.rail} />
     <SideNav
       homeHref={`/${locale}`}
-      brandLabel={`Live Crypto · ${c.home}`}
+      brandLabel={c.brandHome}
       loginHref={login}
       creatorLabel={c.creator}
       navLabel={h.nav}
       links={[
         { href: '#how-it-works', label: h.how, icon: 'layers' },
-        { href: '#experience', label: 'OBS Studio', icon: 'monitor' },
+        { href: '#experience', label: c.obsStudio, icon: 'monitor' },
         { href: '#security', label: g.securityLink, icon: 'shield' },
         { href: '#pricing', label: h.fees, icon: 'tag' },
-        { href: '#faq', label: 'FAQ', icon: 'help' },
+        { href: '#faq', label: c.faq, icon: 'help' },
       ]}
     />
     <main id="main">
       <section className="cinema-hero" aria-labelledby="hero-title">
         <div className="hero-scene" aria-hidden="true">
-          <video className="hero-film" data-ambient data-src="/brand/animation.mp4" muted loop playsInline preload="none" tabIndex={-1} aria-hidden="true" />
+          <video className="hero-film" data-ambient data-src="/brand/animation.mp4" poster="/brand/reel-cube.jpg" muted loop playsInline preload="none" tabIndex={-1} aria-hidden="true" />
           <span className="hero-watermark">LIVECRYPTO</span>
           <div className="hero-tokens">
             {['Ξ', '◎', '₿', '◈', '⬡', 'Ξ'].map((token, index) => <span key={index} style={{ '--t': index } as CSSProperties}>{token}</span>)}
@@ -104,7 +103,6 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
             <p className="cinema-description">{h.description}</p>
             <div className="button-row"><Link href={login} className="brand-button primary">{h.explore}<span aria-hidden="true">↗</span></Link><a href="#experience" className="brand-button secondary"><span className="play-symbol" aria-hidden="true">▷</span>{h.watch}</a></div>
             <ul className="hero-signals" aria-hidden="true">{fx.protocol.slice(0, 3).map((item, index) => <li key={item}><span>0{index + 1}</span>{item}</li>)}</ul>
-            <MotionHint />
             <p className="cinema-caption">{h.caption}</p>
           </div>
           <div className="hero-stage">

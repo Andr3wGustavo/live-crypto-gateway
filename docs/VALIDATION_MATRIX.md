@@ -1,6 +1,6 @@
 # Matrix UI acceptance checklist
 
-Status: **partially executed for the October–November 2026 revision.** The cinematic landing layer, the site-wide Act II motion system, the Act III design pass, the Act V gaming/hybrid redesign and the Act VI cyan campaign with its side rail and glass surfaces were reviewed in Chromium headless at 1440×900, 1024×768 and 390×844 (Act I–III also at 1024×800) against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
+Status: **partially executed for the October–November 2026 revision.** The cinematic landing layer, the site-wide Act II motion system, the Act III design pass, the Act V gaming/hybrid redesign, the Act VI cyan campaign with its side rail and glass surfaces, and the Act VII forced-motion/hover-rail polish were reviewed in Chromium headless at 1440×900, 1024×768 and 390×844 (Act I–III also at 1024×800) against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
 
 ## Setup
 
@@ -14,32 +14,32 @@ Status: **partially executed for the October–November 2026 revision.** The cin
 | Scenario | Expected result | Evidence to record |
 |---|---|---|
 | Hero scene, desktop | Blocks/packet change position while visible; simulation label remains clear | Short recording, browser/viewport |
-| Full scene: Auto → pause → replay | Animation advances, freezes, then restarts | Recording including controls |
+| Full scene: Auto → scroll → replay | Automatic playback advances, scroll mode follows the viewport, replay restarts from zero; there is no pause control | Recording including controls |
 | Scroll mode | Native scrolling changes animation progress; wheel and touch scrolling remain native | Desktop and touch-sized viewport |
 | Range control | Mouse and keyboard can explore start, middle and end states | Keyboard check |
-| Reduced motion | No automatic video/scene playback; no intro, aurora, marquee or reveal animation; explicit enable starts the motion layer | OS preference and result |
+| Forced motion | With the OS set to `prefers-reduced-motion: reduce`, the intro, aurora, marquee, headline, videos and scene still animate; no notice or opt-in appears | Emulated `prefers-reduced-motion` check and computed animation names |
 | Cinematic intro | Four status lines animate; skip button, click, wheel, touch and Escape dismiss; returning in the same tab does not replay it | Desktop and touch-sized recording |
 | Reveal, parallax and tilt | Sections fade in as they enter; hero/network parallax stays subtle; cards tilt with the pointer without hiding text | Desktop pointer recording |
-| Simulated ticker | Numbers advance only while motion is enabled and the strip is labelled as illustrative, not live chain data | Screenshot and DOM check |
+| Simulated ticker | Numbers advance while visible and the strip is labelled as illustrative, not live chain data | Screenshot and DOM check |
 | Chapter rail | The rail stays visible on desktop, follows scroll and always keeps one chapter active, including the interlude; hidden below 1100 px | Screenshots at two scroll positions |
-| Site motion toggle | Toggling in the landing or product shell updates `lc-motion-preference`, persists across reload and is shared by both surfaces | DOM/storage check |
+| No motion control | No pause, enable or opt-in control exists on the landing, product shell or blockchain scene; `data-site-motion` and `data-motion` stay `"on"`; `lc-motion-preference` is not read | DOM and storage check |
 | Async reveals | Metrics and panels mounted after the API response still reveal; the 2.4 s failsafe shows the page if hydration is slow | DOM opacity and screenshot |
 | Chapter spine | Exactly one how-it-works chapter is current at a time, carries `aria-current="step"`, and the spine height follows the reading position | DOM check at two scroll positions |
 | Studio loading skeleton | Placeholders expose `aria-busy` and are replaced by real values; no placeholder number is announced as data | Throttled-network screenshot and DOM check |
 | Studio activity chart | Fourteen UTC buckets match confirmed ledger rows; the chart is `aria-hidden` and the ledger remains the accessible source | DOM comparison of counts |
 | Studio scroll spy | The sticky nav highlights the section at the reading line, with exactly one `aria-current` link | Scroll check |
 | Quick amounts | A chip sets the amount, updates the live fee split and is disabled during signing; keyboard focus remains visible | Screenshot and DOM check |
-| Landing motion switch | The header control reports the true state through `aria-pressed`; pausing stops every video and CSS animation, stores the choice and survives reload; resuming restarts them | DOM check plus two-frame capture |
-| Brand film band | Both loops autoplay only when visible and with motion on; the `AUTO LOOP` / `PAUSED` tag is truthful; the hero cube and mesh band remain blended layers with no player chrome or poster card | Screenshot and `currentTime` check |
-| Reduced-motion notice | With the OS preference set, the page stays static, the hero explains why and its enable button starts motion; no notice appears for visitors who animate | Emulated `prefers-reduced-motion` check |
+| Brand film band | Both loops autoplay when visible, keep their 16:9 ratio and report `AUTO LOOP`; the hero cube and mesh band remain blended layers with no player chrome or poster card | Screenshot and `currentTime` check |
+| Rail hover and focus | Passing the pointer over the desktop rail expands it and leaving collapses it; keyboard focus inside also expands it; no toggle button is visible on desktop | Pointer recording and computed width |
+| Forced-motion CSS audit | No `prefers-reduced-motion` rule suppresses animation and no `[data-motion="off"]` rule changes playback | Stylesheet search and computed styles |
 | Unified cyan surface | Landing, login, studio, checkout and overlay all render on the `#04090d` steel surface with cyan accents and Anton display type; no violet/purple rule remains | Screenshots of every route |
 | Hero film and watermark | The cube loop enters as a graded, mask-faded layer, the outlined wordmark and token glyphs sit behind the copy, and the header logo stays legible over the film | Screenshot at 1440 and 390 px plus DOM opacity/mask check |
-| Headline lock-in | Each glyph animates once from a blurred offset into place; the `h1` accessible name is the complete sentence; with motion off the headline is immediately final | DOM check and two-frame capture |
-| Side navigation, desktop | The glass rail opens to 268 px and collapses to 84 px; the page is pushed, never covered; icons, labels, brand mark and CTA stay usable; the choice survives reload through `lc-sidenav-open` | Screenshots open/collapsed plus DOM width and padding check |
-| Side navigation, mobile | Under 980 px a hamburger opens an opaque full-height drawer over a scrim; the button becomes an X; links close the drawer; Escape closes it and body scroll is locked while open | 390 px screenshots and keyboard check |
+| Headline lock-in | Each glyph animates once from a blurred offset into place; the `h1` accessible name is the complete sentence | DOM check and two-frame capture |
+| Side navigation, desktop | The glass rail expands to 268 px on hover/focus and collapses to 84 px on leave; the page is pushed, never covered; icons, labels, brand mark and CTA stay usable; no desktop toggle | Screenshots open/collapsed plus DOM width and padding check |
+| Side navigation, mobile | Under 980 px a hamburger opens an opaque full-height drawer over a scrim; the button becomes an X; focus is trapped, the page behind is inert, links close the drawer, Escape closes it and focus returns to the hamburger; body scroll is locked while open | 390 px screenshots and keyboard check |
 | Glass cards and buttons | Cards render as rounded glass surfaces (16–22 px) with a soft inner highlight; every button is a filled capsule in Inter Tight, with cyan gradient primary and dark glass secondary | Computed radius/font/background at 1440 and 390 px |
 | Hero film integrity | The entrance film keeps a 16:9 ratio at every width, with no stretch or crop of the source, and the headline does not overflow in EN/PT-BR/ES | Ratio and `scrollWidth` check at three widths |
-| Metric counters | Real values count up; assistive technology reads the final value once; with motion off the final value renders immediately | DOM check |
+| Metric counters | Real values count up; assistive technology reads the final value once | DOM check |
 | Checkout fee split | Creator/fee bar matches the live fee basis points and amount; the timeline is visible in idle state and advances only with real payment state | Amount change and screenshot |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |
 | 320/390 px and short desktop | Controls/text fit; blockchain can still be played; no horizontal page overflow | Screenshots |

@@ -76,7 +76,7 @@ export default async function RootLayout({
       className={`${terminal.variable} ${display.variable} ${body.variable} h-full antialiased dark`}
     >
       <body className="matrix-theme min-h-full font-sans relative overflow-x-hidden">
-        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var p=localStorage.getItem('lc-motion-preference');var on=p==='on'||(p!=='off'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);var path=location.pathname.replace(/^\\/(en|pt-BR|es)(\\/|$)/,'$2');if(!path)path='/';var app=path!=='/'&&path.indexOf('/overlay')!==0;var r=document.documentElement;r.dataset.siteMotion=on?'on':'off';if(on&&app){r.classList.add('site-motion-ready');window.__lcRevealTimer=setTimeout(function(){r.classList.add('site-motion-fallback');},2400);}}catch(e){document.documentElement.dataset.siteMotion='off';}})();" }} />
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{localStorage.removeItem('lc-motion-preference');var path=location.pathname.replace(/^\\/(en|pt-BR|es)(\\/|$)/,'$2');if(!path)path='/';var app=path!=='/'&&path.indexOf('/overlay')!==0;var r=document.documentElement;r.dataset.siteMotion='on';if(app){r.classList.add('site-motion-ready');window.__lcRevealTimer=setTimeout(function(){r.classList.add('site-motion-fallback');},2400);}}catch(e){document.documentElement.dataset.siteMotion='on';}})();" }} />
         <I18nProvider locale={locale} messages={dictionaries[locale]}>
         <BackgroundLayer />
         <SiteMotion />
