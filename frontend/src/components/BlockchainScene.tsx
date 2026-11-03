@@ -83,7 +83,7 @@ export function BlockchainScene({ compact = false }: { compact?: boolean }) {
   return <div ref={root} className={`blockchain-console ${compact ? 'is-compact' : ''}`}>
     <div className="terminal-bar"><span><i />{g.terminal}</span><span>v.01 / {enabled ? '▶' : 'Ⅱ'}</span></div>
     <svg viewBox="0 0 700 350" className="blockchain-svg" role="img" aria-label={g.chainTitle}>
-      <defs><pattern id={`${id}-grid`} width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#65d5cb" strokeOpacity=".08" /></pattern><linearGradient id={`${id}-tile`} x2="1" y2="1"><stop stopColor="#153f4e" /><stop offset="1" stopColor="#17182f" /></linearGradient></defs>
+      <defs><pattern id={`${id}-grid`} width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#65d5cb" strokeOpacity=".08" /></pattern><linearGradient id={`${id}-tile`} x2="1" y2="1"><stop stopColor="#153f4e" /><stop offset="1" stopColor="#0a2028" /></linearGradient></defs>
       <rect width="700" height="350" fill={`url(#${id}-grid)`} />
       <path data-route d="M155 192H216L254 143H444L505 192H547" fill="none" stroke="#518f9a" strokeWidth="2" strokeDasharray="5 7" />
       <g className="chain-endpoint"><rect x="18" y="145" width="137" height="94" rx="5" /><path d="M40 178h36v26H40zM66 188h17v8H66z" fill="none" /><text x="35" y="164">01 / SIGN</text><text x="35" y="224">{h.cinema.nodes[0]}</text></g>

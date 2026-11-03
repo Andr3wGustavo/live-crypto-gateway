@@ -80,7 +80,7 @@ export function CinematicIntro() {
     <div className="intro-scan" aria-hidden="true" />
     <div className="intro-frame">
       <div className="intro-brand">
-        <Image src="/brand/logo-png.png" alt="" width={96} height={96} unoptimized />
+        <Image src="/brand/mark.png" alt="" width={96} height={96} unoptimized />
         <span>LIVE<b>CRYPTO</b><small>PROTOCOL / 01</small></span>
       </div>
       <ul className="intro-lines" aria-hidden="true">

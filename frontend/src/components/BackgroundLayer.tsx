@@ -23,8 +23,8 @@ export function BackgroundLayer() {
   }
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-black">
-      <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/20 to-black" />
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#04090d]">
+      <div className="absolute inset-0 bg-gradient-to-b from-cyan-950/20 to-[#04090d]" />
 
       {/* Cyber Grid & Ambient Dots */}
       <div className="absolute inset-0 bg-cyber-grid opacity-15"></div>
@@ -32,7 +32,7 @@ export function BackgroundLayer() {
 
       {/* Subtle Ambient Glowing Orbs */}
       <div className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-[160px]"></div>
-      <div className="absolute top-[35%] -right-[15%] w-[650px] h-[650px] rounded-full bg-purple-600/10 blur-[180px]"></div>
+      <div className="absolute top-[35%] -right-[15%] w-[650px] h-[650px] rounded-full bg-cyan-400/10 blur-[180px]"></div>
       <div className="absolute -bottom-[20%] left-[20%] w-[700px] h-[700px] rounded-full bg-blue-600/08 blur-[180px]"></div>
     </div>
   );

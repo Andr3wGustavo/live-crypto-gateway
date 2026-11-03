@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Anton, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
 import "../matrix-theme.css";
 import "../cinematic-app.css";
-import "../gaming-system.css";
+import "../campaign-system.css";
 import { BackgroundLayer } from "@/components/BackgroundLayer";
 import { SiteMotion } from "@/components/SiteMotion";
 import { notFound } from 'next/navigation';
@@ -18,10 +18,22 @@ const terminal = JetBrains_Mono({
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+/**
+ * Display face: Anton is the closest open poster face to the campaign
+ * reference — heavy, condensed, and made for uppercase headlines. Body copy
+ * stays on Inter Tight, and telemetry stays on JetBrains Mono.
+ */
+const display = Anton({
+  variable: "--font-display",
+  subsets: ["latin", "latin-ext"],
+  weight: "400",
+  display: "swap",
+});
+
+/** Body face: Inter Tight keeps dense UI copy compact without losing legibility. */
+const body = Inter_Tight({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -61,7 +73,7 @@ export default async function RootLayout({
     <html
        lang={locale}
        dir="ltr"
-      className={`${terminal.variable} ${spaceGrotesk.variable} h-full antialiased dark`}
+      className={`${terminal.variable} ${display.variable} ${body.variable} h-full antialiased dark`}
     >
       <body className="matrix-theme min-h-full font-sans relative overflow-x-hidden">
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var p=localStorage.getItem('lc-motion-preference');var on=p==='on'||(p!=='off'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);var path=location.pathname.replace(/^\\/(en|pt-BR|es)(\\/|$)/,'$2');if(!path)path='/';var app=path!=='/'&&path.indexOf('/overlay')!==0;var r=document.documentElement;r.dataset.siteMotion=on?'on':'off';if(on&&app){r.classList.add('site-motion-ready');window.__lcRevealTimer=setTimeout(function(){r.classList.add('site-motion-fallback');},2400);}}catch(e){document.documentElement.dataset.siteMotion='off';}})();" }} />

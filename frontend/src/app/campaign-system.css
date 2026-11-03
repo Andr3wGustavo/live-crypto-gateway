@@ -1,0 +1,301 @@
+/* ============================================================
+   Campaign system — global product layer.
+
+   One campaign, one surface: near-black steel with electric cyan.
+   Sharp 2-3px corners, hairline rules, mono telemetry, and a
+   single cyan-to-blue gradient used only for emphasis.
+
+   Imported after globals.css, matrix-theme.css and
+   cinematic-app.css so it wins on equal specificity. The landing
+   adds its own layer in [locale]/landing-campaign.css.
+   ============================================================ */
+
+.matrix-theme {
+  --ink: #04090d;
+  --ink-2: #071119;
+  --panel: #0a151d;
+  --panel-2: #0d1c26;
+  --cyan: #22e6ff;
+  --cyan-deep: #0891b2;
+  --ice: #d7f7ff;
+  --grad: linear-gradient(96deg, #6ff6ff 0%, #22e6ff 44%, #2b9dff 100%);
+  --line-strong: rgba(160, 226, 245, .18);
+  --line-soft: rgba(160, 226, 245, .08);
+
+  --background: #04090d;
+  --foreground: #eaf7fb;
+  --surface: #0a151d;
+  --surface-raised: #0d1c26;
+  --primary: #22e6ff;
+  --primary-glow: rgba(34, 230, 255, .2);
+  --accent: #7ce9ff;
+  --accent-glow: rgba(124, 233, 255, .16);
+  --text-muted: #8fa9b4;
+  --line: rgba(160, 226, 245, .18);
+  --radius-panel: 3px;
+  --ease-out: cubic-bezier(.16, .84, .32, 1);
+}
+
+.matrix-theme {
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -.005em;
+}
+
+/* ---------- Type ---------- */
+
+.matrix-theme h1,
+.matrix-theme h2,
+.matrix-theme h3 {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-weight: 400;
+  letter-spacing: -.01em;
+}
+
+.matrix-theme .eyebrow,
+.matrix-theme .field-label,
+.matrix-theme .phase-tag,
+.matrix-theme .studio-field > span {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---------- Buttons ---------- */
+
+/* One button language for the whole product: a filled glass capsule with the
+   body face, a quiet inner highlight and a cyan lift. No outline-only buttons. */
+.matrix-theme .brand-button {
+  position: relative;
+  overflow: hidden;
+  gap: 10px;
+  min-height: 50px;
+  padding: 13px 22px;
+  border: 1px solid rgba(160, 226, 245, .22);
+  border-radius: 14px;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: .88rem;
+  font-weight: 600;
+  letter-spacing: .002em;
+  text-transform: none;
+  background: rgba(18, 36, 46, .66);
+  color: #eaf7fb;
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 12px 32px rgba(0, 0, 0, .28);
+  transition: transform .22s var(--ease-out), background .22s, border-color .22s, color .22s, box-shadow .22s;
+}
+
+.matrix-theme .brand-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .26) 48%, transparent 66%);
+  transform: translateX(-120%);
+  transition: transform .8s var(--ease-out);
+  pointer-events: none;
+}
+
+.matrix-theme .brand-button:hover::after { transform: translateX(120%); }
+
+.matrix-theme .brand-button.primary {
+  color: #031218;
+  background: linear-gradient(135deg, #a8fbff 0%, #22e6ff 46%, #2b9dff 100%);
+  border-color: rgba(214, 252, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 14px 38px rgba(34, 230, 255, .28);
+}
+
+.matrix-theme .brand-button.primary::after {
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .48) 48%, transparent 66%);
+}
+
+.matrix-theme .brand-button.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c2fcff 0%, #4cecff 46%, #45adff 100%);
+  border-color: #e6feff;
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 20px 46px rgba(34, 230, 255, .36);
+}
+
+.matrix-theme .brand-button.secondary {
+  background: rgba(18, 36, 46, .62);
+  border-color: rgba(160, 226, 245, .24);
+  color: #eaf7fb;
+}
+
+.matrix-theme .brand-button.secondary:hover:not(:disabled) {
+  background: rgba(34, 230, 255, .13);
+  border-color: rgba(34, 230, 255, .62);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 16px 38px rgba(0, 0, 0, .3);
+}
+
+.matrix-theme .brand-button:active:not(:disabled) { transform: translateY(0) scale(.985); }
+
+.matrix-theme .brand-button.small {
+  min-height: 40px;
+  padding: 9px 16px;
+  font-size: .78rem;
+  border-radius: 12px;
+}
+
+/* ---------- Inputs and notices ---------- */
+
+.matrix-theme .glass-input {
+  border: 1px solid rgba(160, 226, 245, .22);
+  background: rgba(6, 17, 23, .72);
+  border-radius: 12px;
+  color: #eaf7fb;
+} 
+
+.matrix-theme .glass-input:focus {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-color: var(--cyan);
+}
+
+/* Icon-only language control: the native select stays as the accessible,
+   keyboard-friendly surface but is visually replaced by one quiet globe. */
+.matrix-theme .language-switcher {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid rgba(160, 226, 245, .16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .04);
+  color: #b9d3dd;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, color .2s;
+}
+
+.matrix-theme .language-switcher:hover,
+.matrix-theme .language-switcher:focus-within {
+  border-color: rgba(34, 230, 255, .5);
+  background: rgba(34, 230, 255, .08);
+  color: #eaf7fb;
+}
+
+.matrix-theme .language-globe { width: 17px; height: 17px; pointer-events: none; }
+
+.matrix-theme .language-switcher select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.matrix-theme .notice {
+  background: rgba(34, 230, 255, .07);
+  border: 1px solid rgba(34, 230, 255, .3);
+  color: #ccf6ff;
+  border-radius: 14px;
+}
+
+.matrix-theme .error-notice { border-radius: 14px; }
+
+/* ---------- Panels ---------- */
+
+.matrix-theme .product-panel {
+  position: relative;
+  background: linear-gradient(158deg, rgba(20, 42, 54, .66), rgba(6, 15, 21, .58) 70%);
+  border: 1px solid rgba(160, 226, 245, .16);
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 30px 70px rgba(0, 0, 0, .42);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+}
+
+.matrix-theme .product-toolbar { border-bottom: 1px solid rgba(160, 226, 245, .14); }
+
+/* ---------- Creator Studio ---------- */
+
+.matrix-theme .studio-metrics article {
+  border-top: 2px solid var(--cyan);
+  background: linear-gradient(180deg, rgba(34, 230, 255, .06), transparent 62%);
+}
+
+.matrix-theme .studio-metrics article:nth-child(2) {
+  border-top-color: #2b9dff;
+  background: linear-gradient(180deg, rgba(43, 157, 255, .07), transparent 62%);
+}
+
+.matrix-theme .studio-metrics article:nth-child(3) {
+  border-top-color: #7ce9ff;
+  background: linear-gradient(180deg, rgba(124, 233, 255, .05), transparent 62%);
+}
+
+.matrix-theme .studio-metrics strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -.01em;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+
+.matrix-theme .studio-canvas {
+  background:
+    linear-gradient(rgba(34, 230, 255, .06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 230, 255, .06) 1px, transparent 1px),
+    radial-gradient(ellipse at 76% 84%, rgba(34, 230, 255, .22), #04090d 70%);
+  background-size: 30px 30px, 30px 30px, 100% 100%;
+  border-radius: 2px;
+}
+
+.matrix-theme .studio-sample { background: rgba(10, 21, 29, .95); border-radius: 2px; }
+
+.matrix-theme .studio-ledger th {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.matrix-theme .studio-controls { border-left: 2px solid var(--cyan); }
+.matrix-theme .studio-nav a:hover,
+.matrix-theme .studio-nav a[aria-current] { color: var(--cyan); }
+
+/* ---------- Checkout / login ---------- */
+
+.matrix-theme .checkout-shell {
+  background:
+    radial-gradient(ellipse at 84% 2%, rgba(34, 230, 255, .12), transparent 56%),
+    radial-gradient(ellipse at 4% 96%, rgba(43, 157, 255, .1), transparent 58%),
+    #04090d;
+}
+
+.matrix-theme .login-core { border-color: rgba(34, 230, 255, .3); }
+
+/* ---------- Site motion control ---------- */
+
+.matrix-theme .site-motion-control {
+  border: 1px solid rgba(160, 226, 245, .24);
+  background: rgba(4, 9, 13, .92);
+  color: #d6eef6;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: .56rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+.matrix-theme .site-motion-control:hover {
+  border-color: rgba(34, 230, 255, .7);
+  color: #fff;
+}
+
+.matrix-theme .site-motion-control span { color: var(--cyan); }
+
+/* ---------- Selection and focus ---------- */
+
+.matrix-theme ::selection { background: var(--cyan); color: #04121a; }
+.matrix-theme :focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }

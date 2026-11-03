@@ -32,7 +32,7 @@ export function CreatorDemo() {
     </div>
     <aside className="demo-controls">
       <p className="eyebrow">{d.eyebrow}</p><h3>{d.title}</h3><p>{d.intro}</p>
-      <fieldset><legend>{d.atmosphere}</legend><div className="theme-choices">{[['signal', 'Matrix', '#73efc3'], ['ember', 'Nebula', '#b39afb'], ['mono', 'Glacier', '#7bd4ff']].map(([id, label, color]) => <button type="button" key={id} aria-pressed={theme === id} onClick={() => setTheme(id)}><span style={{ background: color }} />{label}</button>)}</div></fieldset>
+      <fieldset><legend>{d.atmosphere}</legend><div className="theme-choices">{[['signal', 'Matrix', '#73efc3'], ['ember', 'Nebula', '#2b9dff'], ['mono', 'Glacier', '#7bd4ff']].map(([id, label, color]) => <button type="button" key={id} aria-pressed={theme === id} onClick={() => setTheme(id)}><span style={{ background: color }} />{label}</button>)}</div></fieldset>
       <label className="sound-toggle"><input type="checkbox" checked={sound} onChange={e => setSound(e.target.checked)} />{d.sound}</label>
       <button type="button" className="brand-button primary full-width" onClick={() => void preview()}>{active ? d.repeat : d.trigger} ↗</button>
       <p className="field-hint">{d.disclaimer}</p>

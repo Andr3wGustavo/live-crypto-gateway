@@ -28,9 +28,12 @@ export function LanguageSwitcher() {
   const router = useRouter();
   // Never render application controls inside an OBS browser source.
   if (stripLocale(pathname).startsWith('/overlay/')) return null;
-  return <label className="language-switcher">
-    <span>{messages.common.language}</span>
-    <select value={locale} onChange={event => {
+  return <label className="language-switcher" title={messages.common.language}>
+    <svg className="language-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3.5 9h17M3.5 15h17M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9Z" />
+    </svg>
+    <select aria-label={messages.common.language} value={locale} onChange={event => {
       const next = event.target.value;
       if (!isLocale(next)) return;
       document.cookie = `${localeCookie}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;

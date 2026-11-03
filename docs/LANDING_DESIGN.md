@@ -1,16 +1,18 @@
 # Protocol / Matrix — shared product design
 
-Current implementation: November 2026. The "Act V" gaming/hybrid redesign is the current visual layer; the earlier cinematic, "Act II", "Act III" and "Act IV" passes remain documented below because their motion contracts are still in use. Reviews were run in Chromium headless at 1440×900 and 390×844 against the production bundle. Real wallet/OBS journeys remain pending.
+Current implementation: November 2026. The "Act VI" cyan campaign layer is the current visual direction; the earlier cinematic, "Act II", "Act III", "Act IV" and "Act V" passes remain documented below because their motion contracts are still in use. Reviews were run in Chromium headless at 1440×900 and 390×844 against the production bundle. Real wallet/OBS journeys remain pending.
 
 ## Direction
 
-- **Act V — gaming vibrant, hybrid surface.** Marketing pages use a light `#f7f3ff` surface with saturated violet; product screens (login, Creator Studio, checkout, overlay) stay on a dark `#07040f` surface. The logo palette governs both: violet `#6d3bff`, cyan `#00c2ff`, green `#00e57d`, pink `#ff2e93`.
-- Logo-inspired blue, cyan and green, with **violet secondary surfaces**, retained at the owner's request. Green and cyan are used for surfaces, borders and dark-mode text only; on white they never carry body copy, so contrast stays readable.
-- Pill controls, 16 px panels, hard offset shadows and a thin animated gradient line under the header carry the Twitch/Kick energy without turning the product into a neon dashboard.
-- Retro terminal details, geometric panels, a readable Space Grotesk body/display and JetBrains Mono controls. Fonts are self-hosted by Next.js after build.
-- Shared `Brand`, `matrix-theme.css` and `gaming-system.css` across landing, login, Creator Studio and checkout.
-- Supplied brand image/video assets from `public/brand` remain in use. OBS transparency is still controlled separately.
-- Cinematic pacing and scroll-based storytelling are design references; movement explains the product rather than representing live financial activity.
+- **Act VI — cyan campaign, cinematic steel.** The owner asked for a Rockstar-inspired, unified cinematic surface with the purple removed. The landing, login, Creator Studio, checkout and overlay now share a near-black steel base (`#04090d`), electric cyan (`#22e6ff`), deep blue (`#0891b2` / `#2b9dff`) and ice (`#d7f7ff`). Gradients are reserved for emphasis; flat cyan is used for labels and rules.
+- **Type.** Anton is the display face — condensed, heavy and built for uppercase poster headlines. Inter Tight carries body copy, and JetBrains Mono carries telemetry, captions and controls. The previous wide `font-stretch` rules are gone because Anton has a single width.
+- **Controls.** Every button shares one filled glass capsule pattern: 12–14 px radii, Inter Tight 600, sentence case, no background-less buttons. The primary is a cyan gradient with dark ink and a bright hover; the secondary is dark glass with an ice hairline. The closing band inverts the primary to dark-on-cyan. Hard offset shadows from Act V were removed.
+- **Cards.** Panels, pricing tiers, FAQ rows and guide tiles are rounded glass/liquid-glass surfaces at 16–22 px with a soft inner highlight, instead of the previous uniform square cards.
+- **Navigation.** A floating retractable glass rail replaces the top header. It is 84 px collapsed and 268 px expanded on desktop; the expanded rail pushes the page content (via `:has(.side-nav.is-open)`) rather than covering the headline. Under 980 px it becomes an opaque full-height drawer with a scrim, an X-state hamburger and Escape-to-close. The rail keeps the cube mark visible at every width, exposes link icons and labels, and carries the globe-only language control, the motion switch and the creator CTA. The desktop preference persists in `lc-sidenav-open`.
+- **Brand mark.** `public/brand/mark.png` is a transparent crop of the cube from `logo-png.png`; the rail head and boot overlay use it at 46–64 px with a soft cyan glow so the mark stays legible over the hero film.
+- **One surface.** The previous light marketing page/dark product split is retired. Every route now uses the same cyan/steel tokens from `campaign-system.css`, so the marketing page and the product read as one product.
+- **Hero film.** The identity cube is the hero entrance: it keeps its native 16:9 ratio (`aspect-ratio: 16 / 9`), is centred with `object-fit: cover` inside a fixed band, and drifts from scale 1.0 to 1.045 over 46 s behind the copy. It fades in over 2.2 s, is colour-graded and screen-blended, and is never framed as a player card. The mesh loop is the full-bleed background of `#in-motion` instead.
+- **Headline.** Anton lines unfold glyph by glyph (`rotateX(-72deg)` plus blur, 1.3 s each, 0.034 s stagger, 0.32 s delay) with wider tracking (`.015em`, `word-spacing .06em`, line-height `.88`). The `h1` accessible name remains the full sentence, and with motion off the headline renders final immediately.
 
 ## Animation implementation
 
@@ -119,6 +121,33 @@ The owner rejected the previous dark-only direction and asked for a **gaming vib
 ### Motion
 
 The Act II–IV contract is unchanged: the same `lc-motion-preference` key, the same header switch, the same reduced-motion notice and the same video lifecycle. Only the tokenised surface changed. With motion off the hero shows the real poster frame, the stream card reports `PAUSED`, no video receives a `src`, and running animations drop to zero; the in-hero enable button restores playback.
+
+## Act VI — cyan campaign, embedded film
+
+Act VI is a ground-up visual layer, not a re-skin of Act V. The light hybrid surface, violet accents, pill buttons and framed stream card are gone. The supplied brand videos stay, but they are now material inside the page instead of players on it.
+
+| Piece | Role |
+|---|---|
+| `frontend/src/app/campaign-system.css` | New shared token set and product system: `--cyan`, `--blue`, `--ice`, steel surfaces, square buttons, display/body/mono type and the shared product shell. Imported after `matrix-theme.css`. |
+| `frontend/src/app/[locale]/landing-campaign.css` | The whole landing treatment, scoped to `.matrix-landing.campaign`: hero film, watermarks, token floaters, chain theatre, OBS band, pricing, FAQ and closing. |
+| `LandingMotion.tsx` | Landing root class is `campaign`. The same video lifecycle still starts ambient clips only when visible and motion is enabled. |
+| Hero entrance film | `animation.mp4` (identity cube) is embedded in `hero-scene`, colour-graded to cyan, screen-blended and mask-faded at the edges. It enters with a 1.4 s fade plus a 30 s drift; it is never a bordered card or a player. |
+| Mesh band | `consegue_fazer_um_video_de_um.mp4` (network mesh) is a full-bleed background inside `#in-motion`. Gradient scrims keep the copy at AA contrast and the reel HUD reports the truthful `AUTO LOOP` / `PAUSED` state. |
+| `ChainTheatre.tsx` | A deterministic wallet → chain → OBS theatre replaces the old static deck. It advances through labelled simulated steps and never claims live settlement. |
+| Headline lock-in | Each glyph of the hero headline rises, tilts and focuses into place on a 24 ms stagger. The full sentence remains the `h1` accessible name; the animated spans are `aria-hidden`. With motion off the headline renders immediately. |
+
+### Layout rules
+
+- **One dark, cinematic system.** Every route uses body `#04090d`; the landing keeps a fixed 94% opaque header with an 18 px blur so the film never reduces logo or navigation contrast.
+- **Cyan is an accent, not a wash.** Headline ice `#f4fcff`, body `#b9d3dd`, muted `#7e9aa6`. Cyan marks numbers, rules, hover states and the final emphasis line; the gradient `linear-gradient(96deg,#6ff6ff,#22e6ff 44%,#2b9dff)` appears only where emphasis is intended.
+- **Sharp geometry.** Panels use 0–3 px radii, hairline `rgba(160,226,245,.14)` rules and mono micro-labels. No pills, no hard offset shadows.
+- **Crypto texture without noise.** An outlined `LIVECRYPTO` watermark sits behind the headline, six drifting `Ξ ◎ ₿ ◈ ⬡` glyphs add depth, and the network cards use `Ξ ◎ ₿` symbols. All are decorative and `aria-hidden`.
+- **Mobile.** The hero film narrows and drops to 26% opacity, the watermark shrinks and token floaters are hidden below 620 px; `scrollWidth` equals the viewport at 390×844.
+
+### Motion
+
+The motion contract is unchanged. `prefers-reduced-motion` still defaults the page to static; the in-hero notice offers an explicit opt-in. With `data-motion="off"` the hero headline, watermark and tokens render in their final positions, both videos stay paused without a `src`, and the section HUD reports `PAUSED`. With motion on, the headline locks in once, the films drift slowly and all loops pause when off-screen or in a hidden tab.
+
 
 ## Creator journey
 

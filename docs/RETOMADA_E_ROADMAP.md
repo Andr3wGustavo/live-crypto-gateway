@@ -19,15 +19,15 @@ Fluxo do criador: **entrar com carteira → conferir o destino → configurar ov
 
 ## Direção visual aprovada
 
-1. **Act V (vigente): gaming vibrante, tema híbrido.** Marca com estética Twitch/Kick, landing clara em `#f7f3ff` com roxo saturado e telas de produto escuras em `#07040f`.
+1. **Act VI (vigente): campanha ciano, superfície cinematográfica.** Pedido do responsável por uma direção unificada inspirada na Rockstar, com o roxo removido. Landing, login, painel, checkout e overlay compartilham base quase preta `#04090d`, ciano elétrico `#22e6ff`, azul `#0891b2`/`#2b9dff` e gelo `#d7f7ff`; Anton nos títulos, Inter Tight no corpo e JetBrains Mono na telemetria. Botões usam um único padrão de cápsula de vidro preenchida (primário em gradiente ciano, secundário em vidro escuro), cards são superfícies de vidro arredondadas de 16–22 px e o cabeçalho superior foi substituído por uma navegação lateral retrátil de vidro, com trilho de 84 px recolhido / 268 px aberto no desktop e gaveta de altura total abaixo de 980 px. O logo permanece visível, o seletor de idioma é apenas um ícone de globo e a preferência do desktop fica em `lc-sidenav-open`.
 2. Estilo retrô/Matrix inspirado em blockchain, com identidade própria — base histórica que permanece no git e nos contratos de movimento.
-3. Azul, ciano e verde da logo como base, mantendo **roxo como apoio**, conforme feedback do responsável. No Act V a paleta é violeta `#6d3bff`, ciano `#00c2ff`, verde `#00e57d` e rosa `#ff2e93`.
-4. Referências de apresentação cinematográfica e narrativa por scroll de sites como Rockstar; aplicar o princípio de movimento e ritmo à explicação do produto.
+3. Azul, ciano e verde da logo como base. O roxo foi **removido** no Act VI; a paleta passa a ser ciano `#22e6ff`, azul `#2b9dff`, gelo `#d7f7ff` e aço `#04090d`.
+4. Referências de apresentação cinematográfica e narrativa por scroll de sites como Rockstar; aplicar o princípio de movimento e ritmo à explicação do produto. No Act VI o vídeo do cubo é a entrada embutida do herói e o vídeo da malha é uma faixa de fundo em `#in-motion`, nunca um card de player.
 5. Animação blockchain visível em desktop e celular, com reprodução, pausa, exploração por etapas e rolagem.
 6. Respeitar movimento reduzido por padrão, permitindo ativação manual explícita.
-7. Mesma linguagem visual na landing, login, painel e checkout — agora com superfícies clara (marketing) e escura (produto) compartilhando os mesmos tokens.
+7. Mesma linguagem visual na landing, login, painel, checkout e overlay — todos na mesma superfície escura e nos mesmos tokens.
 8. Tipografia legível e explicação clara de recebimento, assinatura, rede, taxas e OBS.
-9. Em superfícies claras, verde e ciano não carregam texto: corpo em tinta `#12082b`, acento textual apenas em violeta.
+9. Contraste: texto principal em gelo `#f4fcff`, corpo em `#b9d3dd`, apoio em `#7e9aa6`. Ciano marca números, réguas e estados, sem carregar parágrafos longos.
 
 ## Roadmap com critérios verificáveis
 

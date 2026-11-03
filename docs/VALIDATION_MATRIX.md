@@ -1,6 +1,6 @@
 # Matrix UI acceptance checklist
 
-Status: **partially executed for the October–November 2026 revision.** The cinematic landing layer, the site-wide Act II motion system, the Act III design pass and the Act V gaming/hybrid redesign were reviewed in Chromium headless at 1440×900 and 390×844 (Act I–III also at 1024×800) against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
+Status: **partially executed for the October–November 2026 revision.** The cinematic landing layer, the site-wide Act II motion system, the Act III design pass, the Act V gaming/hybrid redesign and the Act VI cyan campaign with its side rail and glass surfaces were reviewed in Chromium headless at 1440×900, 1024×768 and 390×844 (Act I–III also at 1024×800) against the production bundle served on port 3001. The remaining scenarios and real wallet/OBS journeys are still pending. Static checks are not a substitute for these scenarios.
 
 ## Setup
 
@@ -30,11 +30,15 @@ Status: **partially executed for the October–November 2026 revision.** The cin
 | Studio scroll spy | The sticky nav highlights the section at the reading line, with exactly one `aria-current` link | Scroll check |
 | Quick amounts | A chip sets the amount, updates the live fee split and is disabled during signing; keyboard focus remains visible | Screenshot and DOM check |
 | Landing motion switch | The header control reports the true state through `aria-pressed`; pausing stops every video and CSS animation, stores the choice and survives reload; resuming restarts them | DOM check plus two-frame capture |
-| Brand reels | Both loops autoplay only when visible and with motion on; the tag reads `AUTO LOOP` or `PAUSED` truthfully; posters keep the band complete with motion disabled | Screenshot and `currentTime` check |
+| Brand film band | Both loops autoplay only when visible and with motion on; the `AUTO LOOP` / `PAUSED` tag is truthful; the hero cube and mesh band remain blended layers with no player chrome or poster card | Screenshot and `currentTime` check |
 | Reduced-motion notice | With the OS preference set, the page stays static, the hero explains why and its enable button starts motion; no notice appears for visitors who animate | Emulated `prefers-reduced-motion` check |
-| Hybrid surface split | Marketing pages render on the light paper surface while login, studio, checkout and overlay render on the dark product surface; both share the logo palette and no brand accent becomes unreadable | Screenshots of landing and login side by side |
-| Hero stream card | The dark 16:9 card plays the brand loop only with motion on, keeps its simulated labels visible, and does not hide the hero copy at any breakpoint | Screenshot at 1440 and 390 px plus DOM label check |
-| Fixed header over content | The landing header stays at top 0 while scrolling, its surface blocks the content behind it, and the gradient line stops under reduced motion | Two scroll-position screenshots |
+| Unified cyan surface | Landing, login, studio, checkout and overlay all render on the `#04090d` steel surface with cyan accents and Anton display type; no violet/purple rule remains | Screenshots of every route |
+| Hero film and watermark | The cube loop enters as a graded, mask-faded layer, the outlined wordmark and token glyphs sit behind the copy, and the header logo stays legible over the film | Screenshot at 1440 and 390 px plus DOM opacity/mask check |
+| Headline lock-in | Each glyph animates once from a blurred offset into place; the `h1` accessible name is the complete sentence; with motion off the headline is immediately final | DOM check and two-frame capture |
+| Side navigation, desktop | The glass rail opens to 268 px and collapses to 84 px; the page is pushed, never covered; icons, labels, brand mark and CTA stay usable; the choice survives reload through `lc-sidenav-open` | Screenshots open/collapsed plus DOM width and padding check |
+| Side navigation, mobile | Under 980 px a hamburger opens an opaque full-height drawer over a scrim; the button becomes an X; links close the drawer; Escape closes it and body scroll is locked while open | 390 px screenshots and keyboard check |
+| Glass cards and buttons | Cards render as rounded glass surfaces (16–22 px) with a soft inner highlight; every button is a filled capsule in Inter Tight, with cyan gradient primary and dark glass secondary | Computed radius/font/background at 1440 and 390 px |
+| Hero film integrity | The entrance film keeps a 16:9 ratio at every width, with no stretch or crop of the source, and the headline does not overflow in EN/PT-BR/ES | Ratio and `scrollWidth` check at three widths |
 | Metric counters | Real values count up; assistive technology reads the final value once; with motion off the final value renders immediately | DOM check |
 | Checkout fee split | Creator/fee bar matches the live fee basis points and amount; the timeline is visible in idle state and advances only with real payment state | Amount change and screenshot |
 | Hidden/offscreen scene | Animation pauses; returning resumes without a large time jump | Browser performance check |

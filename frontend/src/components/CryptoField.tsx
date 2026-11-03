@@ -54,9 +54,9 @@ export function CryptoField() {
 
       if (pointer.active) {
         const glow = context.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 190);
-        glow.addColorStop(0, 'rgba(80, 239, 172, 0.14)');
-        glow.addColorStop(0.45, 'rgba(95, 211, 255, 0.06)');
-        glow.addColorStop(1, 'rgba(80, 239, 172, 0)');
+        glow.addColorStop(0, 'rgba(34, 230, 255, 0.14)');
+        glow.addColorStop(0.45, 'rgba(43, 157, 255, 0.06)');
+        glow.addColorStop(1, 'rgba(34, 230, 255, 0)');
         context.fillStyle = glow;
         context.beginPath();
         context.arc(pointer.x, pointer.y, 190, 0, Math.PI * 2);
@@ -82,14 +82,14 @@ export function CryptoField() {
         const x = a.x + (b.x - a.x) * pulse.t;
         const y = a.y + (b.y - a.y) * pulse.t;
         const glow = context.createRadialGradient(x, y, 0, x, y, 15);
-        glow.addColorStop(0, 'rgba(190, 255, 232, 0.95)');
-        glow.addColorStop(0.35, 'rgba(95, 211, 255, 0.62)');
-        glow.addColorStop(1, 'rgba(95, 211, 255, 0)');
+        glow.addColorStop(0, 'rgba(215, 247, 255, 0.95)');
+        glow.addColorStop(0.35, 'rgba(34, 230, 255, 0.62)');
+        glow.addColorStop(1, 'rgba(34, 230, 255, 0)');
         context.fillStyle = glow;
         context.beginPath();
         context.arc(x, y, 15, 0, Math.PI * 2);
         context.fill();
-        context.strokeStyle = 'rgba(120, 255, 215, 0.28)';
+        context.strokeStyle = 'rgba(111, 246, 255, 0.28)';
         context.lineWidth = 1;
         context.beginPath();
         context.moveTo(a.x, a.y);
@@ -148,7 +148,7 @@ export function CryptoField() {
         vx: (Math.random() - 0.5) * 0.18,
         vy: (Math.random() - 0.5) * 0.18,
         r: Math.random() * 1.8 + 1.1,
-        hue: [162, 190, 262][Math.floor(Math.random() * 3)],
+        hue: [184, 194, 210][Math.floor(Math.random() * 3)],
         phase: Math.random() * Math.PI * 2,
       }));
       pulses = [];
