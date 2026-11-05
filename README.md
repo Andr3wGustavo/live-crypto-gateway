@@ -10,9 +10,9 @@ Live Crypto Gateway is a non-custodial donation service for livestream creators.
 
 ## Product Gallery
 
-The current **Protocol / Matrix** direction combines the logo's blue, cyan and green with violet accents, terminal typography, an SVG blockchain simulation and an interactive OBS demonstration. Login, checkout and Creator Studio share the design and onboarding guides. See [the design notes](docs/LANDING_DESIGN.md); browser acceptance of this revision is pending.
+The current **Act VII** direction is a near-black steel campaign (`#04090d`) with electric cyan (`#22e6ff`), Anton display type, Inter Tight body copy, JetBrains Mono telemetry, a hover-expanding side rail and motion that is always on. Landing, login, checkout and Creator Studio share one layout shell; EVM extensions, Phantom/Solflare/Backpack and Wallet Standard Sui wallets such as Slush are detected natively. See [the design notes](docs/LANDING_DESIGN.md) and the measured [browser evidence](STATUS.md).
 
-Screenshots and a short demo will be added here after the browser review. The slots below are reserved for actual captures of the application; they are not evidence of a completed payment or deployment.
+Screenshots and a short demo will be added here. The slots below are reserved for actual captures of the application; they are not evidence of a completed payment or deployment.
 
 | Preview | What to show | Planned image path |
 |---|---|---|
@@ -36,9 +36,10 @@ See [the image guide](docs/images/README.md) for capture and replacement instruc
 
 ## Capabilities
 
-- Wallet authentication with SIWE (EVM) and signed Solana login challenges.
+- Wallet authentication with SIWE (EVM, bound to the configured chain), signed Solana challenges and Sui personal-message signatures (ed25519 and secp256k1).
+- Multi-wallet detection: EVM injected extensions via EIP-6963, Phantom/Solflare/Backpack for Solana and Wallet Standard Sui wallets such as Slush.
 - Revocable 12-hour `HttpOnly`, `SameSite=Strict` sessions backed by Redis.
-- Per-network payout address validation, including reserved router, treasury, zero, and system addresses.
+- Per-network payout address validation, including reserved router, treasury, zero, and system addresses; Sui addresses are normalised to lowercase `0x` + 64 hex.
 - Persistent payment intents bound to creator, chain, payout address, sender, amount, memo, and Solana reference.
 - Server-side EVM event discovery and Solana reference discovery, so reconciliation continues after the donor closes checkout.
 - Exact decimal verification for native EVM and SOL payment splits, confirmations, configured RPC network, router, treasury, and payment intent fields.

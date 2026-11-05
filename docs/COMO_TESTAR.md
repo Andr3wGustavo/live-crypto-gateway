@@ -46,8 +46,10 @@ Essa revisão visual está implementada, mas a homologação em navegador/dispos
 | 8 | Use os links do guia no painel | Devem levar às seções de conta, destino, OBS e compartilhamento |
 | 9 | Copie o link público de doação | Checkout abre no criador correto; a URL privada do OBS não é o link para compartilhar |
 | 10 | Teste logout e acesso posterior ao painel | Volta ao login; sessão revogada não autoriza novas operações |
+| 11 | Abra a aba **Sui** e entre com a Slush (ou outra carteira Sui) | A carteira aparece na lista; conectar não abre sessão; assine a mensagem e confirme que o endereço exibido é `0x` + 64 hex |
+| 12 | Cadastre um endereço Sui em "Carteiras de recebimento" | O endereço é salvo em minúsculas; endereço curto (`0x2`), zero ou tesouraria são recusados; pagamentos Sui continuam desativados |
 
-Use MetaMask/Rabby para a jornada EVM ou Phantom para Solana. O login autentica uma conta, não envia uma doação. Não há pareamento móvel por QR implementado; no celular é necessária uma carteira/navegador compatível com o fluxo disponível.
+Use MetaMask/Rabby para a jornada EVM, Phantom/Solflare/Backpack para Solana ou Slush/Sui Wallet para Sui. O login autentica uma conta, não envia uma doação. Não há pareamento móvel por QR implementado; no celular é necessária uma carteira/navegador compatível com o fluxo disponível.
 
 ## 5. Instalar no OBS
 
@@ -84,7 +86,7 @@ Falhas de Redis/logout e provedor já têm regressões automatizadas com falhas 
 
 ## 8. Pagamentos reais de testnet: próxima etapa
 
-Antes de habilitar pagamentos, precisamos do router EVM, tesouraria e RPC corretos, carteiras com tokens de teste e PostgreSQL/Redis disponíveis. Siga `PRODUCTION_GLOBAL_LAUNCH.md`. Não altere `DONATIONS_ENABLED` para testar a aparência.
+Antes de habilitar pagamentos, precisamos do router EVM, tesouraria e RPC corretos, carteiras com tokens de teste e PostgreSQL/Redis disponíveis. Siga `PRODUCTION_GLOBAL_LAUNCH.md`. Não altere `DONATIONS_ENABLED` para testar a aparência. No Sui, login e cadastro de destino já funcionam, mas o checkout só deve ser habilitado depois de publicar o pacote Move, configurar `SUI_TREASURY_ADDRESS` e `SUI_PACKAGE_ID` e reconciliar uma doação real de testnet; sem o pacote, `capabilities.sui` permanece `false`.
 
 ## 9. Como enviar feedback
 

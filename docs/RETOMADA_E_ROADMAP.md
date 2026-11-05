@@ -49,6 +49,7 @@ Fluxo do criador: **entrar com carteira → conferir o destino → configurar ov
 | R14 | P1 | Modelo comercial | Hipóteses documentadas | Validar taxa, custos, condições, suporte e mercados atendidos | Piloto e decisões do negócio |
 | R15 | P2 | Receita em mainnet | Pendente | Revisão independente, configuração aprovada, operação e piloto controlado | R08–R14 |
 | R16 | P2 | Aquisição e expansão | Plano documentado | Conteúdo e parcerias com conversão medida; investimento guiado por retenção | Produto confiável e métricas |
+| R17 | P0 | Identidade Sui e múltiplas carteiras | Implementada; testes criptográficos passam; validação com extensões reais pendente | Login Sui (ed25519/secp256k1), payout Sui, Slush/Sui Wallet, Phantom/Solflare/Backpack, RPC Solana configurável e SIWE vinculado à rede | Extensões instaladas e carteiras de testnet |
 
 **Próximo foco:** concluir R03–R05 e verificar R02/R04. Staging vem depois da primeira validação local; mainnet permanece uma etapa separada.
 

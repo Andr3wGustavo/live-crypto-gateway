@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:product": "eslint src/app src/components src/i18n src/proxy.ts src/services/voiceSynthesis.ts tests next.config.ts",
+    "lint:product": "eslint src/app src/components src/i18n src/lib src/proxy.ts src/services/voiceSynthesis.ts tests next.config.ts",
     "test:i18n": "node --experimental-strip-types --test tests/i18n.test.mjs"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 const { getAddress, ZeroAddress } = require('ethers');
 const { decodePublicKey } = require('./solanaAuth');
+const { normalizeSuiAddress } = require('./suiAuth');
 
 // Format/destination validation only; ownership and payment attribution are
 // separate requirements and must not be inferred from a valid address.
@@ -23,6 +24,15 @@ function normalizePayoutAddress(chainId, address, config) {
       throw new Error('O destino não pode ser o programa do sistema nem a tesouraria.');
     }
     return value; // Base58 is case-sensitive.
+  }
+  if (chainId === config.sui.chainId) {
+    let normalized;
+    try { normalized = normalizeSuiAddress(value); }
+    catch { throw new Error('Endereço Sui inválido: informe 0x seguido de 64 caracteres hexadecimais.'); }
+    if (/^0x0{64}$/.test(normalized) || (config.sui.treasury && normalized === normalizeSuiAddress(config.sui.treasury))) {
+      throw new Error('O destino não pode ser o endereço zero nem a tesouraria.');
+    }
+    return normalized;
   }
   throw new Error('Rede não configurada para este ambiente.');
 }

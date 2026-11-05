@@ -10,13 +10,13 @@ import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstructi
 import { Buffer } from 'buffer';
 import routerAbi from '@/abi/LiveCryptoRouter.json';
 import { LanguageSwitcher, useI18n } from '@/i18n/Provider';
+import { detectSolanaWallets, type SolanaProvider, type SolanaWalletOption } from '@/lib/solanaWallets';
 
-type Network = { chainId: string; name: string; currency: string; testnet: boolean; enabled: boolean; router?: string; treasury?: string; explorer: string };
+type Network = { chainId: string; name: string; currency: string; testnet: boolean; enabled: boolean; router?: string; treasury?: string; explorer: string; rpcUrl?: string };
 type Config = { enabled: boolean; feeBps: number; networks: Network[] };
 type Wallet = { chain_id: string; public_address: string };
 type Intent = { id: string; accessToken: string; memo: string; reference: string | null; recipient: string; router: string; treasury: string; feeBps: number; amount: string; expiresAt: string };
 type Submitted = { hash: string; network: Network; gross: string; intent?: Intent };
-type SolanaWallet = { publicKey: PublicKey; connect: () => Promise<unknown>; signAndSendTransaction: (tx: Transaction) => Promise<{ signature: string }> };
 type State = 'idle' | 'signing' | 'pending' | 'confirmed' | 'error';
 
 function loadSubmittedPayment(streamerId: string): Submitted | null {
@@ -42,11 +42,24 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
   const [netReceived, setNetReceived] = useState('');
   const [expired, setExpired] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [solanaWallets, setSolanaWallets] = useState<SolanaWalletOption[]>([]);
+  const [solanaWalletId, setSolanaWalletId] = useState('');
   const busy = useRef(false);
   const { address, chainId, isConnected } = useAccount();
   const { open } = useWalletPicker();
   const { sendTransactionAsync } = useSendTransaction();
   const { switchChainAsync } = useSwitchChain();
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      const detected = detectSolanaWallets();
+      setSolanaWallets(detected);
+      setSolanaWalletId(detected[0]?.id || '');
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -85,7 +98,7 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
 
   const network = config?.networks.find(n => n.chainId === networkId);
   const recipient = wallets.find(w => w.chain_id === networkId)?.public_address;
-  const decimals = networkId.startsWith('solana') ? 9 : 18;
+  const decimals = networkId.startsWith('solana') || networkId.startsWith('sui') ? 9 : 18;
   let raw = 0n;
   try {
     if (/^\d+(\.\d+)?$/.test(amount) && (amount.split('.')[1]?.length || 0) <= decimals) raw = parseUnits(amount, decimals);
@@ -97,7 +110,7 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
   // the donor commits. Idle draws no progress so it never implies a payment.
   const paymentStarted = Boolean(submitted) || state !== 'idle';
   const timelineStep = paymentStarted ? paymentStep : -1;
-  const canPay = !loading && network?.enabled && recipient && raw > 0n && !submitted && state !== 'signing';
+  const canPay = !loading && network?.enabled && !networkId.startsWith('sui') && recipient && raw > 0n && !submitted && state !== 'signing';
 
   useEffect(() => {
     if (!submitted?.intent) return;
@@ -143,19 +156,24 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
 
   async function donate() {
     if (!canPay || !network || !recipient || !config || busy.current) return;
+    // Sui sign-in and payout registration are live, but this checkout does not
+    // build a Sui transaction yet. Refuse loudly instead of borrowing the EVM
+    // branch for a network the wallet cannot sign.
+    if (network.chainId.startsWith('sui')) { setError(p.unsupported); return; }
     busy.current = true;
     setError('');
     setState('signing');
     try {
       let hash: string;
-      let solWallet: SolanaWallet | undefined;
+      let solWallet: SolanaProvider | undefined;
       let sender: string | undefined = address;
       if (network.chainId.startsWith('solana')) {
-        const browser = window as unknown as { phantom?: { solana?: SolanaWallet }; solana?: SolanaWallet };
-        solWallet = browser.phantom?.solana || browser.solana;
+        const option = solanaWallets.find(wallet => wallet.id === solanaWalletId) || solanaWallets[0];
+        solWallet = option?.provider;
         if (!solWallet) throw new Error('Solana wallet unavailable');
         await solWallet.connect();
-        sender = solWallet.publicKey.toBase58();
+        sender = solWallet.publicKey?.toString() || '';
+        if (!sender) throw new Error('The Solana wallet returned no public key.');
       } else {
         if (!isConnected || !address) { await open(); setState('idle'); return; }
         if (chainId !== Number(network.chainId)) await switchChainAsync({ chainId: Number(network.chainId) });
@@ -174,13 +192,15 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
       if (network.chainId.startsWith('solana')) {
         const wallet = solWallet;
         if (!wallet) throw new Error('Conecte uma carteira Solana compatível, como Phantom.');
+        const payer = wallet.publicKey;
+        if (!payer) throw new Error('A carteira Solana não retornou uma chave pública.');
         if (raw > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('Valor acima do limite seguro deste checkout.');
         if (!network.treasury) throw new Error('Tesouraria indisponível.');
-        const connection = new Connection(network.testnet ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com', 'confirmed');
+        const connection = new Connection(network.rpcUrl || (network.testnet ? 'https://api.devnet.solana.com' : 'https://api.mainnet-beta.solana.com'), 'confirmed');
         const { blockhash } = await connection.getLatestBlockhash();
-        const tx = new Transaction({ recentBlockhash: blockhash, feePayer: wallet.publicKey });
-        if (intentFee > 0n) tx.add(SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey: new PublicKey(intent.treasury), lamports: Number(intentFee) }));
-        const transfer = SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey: new PublicKey(intent.recipient), lamports: Number(intentRaw - intentFee) });
+        const tx = new Transaction({ recentBlockhash: blockhash, feePayer: payer });
+        if (intentFee > 0n) tx.add(SystemProgram.transfer({ fromPubkey: payer, toPubkey: new PublicKey(intent.treasury), lamports: Number(intentFee) }));
+        const transfer = SystemProgram.transfer({ fromPubkey: payer, toPubkey: new PublicKey(intent.recipient), lamports: Number(intentRaw - intentFee) });
         if (!intent.reference) throw new Error('Missing payment reference');
         transfer.keys.push({ pubkey: new PublicKey(intent.reference), isSigner: false, isWritable: false });
         tx.add(transfer);
@@ -216,9 +236,17 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
         {config && !config.enabled && <p className="notice">{p.preview}</p>}
         <label className="field-label" htmlFor="network">{p.network}</label>
         <select id="network" className="glass-input field-control" value={networkId} disabled={!!submitted || state === 'signing'} onChange={e => setNetworkId(e.target.value)}>
-          {config?.networks.map(n => <option value={n.chainId} key={n.chainId}>{n.name} · {n.currency}{!n.enabled ? ` · ${c.unavailable}` : ''}</option>)}
+          {config?.networks.map(n => <option value={n.chainId} key={n.chainId}>{n.name} · {n.currency}{!n.enabled || n.chainId.startsWith('sui') ? ` · ${c.unavailable}` : ''}</option>)}
         </select>
         {network && <p className={`network-badge${network.testnet ? ' is-testnet' : ''}`} aria-live="polite"><span aria-hidden="true" />{network.name} · {network.currency} · {network.testnet ? c.testnet : c.active}</p>}
+        {network?.chainId.startsWith('sui') && <p className="field-hint">{p.suiSoon}</p>}
+        {network?.chainId.startsWith('solana') && solanaWallets.length > 1 && <>
+          <label className="field-label" htmlFor="solana-wallet">{p.wallet}</label>
+          <select id="solana-wallet" className="glass-input field-control" value={solanaWalletId} disabled={!!submitted || state === 'signing'} onChange={event => setSolanaWalletId(event.target.value)}>
+            {solanaWallets.map(wallet => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
+          </select>
+        </>}
+        {network?.chainId.startsWith('solana') && solanaWallets.length === 0 && <p className="field-hint">{p.walletMissing}</p>}
         {network?.testnet && <p className="field-hint">{p.testnet}</p>}
         <label className="field-label" htmlFor="amount">{p.amount} {network?.currency}</label>
         <input id="amount" className="glass-input field-control" inputMode="decimal" value={amount} disabled={!!submitted || state === 'signing'} onChange={e => setAmount(e.target.value.replace(',', '.'))} autoComplete="off" aria-describedby="decimal-hint" />

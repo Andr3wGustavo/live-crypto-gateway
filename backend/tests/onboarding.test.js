@@ -18,13 +18,17 @@ const { Wallet, ZeroAddress, getAddress } = require('ethers');
 const { SiweMessage } = require('siwe');
 const { app } = require('../src/server');
 const { signInMessage } = require('../src/services/solanaAuth');
+const { deriveSuiAddress, signInMessage: suiSignInMessage, blake2b256, PERSONAL_MESSAGE_INTENT } = require('../src/services/suiAuth');
 const db = require('../src/db');
 
-let server, base, evmSession, solSession;
+let server, base, evmSession, solSession, suiSession;
 let admin, pool;
 const schema = `onboarding_${crypto.randomBytes(8).toString('hex')}`;
 const evmWallet = Wallet.createRandom();
 const solKeys = crypto.generateKeyPairSync('ed25519');
+const suiKeys = crypto.generateKeyPairSync('ed25519');
+const suiPublicKey = suiKeys.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32);
+const suiAddress = deriveSuiAddress(suiPublicKey, 'ed25519');
 function base58(bytes) {
   const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   let value = BigInt(`0x${bytes.toString('hex')}`), result = '';
@@ -48,8 +52,13 @@ async function login(type) {
   if (type === 'solana') {
     const message = signInMessage(solAddress, nonce, process.env.FRONTEND_URL);
     payload = { type, publicKey: solAddress, nonce, message, signature: crypto.sign(null, Buffer.from(message), solKeys.privateKey).toString('hex') };
+  } else if (type === 'sui') {
+    const message = suiSignInMessage(suiAddress, nonce, process.env.FRONTEND_URL);
+    const digest = blake2b256(Buffer.concat([PERSONAL_MESSAGE_INTENT, Buffer.from(message, 'utf8')]));
+    const signature = Buffer.concat([Buffer.from([0]), crypto.sign(null, digest, suiKeys.privateKey), suiPublicKey]).toString('base64');
+    payload = { type, address: suiAddress, nonce, message, signature };
   } else {
-    const message = new SiweMessage({ domain: 'localhost:3000', address: evmWallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: 1, nonce }).prepareMessage();
+    const message = new SiweMessage({ domain: 'localhost:3000', address: evmWallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: Number(process.env.EVM_CHAIN_ID), nonce }).prepareMessage();
     payload = { message, signature: await evmWallet.signMessage(message) };
   }
   const response = await post('/api/auth/verify', payload);
@@ -75,6 +84,7 @@ before(async () => {
   base = `http://127.0.0.1:${server.address().port}`;
   evmSession = await login('evm');
   solSession = await login('solana');
+  suiSession = await login('sui');
 });
 after(async () => {
   if (server) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
@@ -87,14 +97,18 @@ after(async () => {
 test('signed onboarding uses configured networks and exposes the same safe config as checkout', async () => {
   const evm = await dashboard(evmSession);
   const sol = await dashboard(solSession);
+  const sui = await dashboard(suiSession);
   const config = await (await fetch(`${base}/api/public/payment-config`)).json();
   assert.deepEqual(evm.paymentConfig, config);
-  assert.deepEqual(config.networks.map(network => network.chainId), ['84532', 'solana-devnet']);
+  assert.deepEqual(config.networks.map(network => network.chainId), ['84532', 'solana-devnet', 'sui-testnet']);
   assert.ok(config.networks.every(network => !network.enabled && !('rpc' in network)));
+  assert.deepEqual(config.capabilities, { evm: false, solana: false, sui: false });
   assert.deepEqual(evm.wallets.map(wallet => wallet.chain_id), ['84532']);
   assert.equal(evm.wallets[0].public_address.toLowerCase(), evmWallet.address.toLowerCase());
   assert.equal(sol.wallets[0].chain_id, 'solana-devnet');
   assert.equal(sol.wallets[0].public_address, solAddress);
+  assert.equal(sui.wallets[0].chain_id, 'sui-testnet');
+  assert.equal(sui.wallets[0].public_address, suiAddress);
 });
 
 test('wallet API rejects invalid, cross-network and reserved destinations without changing saved payouts', async () => {
@@ -105,7 +119,9 @@ test('wallet API rejects invalid, cross-network and reserved destinations withou
     ['84532', '0x52908400098527886E0F7030069857D2E4169Ee7'], // invalid mixed-case checksum
     ['84532', { address: evmWallet.address }], ['solana-devnet', evmWallet.address],
     ['solana-devnet', '2'.repeat(32)], ['solana-devnet', '11111111111111111111111111111111'],
-    ['solana-devnet', process.env.SOLANA_TREASURY_ADDRESS]
+    ['solana-devnet', process.env.SOLANA_TREASURY_ADDRESS],
+    ['sui-testnet', evmWallet.address], ['sui-testnet', '0x2'], ['sui-testnet', '0x' + '0'.repeat(64)],
+    ['sui-testnet', '0x' + 'g'.repeat(64)], ['sui-testnet', suiAddress.toUpperCase()]
   ]) {
     const response = await post('/api/dashboard/wallet', { chain_id, public_address }, evmSession.token);
     assert.equal(response.status, 422, `${chain_id}: ${JSON.stringify(public_address)}`);
@@ -134,6 +150,17 @@ test('Solana payout keeps exact case and returning login preserves it', async ()
   assert.equal(response.status, 200);
   assert.equal((await response.json()).wallet.public_address, address);
   assert.equal((await dashboard(await login('solana'))).wallets[0].public_address, address);
+});
+
+test('Sui payout is normalised to lowercase and survives a returning login', async () => {
+  const keys = crypto.generateKeyPairSync('ed25519');
+  const publicKey = keys.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32);
+  const address = deriveSuiAddress(publicKey, 'ed25519');
+  const mixedCase = `0x${address.slice(2).replace(/[a-f]/g, character => character.toUpperCase())}`;
+  const response = await post('/api/dashboard/wallet', { chain_id: 'sui-testnet', public_address: ` ${mixedCase} ` }, suiSession.token);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).wallet.public_address, address);
+  assert.equal((await dashboard(await login('sui'))).wallets.find(wallet => wallet.chain_id === 'sui-testnet').public_address, address);
 });
 
 test('returning accounts acquire a missing configured network without deleting older destinations', async t => {
@@ -276,7 +303,7 @@ test('simultaneous first logins with independent nonces share one creator accoun
   const responses=await Promise.all([1,2].map(async()=>{
     const challenge=await fetch(`${base}/api/auth/nonce`);
     assert.equal(challenge.status,200); assert.match(challenge.headers.get('cache-control'),/no-store/);
-    const message=new SiweMessage({domain:'localhost:3000',address:wallet.address,uri:process.env.FRONTEND_URL,version:'1',chainId:1,nonce:await challenge.text()}).prepareMessage();
+    const message=new SiweMessage({domain:'localhost:3000',address:wallet.address,uri:process.env.FRONTEND_URL,version:'1',chainId:Number(process.env.EVM_CHAIN_ID),nonce:await challenge.text()}).prepareMessage();
     const response=await post('/api/auth/verify',{message,signature:await wallet.signMessage(message)});
     assert.equal(response.status,200); return response.json();
   }));

@@ -4,6 +4,7 @@ const db = require('../db');
 const { pubClient } = require('../redis');
 const logger = require('../utils/logger');
 const { verifySolanaSignature } = require('../services/solanaAuth');
+const { verifySuiSignature } = require('../services/suiAuth');
 const { paymentConfig } = require('../services/paymentConfig');
 const { createSession, revokeSession } = require('../services/sessions');
 
@@ -27,13 +28,58 @@ router.get('/nonce', async (req, res) => {
   }
 });
 
-// POST /api/auth/verify - Universal Multi-Chain Login & Register (EVM + Solana)
+// POST /api/auth/verify - Universal Multi-Chain Login & Register (EVM + Solana + Sui)
 router.post('/verify', async (req, res) => {
   try {
     const { message, signature, type = 'evm', publicKey, nonce } = req.body;
-    
+
     // ──────────────────────────────────────────────
-    // 1. Solana Sign-In Verification
+    // 1. Sui Sign-In Verification
+    // ──────────────────────────────────────────────
+    if (type === 'sui') {
+      const suiAddress = req.body.address || req.body.publicKey;
+      const receivedNonce = nonce || (typeof message === 'string' && message.match(/Nonce:\s*([a-zA-Z0-9]+)/)?.[1]);
+
+      if (!suiAddress) {
+        return res.status(400).json({ error: 'Sui address required' });
+      }
+
+      if (!verifySuiSignature({ address: suiAddress, nonce: receivedNonce, message, signature }, process.env.FRONTEND_URL || 'http://localhost:3000')) {
+        return res.status(401).json({ error: 'Invalid Sui signature or sign-in message' });
+      }
+      if (!await pubClient.getDel(`nonce:${receivedNonce}`)) {
+        return res.status(401).json({ error: 'Invalid or expired authentication nonce' });
+      }
+
+      const normalizedSui = suiAddress.trim().toLowerCase();
+      let streamerRes = await db.query(
+        'SELECT id, public_address, obs_token FROM Streamers WHERE public_address = $1',
+        [normalizedSui]
+      );
+
+      let streamer;
+      if (streamerRes.rows.length === 0) {
+        streamerRes = await db.query(
+          'INSERT INTO Streamers (public_address) VALUES ($1) ON CONFLICT(public_address) DO UPDATE SET public_address=EXCLUDED.public_address RETURNING id, public_address, obs_token',
+          [normalizedSui]
+        );
+        streamer = streamerRes.rows[0];
+      } else {
+        streamer = streamerRes.rows[0];
+      }
+
+      // Preserve a deliberately selected payout on returning login.
+      await db.query(
+        'INSERT INTO Wallets (streamer_id, chain_id, public_address) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [streamer.id, paymentConfig().sui.chainId, normalizedSui]
+      );
+
+      logger.info(`Streamer authenticated via Sui wallet: ${normalizedSui} (ID: ${streamer.id})`);
+      return await createSession(res, streamer, 'sui');
+    }
+
+    // ──────────────────────────────────────────────
+    // 2. Solana Sign-In Verification
     // ──────────────────────────────────────────────
     if (type === 'solana' || publicKey) {
       const solanaAddress = publicKey || req.body.address;
@@ -80,7 +126,7 @@ router.post('/verify', async (req, res) => {
     }
 
     // ──────────────────────────────────────────────
-    // 2. EVM Sign-In with Ethereum (SIWE)
+    // 3. EVM Sign-In with Ethereum (SIWE)
     // ──────────────────────────────────────────────
     if (!message || !signature) {
       return res.status(400).json({ error: 'Expected message and signature for EVM login' });
@@ -96,6 +142,11 @@ router.post('/verify', async (req, res) => {
 
     const origin = new URL(process.env.FRONTEND_URL || 'http://localhost:3000');
     if (siweMessage.uri !== origin.origin) return res.status(401).json({ error: 'Invalid sign-in origin' });
+    // Bind the signature to the one EVM network this deployment serves. A
+    // message signed for another chain must not authenticate here.
+    if (Number(siweMessage.chainId) !== Number(paymentConfig().evm.chainId)) {
+      return res.status(401).json({ error: 'Sign-in chain does not match the configured network' });
+    }
     const fields = await siweMessage.verify({ signature, domain: origin.host, nonce: siweMessage.nonce });
     if (!fields.success || !await pubClient.getDel(`nonce:${siweMessage.nonce}`)) {
       return res.status(401).json({ error: 'Invalid or already used nonce' });

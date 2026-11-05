@@ -10,6 +10,7 @@ const { Wallet } = require('ethers');
 const { SiweMessage } = require('siwe');
 const { app } = require('../src/server');
 const { signInMessage } = require('../src/services/solanaAuth');
+const { deriveSuiAddress, signInMessage: suiSignInMessage, blake2b256, PERSONAL_MESSAGE_INTENT } = require('../src/services/suiAuth');
 const { MemoryRedisStore } = require('../src/redis');
 const { ChainVerifier, routerInterface } = require('../src/services/chainVerifier');
 const db = require('../src/db');
@@ -99,10 +100,37 @@ test('real Ed25519 signature authenticates, preserves address case, rejects tamp
 });
 test('SIWE verifies a real signature, origin and a single-use nonce', async () => {
   const wallet = Wallet.createRandom();
-  const message = new SiweMessage({ domain: 'localhost:3000', address: wallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: 1, nonce: await nonce() }).prepareMessage();
+  const message = new SiweMessage({ domain: 'localhost:3000', address: wallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: Number(process.env.EVM_CHAIN_ID || '80002'), nonce: await nonce() }).prepareMessage();
   const payload = { message, signature: await wallet.signMessage(message) };
   assert.equal((await post('/api/auth/verify', payload)).status, 200);
   assert.equal((await post('/api/auth/verify', payload)).status, 401);
+});
+test('SIWE signed for a different chain is rejected before the nonce is consumed', async () => {
+  const wallet = Wallet.createRandom();
+  const challenge = await nonce();
+  const foreignChain = Number(process.env.EVM_CHAIN_ID || '80002') === 137 ? 8453 : 137;
+  const message = new SiweMessage({ domain: 'localhost:3000', address: wallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: foreignChain, nonce: challenge }).prepareMessage();
+  const payload = { message, signature: await wallet.signMessage(message) };
+  const rejected = await post('/api/auth/verify', payload);
+  assert.equal(rejected.status, 401);
+  assert.match((await rejected.json()).error, /chain/i);
+  // The correct chain must still work with the same unconsumed nonce.
+  const correct = new SiweMessage({ domain: 'localhost:3000', address: wallet.address, uri: process.env.FRONTEND_URL, version: '1', chainId: Number(process.env.EVM_CHAIN_ID || '80002'), nonce: challenge }).prepareMessage();
+  assert.equal((await post('/api/auth/verify', { message: correct, signature: await wallet.signMessage(correct) })).status, 200);
+});
+test('Sui sign-in rejects a tampered message and cannot reuse the nonce', async () => {
+  const keys = crypto.generateKeyPairSync('ed25519');
+  const publicKey = keys.publicKey.export({ type: 'spki', format: 'der' }).subarray(-32);
+  const address = deriveSuiAddress(publicKey, 'ed25519');
+  const challenge = await nonce();
+  const message = suiSignInMessage(address, challenge, process.env.FRONTEND_URL);
+  const signature = (signedMessage) => {
+    const digest = blake2b256(Buffer.concat([PERSONAL_MESSAGE_INTENT, Buffer.from(signedMessage, 'utf8')]));
+    return Buffer.concat([Buffer.from([0]), crypto.sign(null, digest, keys.privateKey), publicKey]).toString('base64');
+  };
+  assert.equal((await post('/api/auth/verify', { type: 'sui', address, nonce: challenge, message: `${message}!`, signature: signature(`${message}!`) })).status, 401);
+  assert.equal((await post('/api/auth/verify', { type: 'sui', address, nonce: challenge, message, signature: signature(message) })).status, 200);
+  assert.equal((await post('/api/auth/verify', { type: 'sui', address, nonce: challenge, message, signature: signature(message) })).status, 401);
 });
 test('nonce consumption is atomic under concurrency', async () => {
   const store = new MemoryRedisStore();
