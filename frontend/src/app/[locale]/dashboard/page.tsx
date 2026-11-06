@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Brand } from '@/components/Brand';
 import { AnimatedValue } from '@/components/AnimatedValue';
 import { ActivityChart } from '@/components/ActivityChart';
@@ -172,7 +173,7 @@ export default function Dashboard() {
   const currency = (value: number | string) => number(Number(value) || 0, { style: 'currency', currency: 'USD' });
 
   return <main className="product-shell">
-    <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><div className="header-actions"><LanguageSwitcher /><button className="brand-button secondary small" disabled={!!busy} onClick={() => { if (busy) return; setBusy('logout'); void request('/api/auth/logout', { method:'POST' }).then(() => { localStorage.removeItem('jwt'); router.replace(path('/login')); }).catch(() => { setError(c.error); setBusy(''); }); }}>{c.logout}</button></div></header>
+    <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><div className="header-actions"><LanguageSwitcher /><Link href={path('/docs')} className="brand-button secondary small">{c.docs}</Link><button className="brand-button secondary small" disabled={!!busy} onClick={() => { if (busy) return; setBusy('logout'); void request('/api/auth/logout', { method:'POST' }).then(() => { localStorage.removeItem('jwt'); router.replace(path('/login')); }).catch(() => { setError(c.error); setBusy(''); }); }}>{c.logout}</button></div></header>
     <div className="studio-heading" id="studio-account"><span className="studio-ghost" aria-hidden="true">LC</span><div><p className="eyebrow">LIVECRYPTO / COMMAND_CENTER</p><h1>{d.title}</h1><p className="muted">{d.subtitle}</p></div>{profile && <a href={payUrl} target="_blank" rel="noreferrer" className="brand-button secondary">{d.public} ↗</a>}</div>
     {error && <p className="error-notice" role="alert">{error}</p>}
     {notice && <p className="notice" role="status">{notice}</p>}

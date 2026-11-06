@@ -55,6 +55,10 @@ Status: **partially executed for the October–November 2026 revision.** The cin
 | OBS guide | Instructions match actual Browser Source setup; test command is not presented as proof of display | OBS screenshot/video |
 | Logout/session expiry | Dashboard redirects to login; session no longer authorizes API mutations | Browser/network result |
 | Locale switching | Route, guide text and security copy switch together | EN/PT-BR/ES check |
+| Docs page, desktop | Three columns render with sticky sidebar and “on this page”; section anchors land below the header; tables and code blocks scroll inside their own containers; copy buttons work; no page-level horizontal overflow | Screenshots at 1440, 1024 and 390 px plus DOM width |
+| Docs page, mobile | The sidebar becomes a native disclosure; selecting a section closes it; the article keeps readable measure, tables scroll horizontally and code stays inside the viewport | 390 px screenshots and keyboard check |
+| Docs content accuracy | Wallets, ports, env gates and Sui checkout state match the code; QR/mobile is labelled planned, never implemented; no mainnet, custody, instant-settlement or audit claim appears | Text search and reviewer sign-off |
+| Docs interactivity | Reveals never hold content invisible after the failsafe; the donation flow selector changes the active stage with keyboard and pointer; the active section is announced with `aria-current` | DOM check and recording |
 | Overlay transparency | No product background leaks into the OBS browser source | OBS preview |
 
 ## Commands

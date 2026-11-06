@@ -147,7 +147,7 @@ export default function LoginPage() {
   const activeStep = status === 'idle' ? 0 : status === 'nonce' || status === 'signing' ? 1 : status === 'verifying' ? 2 : 3;
   const shownAddress = tab === 'evm' ? address : tab === 'solana' ? solanaAddress : suiAddress;
   return <main className="checkout-shell">
-    <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><LanguageSwitcher /></header>
+    <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><div className="header-actions"><LanguageSwitcher /><Link href={path('/docs')} className="brand-button secondary small">{c.docs}</Link></div></header>
     <div className="login-grid">
     <div>
       <div className="login-visual-wrap" data-reveal>

@@ -61,14 +61,33 @@ export function SiteMotion() {
     }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
     const trackedReveals = new WeakSet<Element>();
 
+    // IntersectionObserver is the primary path, but it can be delayed or
+    // suspended (background tabs, headless capture, long first frames). The
+    // rect check below reveals whatever is already on screen instead of
+    // leaving the first paint blank. Only elements below the fold wait for
+    // the observer or the rAF-throttled scroll fallback.
+    const inView = (item: HTMLElement) => {
+      const rect = item.getBoundingClientRect();
+      return rect.top < window.innerHeight * 0.94 && rect.bottom > 0;
+    };
+
     const scanReveals = () => {
       for (const item of document.querySelectorAll<HTMLElement>('[data-reveal]')) {
         if (trackedReveals.has(item)) continue;
         trackedReveals.add(item);
         const delay = Number(item.dataset.revealDelay || 0);
         if (delay) item.style.setProperty('--reveal-delay', `${delay}ms`);
-        if (!enabled) item.classList.add('is-revealed');
+        if (!enabled || inView(item)) item.classList.add('is-revealed');
         else revealObserver.observe(item);
+      }
+    };
+
+    const revealInView = () => {
+      if (!enabled) return;
+      for (const item of document.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-revealed)')) {
+        if (!inView(item)) continue;
+        item.classList.add('is-revealed');
+        revealObserver.unobserve(item);
       }
     };
 
@@ -102,6 +121,7 @@ export function SiteMotion() {
       const value = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
       if (progress) progress.style.transform = `scaleX(${value})`;
       root.style.setProperty('--scroll-ratio', value.toFixed(3));
+      revealInView();
     };
     const onScroll = () => { if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScroll); };
 

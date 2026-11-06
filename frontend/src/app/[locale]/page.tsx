@@ -38,6 +38,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const { home: h, common: c, guide: g, fx } = dictionaries[locale];
   const x = h.cinema;
   const login = localePath(locale, '/login');
+  const docsHref = localePath(locale, '/docs');
   let heroCursor = 0;
   const heroLines = h.hero.map(line => line.split(' ').map(word => ({
     word,
@@ -59,6 +60,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         { href: '#experience', label: c.obsStudio, icon: 'monitor' },
         { href: '#security', label: g.securityLink, icon: 'shield' },
         { href: '#pricing', label: h.fees, icon: 'tag' },
+        { href: docsHref, label: c.docs, icon: 'book' },
         { href: '#faq', label: c.faq, icon: 'help' },
       ]}
     />
@@ -180,6 +182,6 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <section className="faq-section section-wrap" id="faq" data-no="10"><div data-reveal><p className="eyebrow">{h.faqEyebrow}</p><h2>{h.faqTitle[0]}<br /><span className="muted">{h.faqTitle[1]}</span></h2></div><div className="faq-list" data-reveal data-reveal-delay="100">{h.questions.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
       <section className="closing-section section-wrap"><div className="closing-orb" data-parallax="0.12" aria-hidden="true" /><p className="eyebrow" data-reveal>{h.closing}</p><h2 data-reveal data-reveal-delay="80">{h.closingTitle[0]}<br /><span>{h.closingTitle[1]}</span></h2><Link href={login} className="brand-button primary" data-reveal data-reveal-delay="160">{c.creator} <span aria-hidden="true">↗</span></Link><p data-reveal data-reveal-delay="220">{h.beta}</p></section>
     </main>
-    <footer className="site-footer section-wrap"><Brand href={`/${locale}`} label={`Live Crypto · ${c.home}`} /><p>{h.footer}</p><a href="#faq">{h.contact} ↗</a></footer>
+    <footer className="site-footer section-wrap"><Brand href={`/${locale}`} label={`Live Crypto · ${c.home}`} /><p>{h.footer}</p><Link href={docsHref} className="footer-link">{c.docs} ↗</Link><a href="#faq">{h.contact} ↗</a></footer>
   </LandingMotion>;
 }

@@ -10,6 +10,8 @@ Live Crypto Gateway is a non-custodial donation service for livestream creators.
 
 ## Product Gallery
 
+**In-app documentation:** `/{locale}/docs` is the GitHub-style guide for creators and operators, in English, Brazilian Portuguese and Spanish. It covers the product, multi-chain wallets, Creator Studio, OBS, alerts, the donation flow, payments, the planned QR/mobile entry, security, local setup and the real validation status.
+
 The current **Act VII** direction is a near-black steel campaign (`#04090d`) with electric cyan (`#22e6ff`), Anton display type, Inter Tight body copy, JetBrains Mono telemetry, a hover-expanding side rail and motion that is always on. Landing, login, checkout and Creator Studio share one layout shell; EVM extensions, Phantom/Solflare/Backpack and Wallet Standard Sui wallets such as Slush are detected natively. See [the design notes](docs/LANDING_DESIGN.md) and the measured [browser evidence](STATUS.md).
 
 Screenshots and a short demo will be added here. The slots below are reserved for actual captures of the application; they are not evidence of a completed payment or deployment.

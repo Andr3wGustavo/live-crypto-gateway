@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Brand } from '@/components/Brand';
 import { SecurityGuide } from '@/components/CreatorGuide';
 import { useAccount, useSendTransaction, useSwitchChain } from 'wagmi';
@@ -227,7 +228,7 @@ export default function Checkout({ params }: { params: Promise<{ streamer_id: st
   const explorer = submitted ? `${submitted.network.explorer}${encodeURIComponent(submitted.hash)}${submitted.network.chainId === 'solana-devnet' ? '?cluster=devnet' : ''}` : '';
   return (
     <main className="checkout-shell">
-      <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><LanguageSwitcher /></header>
+      <header className="product-toolbar"><Brand href={path()} label={`LiveCrypto · ${c.home}`} /><div className="header-actions"><LanguageSwitcher /><Link href={path('/docs')} className="brand-button secondary small">{c.docs}</Link></div></header>
       <section className="product-panel checkout-panel" aria-labelledby="checkout-title" data-reveal data-glow>
         <p className="eyebrow">{p.creator.replace('{id}', streamer_id)}</p>
         <h1 id="checkout-title">{p.title}</h1>

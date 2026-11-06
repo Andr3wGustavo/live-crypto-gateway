@@ -20,7 +20,7 @@ const en = {
   common: {
     language: 'Language', close: 'Close', home: 'Home', creator: 'Creator Studio', back: 'Back to home', loading: 'Loading…',
     navOpen: 'Open navigation', navClose: 'Close navigation',
-    obsStudio: 'OBS Studio', faq: 'FAQ', brandHome: 'Live Crypto · Home',
+    obsStudio: 'OBS Studio', faq: 'FAQ', docs: 'Docs', brandHome: 'Live Crypto · Home',
     save: 'Save changes', saving: 'Saving…', saved: 'Changes saved', error: 'Unable to complete this action. Please try again.',
     session: 'Your session has expired. Sign in again.', copy: 'Copy', copied: 'Copied', preview: 'Preview',
     logout: 'Sign out', unavailable: 'Unavailable', testnet: 'Testnet', active: 'Active', hidden: 'Hidden',
@@ -198,7 +198,7 @@ const pt: Messages = {
   common: {
     language: 'Idioma', close: 'Fechar', home: 'Início', creator: 'Estúdio do criador', back: 'Voltar ao início', loading: 'Carregando…',
     navOpen: 'Abrir navegação', navClose: 'Fechar navegação',
-    obsStudio: 'OBS Studio', faq: 'Perguntas frequentes', brandHome: 'Live Crypto · Início',
+    obsStudio: 'OBS Studio', faq: 'Perguntas frequentes', docs: 'Documentação', brandHome: 'Live Crypto · Início',
     save: 'Salvar alterações', saving: 'Salvando…', saved: 'Alterações salvas', error: 'Não foi possível concluir esta ação. Tente novamente.',
     session: 'Sua sessão expirou. Entre novamente.', copy: 'Copiar', copied: 'Copiado', preview: 'Prévia',
     logout: 'Sair', unavailable: 'Indisponível', testnet: 'Rede de teste', active: 'Ativo', hidden: 'Oculto',
@@ -374,7 +374,7 @@ const es: Messages = {
   common: {
     language: 'Idioma', close: 'Cerrar', home: 'Inicio', creator: 'Estudio del creador', back: 'Volver al inicio', loading: 'Cargando…',
     navOpen: 'Abrir navegación', navClose: 'Cerrar navegación',
-    obsStudio: 'OBS Studio', faq: 'Preguntas frecuentes', brandHome: 'Live Crypto · Inicio',
+    obsStudio: 'OBS Studio', faq: 'Preguntas frecuentes', docs: 'Documentación', brandHome: 'Live Crypto · Inicio',
     save: 'Guardar cambios', saving: 'Guardando…', saved: 'Cambios guardados', error: 'No se pudo completar esta acción. Inténtalo de nuevo.',
     session: 'Tu sesión ha caducado. Inicia sesión de nuevo.', copy: 'Copiar', copied: 'Copiado', preview: 'Vista previa',
     logout: 'Cerrar sesión', unavailable: 'No disponible', testnet: 'Red de prueba', active: 'Activo', hidden: 'Oculto',

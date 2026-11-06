@@ -1,11 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react';
 import { LanguageSwitcher, useI18n } from '@/i18n/Provider';
 import { Brand } from './Brand';
 
-export type SideNavIcon = 'layers' | 'monitor' | 'shield' | 'tag' | 'help';
+export type SideNavIcon = 'layers' | 'monitor' | 'shield' | 'tag' | 'help' | 'book';
 export type SideNavLink = { href: string; label: string; icon: SideNavIcon };
 
 const ICONS: Record<SideNavIcon, ReactNode> = {
@@ -14,6 +14,7 @@ const ICONS: Record<SideNavIcon, ReactNode> = {
   shield: <><path d="M12 3 5 6v6c0 4.4 3 7.4 7 9 4-1.6 7-4.6 7-9V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></>,
   tag: <><path d="M4 4h7l9 9-7 7-9-9V4Z" /><circle cx="8.5" cy="8.5" r="1.4" /></>,
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.9.6-1.4 1.1-1.4 2.1" /><path d="M12 17h.01" /></>,
+  book: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z" /><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5A2.5 2.5 0 0 1 4 20.5Z" /><path d="M8 7h8M8 11h6" /></>,
 };
 
 const MOBILE_QUERY = '(max-width: 980px)';
@@ -196,25 +197,36 @@ export function SideNav({
       <nav className="side-nav-links" aria-label={navLabel}>
         {links.map(link => {
           const active = activeHref === link.href;
-          return <a
-            key={link.href}
-            href={link.href}
-            onClick={event => {
-              closeMobile();
-              if (!mobile) {
-                setFocusWithin(false);
-                event.currentTarget.blur();
-              }
-            }}
-            title={link.label}
-            className={active ? 'is-active' : undefined}
-            aria-current={active ? 'location' : undefined}
-          >
+          const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
+            closeMobile();
+            if (!mobile) {
+              setFocusWithin(false);
+              event.currentTarget.blur();
+            }
+          };
+          const content = <>
             <span className="side-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{ICONS[link.icon]}</svg>
             </span>
             <span className="side-nav-label">{link.label}</span>
-          </a>;
+          </>;
+          // Route links (docs) need the client router; chapter links stay native
+          // anchors so the scroll spy and browser history keep working.
+          return link.href.startsWith('/')
+            ? <Link
+              key={link.href}
+              href={link.href}
+              onClick={onClick}
+              title={link.label}
+            >{content}</Link>
+            : <a
+              key={link.href}
+              href={link.href}
+              onClick={onClick}
+              title={link.label}
+              className={active ? 'is-active' : undefined}
+              aria-current={active ? 'location' : undefined}
+            >{content}</a>;
         })}
       </nav>
 
